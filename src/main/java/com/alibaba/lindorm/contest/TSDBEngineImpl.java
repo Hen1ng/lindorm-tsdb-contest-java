@@ -13,15 +13,13 @@ import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.*;
-import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.GCUtil;
-import com.alibaba.lindorm.contest.util.SchemaUtil;
-import com.alibaba.lindorm.contest.util.UnsafeUtil;
+import com.alibaba.lindorm.contest.util.*;
 import sun.misc.Unsafe;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_TYPE_INTEGER;
@@ -29,6 +27,7 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 
 public class TSDBEngineImpl extends TSDBEngine {
 
+    private ExecutorService executorService;
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
@@ -59,6 +58,14 @@ public class TSDBEngineImpl extends TSDBEngine {
                 dataPath.createNewFile();
             }
             this.fileService = new TSFileService(dataPath.getPath(), indexFile);
+            if (RestartUtil.isFirstStart(indexFile)) {
+                executorService = new ThreadPoolExecutor(300, 1000,
+                        0L, TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<Runnable>());
+                for (int i = 0; i < 60; i++) {
+                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
+                }
+            }
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
             }
@@ -76,12 +83,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.executeLatestQueryTimes = new AtomicLong(0);
         this.executeTimeRangeQueryTimes = new AtomicLong(0);
         this.executeLatestQueryVinsSize = new AtomicLong(0);
-//        final BechmarkTest bechmarkTest = new BechmarkTest();
-//        try {
-//            bechmarkTest.testSSDWriteIops(dataPath.getPath());
-//        } catch (Exception e) {
-//            System.out.println("test iops error" + e);
-//        }
     }
 
     @Override
@@ -128,7 +129,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             VinDictMap.saveMapToFile(vinDictFile);
             SchemaUtil.saveMapToFile(schemaFile);
             for (TSFile tsFile : fileService.getTsFiles()) {
-                System.out.println("tsFile: " + tsFile.getFileName()  + "position: " + tsFile.getPosition().get());
+                System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);
@@ -160,17 +161,21 @@ public class TSDBEngineImpl extends TSDBEngine {
         executeLatestQueryThreadSet.add(Thread.currentThread().getName());
         try {
             ArrayList<Row> rows = new ArrayList<>();
+            List<Future<Row>> rowFutureList = new ArrayList<>(pReadReq.getVins().size());
             for (Vin vin : pReadReq.getVins()) {
-                final Row row = memoryTable.getLastRow(vin, pReadReq.getRequestedColumns());
+                final Future<Row> rowFuture = executorService.submit(() -> memoryTable.getLastRow(vin, pReadReq.getRequestedColumns()));
+                rowFutureList.add(rowFuture);
+            }
+            for (Future<Row> rowFuture : rowFutureList) {
+                final Row row = rowFuture.get();
                 if (row != null) {
                     rows.add(row);
                 }
             }
+            executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
             if (executeLatestQueryTimes.get() % 10000 == 0) {
-                executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
                 System.out.println("executeLatestQuery query vin size:{}" + pReadReq.getVins().size());
             }
-
             return rows;
         } catch (Exception e) {
             System.out.println("executeLatestQuery error, e" + e);

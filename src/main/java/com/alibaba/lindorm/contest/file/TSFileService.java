@@ -7,7 +7,6 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.RestartUtil;
 import com.alibaba.lindorm.contest.util.SchemaUtil;
 
 import java.io.File;
