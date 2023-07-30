@@ -90,7 +90,7 @@ public class TSFile {
         try {
             final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1);
             byteBuffer.put((byte) 0);
-            for (int i = 0, j = 0; i < this.fileSize && i >= 0; i += Constants.OS_PAGE_SIZE, j++) {
+            for (int i = 0, j = 0; i < Constants.WARM_FILE_SIZE && i >= 0; i += Constants.OS_PAGE_SIZE, j++) {
                 byteBuffer.flip();
                 fileChannel.write(byteBuffer, i);
                 // prevent gc

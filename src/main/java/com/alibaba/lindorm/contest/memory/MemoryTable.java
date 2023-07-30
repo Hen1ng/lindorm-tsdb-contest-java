@@ -41,7 +41,7 @@ public class MemoryTable {
         }
     }
 
-    public synchronized void put(Row row) {
+    public void put(Row row) {
         Vin vin = row.getVin();
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();

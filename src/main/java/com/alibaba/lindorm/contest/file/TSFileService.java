@@ -35,9 +35,9 @@ public class TSFileService {
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
-            if (RestartUtil.isFirstStart(indexFile)) {
-                tsFiles[i].warmTsFile();
-            }
+//            if (RestartUtil.isFirstStart(indexFile)) {
+//                tsFiles[i].warmTsFile();
+//            }
         }
     }
 
