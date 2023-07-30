@@ -133,7 +133,7 @@ public class TSFileService {
                                     tsFile.getFromOffsetByFileChannel(stringBuffer, offset + off);
                                     columns.put(requestedColumn, new ColumnValue.StringColumn(stringBuffer.flip()));
                                 } else {
-                                    columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.allocateDirect(0)));
+                                    columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.allocate(0)));
                                 }
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range String error, e:" + e + "index:" + index);
