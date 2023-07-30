@@ -1,11 +1,11 @@
 package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.RestartUtil;
 
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -25,6 +25,7 @@ public class TSFile {
     private Lock lock;
     private long fileSize;
     private int fileName;
+    private File file;
 
     public TSFile(String filePath, int fileName, long initPosition) {
         try {
@@ -33,7 +34,7 @@ public class TSFile {
             this.fileSize = Constants.TS_FILE_SIZE;
             this.initPosition = initPosition;
             this.position = new AtomicLong(0);
-            final File file = new File(tsFilePath);
+            this.file = new File(tsFilePath);
             if (!file.exists()) {
                 file.createNewFile();
             }
@@ -85,28 +86,30 @@ public class TSFile {
 //    }
 
     public void warmTsFile() {
-        long start = System.currentTimeMillis();
-        try {
-            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1);
-            byteBuffer.put((byte) 0);
-            for (int i = 0, j = 0; i < this.fileSize && i >= 0; i += Constants.OS_PAGE_SIZE, j++) {
-                byteBuffer.flip();
-                fileChannel.write(byteBuffer, i);
-                // prevent gc
-                if (j % 1000 == 0) {
-                    try {
-                        Thread.sleep(0);
-                    } catch (InterruptedException ignore) {
+        if (RestartUtil.isFirstStart(this.file)) {
+            long start = System.currentTimeMillis();
+            try {
+                final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1);
+                byteBuffer.put((byte) 0);
+                for (int i = 0, j = 0; i < this.fileSize && i >= 0; i += Constants.OS_PAGE_SIZE, j++) {
+                    byteBuffer.flip();
+                    fileChannel.write(byteBuffer, i);
+                    // prevent gc
+                    if (j % 1000 == 0) {
+                        try {
+                            Thread.sleep(0);
+                        } catch (InterruptedException ignore) {
 
+                        }
                     }
                 }
+                fileChannel.force(true);
+                fileChannel.position(0);
+            } catch (Exception e) {
+                System.out.println("warmTsFile error, e" + e);
             }
-            fileChannel.force(true);
-            fileChannel.position(0);
-        } catch (Exception e) {
-            System.out.println("warmTsFile error, e" + e);
+            System.out.println("warm tsFile fileName:" + fileName + " cost: " + (System.currentTimeMillis() - start) + " ms");
         }
-        System.out.println("warm tsFile fileName:" + fileName + " cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
     public FileChannel getFileChannel() {
