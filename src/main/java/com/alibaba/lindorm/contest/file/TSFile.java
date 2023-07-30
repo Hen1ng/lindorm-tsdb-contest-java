@@ -1,7 +1,6 @@
 package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.RestartUtil;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -47,8 +46,8 @@ public class TSFile {
     }
 
     public long append(ByteBuffer byteBuffer) {
-        long currentPos = this.position.get();
         this.lock.lock();
+        long currentPos = this.position.get();
         try {
             byteBuffer.flip();
             int remaining = byteBuffer.remaining();
