@@ -65,6 +65,13 @@ public class TSDBEngineImpl extends TSDBEngine {
                 for (int i = 0; i < 300; i++) {
                     executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
                 }
+            } else {
+                executorService = new ThreadPoolExecutor(60, 120,
+                        0L, TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<Runnable>());
+                for (int i = 0; i < 60; i++) {
+                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
+                }
             }
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
