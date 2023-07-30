@@ -58,11 +58,11 @@ public class TSDBEngineImpl extends TSDBEngine {
                 dataPath.createNewFile();
             }
             this.fileService = new TSFileService(dataPath.getPath(), indexFile);
-            if (RestartUtil.isFirstStart(indexFile)) {
+            if (!RestartUtil.isFirstStart(indexFile)) {
                 executorService = new ThreadPoolExecutor(300, 1000,
                         0L, TimeUnit.MILLISECONDS,
                         new LinkedBlockingQueue<Runnable>());
-                for (int i = 0; i < 60; i++) {
+                for (int i = 0; i < 300; i++) {
                     executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
                 }
             }
