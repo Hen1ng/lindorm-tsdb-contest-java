@@ -31,6 +31,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
+    private final AtomicLong executeLatestQueryVinsSize;
     private final AtomicLong executeTimeRangeQueryTimes;
     private final Set<String> writeThreadSet = new HashSet<>();
     private final Set<String> executeLatestQueryThreadSet = new HashSet<>();
@@ -74,6 +75,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.memoryTable = new MemoryTable(Constants.TOTAL_VIN_NUMS, fileService);
         this.executeLatestQueryTimes = new AtomicLong(0);
         this.executeTimeRangeQueryTimes = new AtomicLong(0);
+        this.executeLatestQueryVinsSize = new AtomicLong(0);
 //        final BechmarkTest bechmarkTest = new BechmarkTest();
 //        try {
 //            bechmarkTest.testSSDWriteIops(dataPath.getPath());
@@ -118,6 +120,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("threadName: " + threadName);
         }
         System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
+        System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
         System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
         try {
             memoryTable.writeToFileBeforeShutdown();
@@ -163,6 +166,11 @@ public class TSDBEngineImpl extends TSDBEngine {
                     rows.add(row);
                 }
             }
+            if (executeLatestQueryTimes.get() % 10000 == 0) {
+                executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
+                System.out.println("executeLatestQuery query vin size:{}" + pReadReq.getVins().size());
+            }
+
             return rows;
         } catch (Exception e) {
             System.out.println("executeLatestQuery error, e" + e);
