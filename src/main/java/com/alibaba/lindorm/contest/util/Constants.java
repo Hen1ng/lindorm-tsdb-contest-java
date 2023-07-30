@@ -6,7 +6,7 @@ public class Constants {
     public static final int TS_FILE_NUMS = 30;
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;
 
-    public static final int CACHE_VINS_LINE_NUMS = 60;
+    public static final int CACHE_VINS_LINE_NUMS = 50;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;

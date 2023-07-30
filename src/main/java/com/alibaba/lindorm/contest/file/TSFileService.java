@@ -16,12 +16,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class TSFileService {
 
-    private static ThreadLocal<ByteBuffer> TOTAL_INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 4));
-    private static ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 8));
-    private static ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
-    private static ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
-    private static ThreadLocal<ByteBuffer> INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(4));
-    private static ThreadLocal<ByteBuffer> DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(8));
+    private static final ThreadLocal<ByteBuffer> TOTAL_INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 4));
+    private static final ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 8));
+    private static final ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
+    private static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
+    private static final ThreadLocal<ByteBuffer> INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(4));
+    private static final ThreadLocal<ByteBuffer> DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(8));
 
 
     private final TSFile[] tsFiles;
@@ -73,7 +73,8 @@ public class TSFileService {
                         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
-                                final ByteBuffer intBuffer = ByteBuffer.allocate(4);
+                                final ByteBuffer intBuffer = INT_BUFFER.get();
+                                intBuffer.clear();
                                 int off = (columnIndex * valueSize + i) * 4;
                                 tsFile.getFromOffsetByFileChannel(intBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
                                 intBuffer.flip();
@@ -84,7 +85,8 @@ public class TSFileService {
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
-                                final ByteBuffer doubleBuffer = ByteBuffer.allocate(8);
+                                final ByteBuffer doubleBuffer = DOUBLE_BUFFER.get();
+                                doubleBuffer.clear();
                                 int off = valueSize * Constants.INT_NUMS * 4 + ((columnIndex - Constants.INT_NUMS) * Constants.CACHE_VINS_LINE_NUMS + i) * 8;
                                 tsFile.getFromOffsetByFileChannel(doubleBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
                                 doubleBuffer.flip();
@@ -160,18 +162,19 @@ public class TSFileService {
                     final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                     if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                         try {
-                            final ByteBuffer intBuffer = ByteBuffer.allocate(4);
+                            final ByteBuffer intBuffer = INT_BUFFER.get();
+                            intBuffer.clear();
                             int off = (columnIndex * valueSize + i) * 4;
                             tsFile.getFromOffsetByFileChannel(intBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
                             intBuffer.flip();
                             columns.put(requestedColumn, new ColumnValue.IntegerColumn(intBuffer.getInt()));
-//                            System.out.println("read int");
                         } catch (Exception e) {
                             System.out.println("getByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
                     } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                         try {
-                            final ByteBuffer doubleBuffer = ByteBuffer.allocate(8);
+                            final ByteBuffer doubleBuffer = DOUBLE_BUFFER.get();
+                            doubleBuffer.clear();
                             int off = valueSize * Constants.INT_NUMS * 4 + ((columnIndex - Constants.INT_NUMS) * Constants.CACHE_VINS_LINE_NUMS + i) * 8;
                             tsFile.getFromOffsetByFileChannel(doubleBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
                             doubleBuffer.flip();
@@ -236,14 +239,29 @@ public class TSFileService {
             }
             TSFile tsFile = getTsFileByVin(vin);
             String[] indexArray = SchemaUtil.getIndexArray();
-            //存储int类型，大小为缓存数据行 * 每行多少个int * 4
-            final ByteBuffer intBuffer = ByteBuffer.allocateDirect(lineNum * Constants.INT_NUMS * 4);
-            //存储double类型，大小为缓存数据行 * 每行多少个double * 8
-            final ByteBuffer doubleBuffer = ByteBuffer.allocateDirect(lineNum * Constants.FLOAT_NUMS * 8);
-            //存储时间戳，总共有多少行，有多少个时间戳
-            final ByteBuffer longBuffer = ByteBuffer.allocateDirect(lineNum * 8);
-            //存储每个字符串的长度
-            ByteBuffer stringLengthBuffer = ByteBuffer.allocateDirect(lineNum * Constants.STRING_NUMS * 4);
+            ByteBuffer intBuffer;
+            ByteBuffer doubleBuffer;
+            ByteBuffer longBuffer;
+            ByteBuffer stringLengthBuffer;
+            if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
+                intBuffer = TOTAL_INT_BUFFER.get();
+                doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
+                longBuffer = TOTAL_LONG_BUFFER.get();
+                stringLengthBuffer = TOTAL_STRING_LENGTH_BUFFER.get();
+                intBuffer.clear();
+                doubleBuffer.clear();
+                longBuffer.clear();
+                stringLengthBuffer.clear();
+            } else {
+                //存储int类型，大小为缓存数据行 * 每行多少个int * 4
+                intBuffer = ByteBuffer.allocateDirect(lineNum * Constants.INT_NUMS * 4);
+                //存储double类型，大小为缓存数据行 * 每行多少个double * 8
+                doubleBuffer = ByteBuffer.allocateDirect(lineNum * Constants.FLOAT_NUMS * 8);
+                //存储时间戳，总共有多少行，有多少个时间戳
+                longBuffer = ByteBuffer.allocateDirect(lineNum * 8);
+                //存储每个字符串的长度
+                stringLengthBuffer = ByteBuffer.allocateDirect(lineNum * Constants.STRING_NUMS * 4);
+            }
             int totalStringLength = 0;
             long maxTimestamp = Long.MIN_VALUE;
             long minTimestamp = Long.MAX_VALUE;

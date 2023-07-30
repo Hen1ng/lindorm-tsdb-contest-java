@@ -13,7 +13,7 @@ public class GCUtil {
         for (GarbageCollectorMXBean garbageCollectorMXBean : garbageCollectorMXBeans) {
             System.out.println("name:" + garbageCollectorMXBean.getName());
             System.out.println("collection count :" + garbageCollectorMXBean.getCollectionCount());
-            System.out.println("collection time :" + garbageCollectorMXBean.getCollectionTime());
+            System.out.println("collection time :" + garbageCollectorMXBean.getCollectionTime() / 1000 + " s");
         }
     }
 }
