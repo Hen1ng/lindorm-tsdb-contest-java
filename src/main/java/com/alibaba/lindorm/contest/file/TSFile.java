@@ -86,30 +86,28 @@ public class TSFile {
 //    }
 
     public void warmTsFile() {
-        if (RestartUtil.isFirstStart(this.file)) {
-            long start = System.currentTimeMillis();
-            try {
-                final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1);
-                byteBuffer.put((byte) 0);
-                for (int i = 0, j = 0; i < this.fileSize && i >= 0; i += Constants.OS_PAGE_SIZE, j++) {
-                    byteBuffer.flip();
-                    fileChannel.write(byteBuffer, i);
-                    // prevent gc
-                    if (j % 1000 == 0) {
-                        try {
-                            Thread.sleep(0);
-                        } catch (InterruptedException ignore) {
+        long start = System.currentTimeMillis();
+        try {
+            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1);
+            byteBuffer.put((byte) 0);
+            for (int i = 0, j = 0; i < this.fileSize && i >= 0; i += Constants.OS_PAGE_SIZE, j++) {
+                byteBuffer.flip();
+                fileChannel.write(byteBuffer, i);
+                // prevent gc
+                if (j % 1000 == 0) {
+                    try {
+                        Thread.sleep(0);
+                    } catch (InterruptedException ignore) {
 
-                        }
                     }
                 }
-                fileChannel.force(true);
-                fileChannel.position(0);
-            } catch (Exception e) {
-                System.out.println("warmTsFile error, e" + e);
             }
-            System.out.println("warm tsFile fileName:" + fileName + " cost: " + (System.currentTimeMillis() - start) + " ms");
+            fileChannel.force(true);
+            fileChannel.position(0);
+        } catch (Exception e) {
+            System.out.println("warmTsFile error, e" + e);
         }
+        System.out.println("warm tsFile fileName:" + fileName + " cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
     public FileChannel getFileChannel() {

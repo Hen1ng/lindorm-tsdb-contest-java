@@ -7,8 +7,10 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.RestartUtil;
 import com.alibaba.lindorm.contest.util.SchemaUtil;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -25,16 +27,17 @@ public class TSFileService {
     private static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     private static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
 
-
     private final TSFile[] tsFiles;
     private final AtomicLong atomicLong = new AtomicLong(0);
 
-    public TSFileService(String file) {
+    public TSFileService(String file, File indexFile) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
-            tsFiles[i].warmTsFile();
+            if (RestartUtil.isFirstStart(indexFile)) {
+                tsFiles[i].warmTsFile();
+            }
         }
     }
 

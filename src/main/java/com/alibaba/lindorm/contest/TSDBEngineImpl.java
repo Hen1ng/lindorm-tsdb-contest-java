@@ -35,7 +35,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     private final Set<String> writeThreadSet = new HashSet<>();
     private final Set<String> executeLatestQueryThreadSet = new HashSet<>();
     private final Set<String> executeTimeRangeQueryThreadSet = new HashSet<>();
-    private final TSFileService fileService;
+    private TSFileService fileService = null;
     private final MemoryTable memoryTable;
     private Unsafe unsafe = UnsafeUtil.getUnsafe();
     private File indexFile;
@@ -54,6 +54,10 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.vinDictFile = new File(dataPath.getPath() + "/vinDict.txt");
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
         try {
+            if (!dataPath.exists()) {
+                dataPath.createNewFile();
+            }
+            this.fileService = new TSFileService(dataPath.getPath(), indexFile);
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
             }
@@ -63,13 +67,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             if (!schemaFile.exists()) {
                 schemaFile.createNewFile();
             }
-            if (!dataPath.exists()) {
-                dataPath.createNewFile();
-            }
         } catch (Exception e) {
             System.out.println("create dataPath error, e" + e);
         }
-        this.fileService = new TSFileService(dataPath.getPath());
         this.upsertTimes = new AtomicLong(0);
         this.memoryTable = new MemoryTable(Constants.TOTAL_VIN_NUMS, fileService);
         this.executeLatestQueryTimes = new AtomicLong(0);
