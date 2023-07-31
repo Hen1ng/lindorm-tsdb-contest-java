@@ -234,7 +234,7 @@ public class MemoryTable {
         final Set<String> requestedColumns = SchemaUtil.getSchema().getColumnTypeMap().keySet();
         for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
             Pair<Index, Long> pair = MapIndex.getLast(vin);
-            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "pair:" + pair);
+//            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "pair:" + pair);
             final Index index = pair.getLeft();
             final Long timestamp = pair.getRight();
             Row row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns);
@@ -244,7 +244,7 @@ public class MemoryTable {
             Integer i = VinDictMap.get(vin);
             final SortedList<Value> valueSortedList = this.values[i];
             final Value value = new Value(timestamp, row.getColumns());
-            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "i :" + i + "value: " + value + "valueSortedList init size " + valueSortedList.size());
+//            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "i :" + i + "value: " + value + "valueSortedList init size " + valueSortedList.size());
             valueSortedList.add(value);
         }
         System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
