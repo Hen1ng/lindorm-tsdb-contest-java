@@ -122,6 +122,7 @@ public class MemoryTable {
         for (int i1 = 0; i1 < size; i1++) {
             final Value value1 = values[slot].get(i1);
             if (value1.getTimestamp() > ts) {
+                ts = value1.getTimestamp();
                 value = value1;
                 i = i1;
             }
