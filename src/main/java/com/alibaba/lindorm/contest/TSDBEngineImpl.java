@@ -188,7 +188,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 //                }
 //            }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 10000 == 0) {
+            if (executeLatestQueryTimes.get() % 100000 == 0) {
                 System.out.println("executeLatestQuery query vin size:{}" + pReadReq.getVins().size());
             }
             return rows;

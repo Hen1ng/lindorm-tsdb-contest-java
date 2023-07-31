@@ -15,7 +15,7 @@ public class MapIndex {
 
     public static final Map<Vin, CopyOnWriteArrayList<Index>> INDEX_MAP = new ConcurrentHashMap<>();
 
-    public static synchronized void put(Vin vin, Index index) {
+    public static void put(Vin vin, Index index) {
         CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
         if (indices == null) {
             indices = new CopyOnWriteArrayList<>();
@@ -26,7 +26,7 @@ public class MapIndex {
         }
     }
 
-    public static synchronized List<Index> get(Vin vin, long timeLowerBound, long timeUpperBound) {
+    public static List<Index> get(Vin vin, long timeLowerBound, long timeUpperBound) {
         CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
         List<Index> indexList = new ArrayList<>();
         if (indices == null) {
@@ -46,7 +46,7 @@ public class MapIndex {
         return indexList;
     }
 
-    public static synchronized Pair<Index, Long> getLast(Vin vin) {
+    public static Pair<Index, Long> getLast(Vin vin) {
         CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
         if (indices == null) {
             return null;
