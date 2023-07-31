@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MapIndex {
 
-    private static final Map<Vin, CopyOnWriteArrayList<Index>> INDEX_MAP = new ConcurrentHashMap<>();
+    public static final Map<Vin, CopyOnWriteArrayList<Index>> INDEX_MAP = new ConcurrentHashMap<>();
 
     public static synchronized void put(Vin vin, Index index) {
         CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);

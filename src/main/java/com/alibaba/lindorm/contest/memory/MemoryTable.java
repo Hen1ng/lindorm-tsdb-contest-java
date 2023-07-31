@@ -6,10 +6,7 @@ import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
-import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.Pair;
-import com.alibaba.lindorm.contest.util.SchemaUtil;
-import com.alibaba.lindorm.contest.util.SpinLockArray;
+import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.list.SortedList;
 
 import java.nio.ByteBuffer;
@@ -83,6 +80,9 @@ public class MemoryTable {
             if (i == null) {
                 return null;
             }
+            if (!RestartUtil.IS_FIRST_START) {
+                return getFromMemoryTable(vin, requestedColumns, i);
+            }
             final Row fromMemoryTable = getFromMemoryTable(vin, requestedColumns, i);
 //            System.out.println("getLastRow query from memory row" + fromMemoryTable);
             Row row = null;
@@ -116,19 +116,19 @@ public class MemoryTable {
         if (size == 0) {
             return null;
         }
-        long ts = Long.MIN_VALUE;
-        Value value = null;
-        int i = 0;
-        for (int i1 = 0; i1 < size; i1++) {
-            final Value value1 = values[slot].get(i1);
-            if (value1.getTimestamp() > ts) {
-                ts = value1.getTimestamp();
-                value = value1;
-                i = i1;
-            }
-        }
-        System.out.println("value index" + i);
-//        Value value = values[slot].get(0);
+//        long ts = Long.MIN_VALUE;
+//        Value value = null;
+//        int i = 0;
+//        for (int i1 = 0; i1 < size; i1++) {
+//            final Value value1 = values[slot].get(i1);
+//            if (value1.getTimestamp() > ts) {
+//                ts = value1.getTimestamp();
+//                value = value1;
+//                i = i1;
+//            }
+//        }
+//        System.out.println("value index" + i);
+        Value value = values[slot].get(0);
         Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
         for (String requestedColumn : requestedColumns) {
             final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
@@ -226,5 +226,27 @@ public class MemoryTable {
 
     public SortedList<Value>[] getValues() {
         return values;
+    }
+
+    public void loadLastTsToMemory() {
+        System.out.println("loadLastTsToMemory start");
+        long start = System.currentTimeMillis();
+        final Set<String> requestedColumns = SchemaUtil.getSchema().getColumnTypeMap().keySet();
+        for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
+            Pair<Index, Long> pair = MapIndex.getLast(vin);
+            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "pair:" + pair);
+            final Index index = pair.getLeft();
+            final Long timestamp = pair.getRight();
+            Row row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns);
+            if (row == null) {
+                throw new RuntimeException("loadLastTsToMemory error, row is null");
+            }
+            Integer i = VinDictMap.get(vin);
+            final SortedList<Value> valueSortedList = this.values[i];
+            final Value value = new Value(timestamp, row.getColumns());
+            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "i :" + i + "value: " + value + "valueSortedList init size " + valueSortedList.size());
+            valueSortedList.add(value);
+        }
+        System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
     }
 }

@@ -58,21 +58,22 @@ public class TSDBEngineImpl extends TSDBEngine {
                 dataPath.createNewFile();
             }
             this.fileService = new TSFileService(dataPath.getPath(), indexFile);
-            if (!RestartUtil.isFirstStart(indexFile)) {
-                executorService = new ThreadPoolExecutor(300, 1000,
-                        0L, TimeUnit.MILLISECONDS,
-                        new LinkedBlockingQueue<Runnable>());
-                for (int i = 0; i < 300; i++) {
-                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
-                }
-            } else {
-                executorService = new ThreadPoolExecutor(60, 120,
-                        0L, TimeUnit.MILLISECONDS,
-                        new LinkedBlockingQueue<Runnable>());
-                for (int i = 0; i < 60; i++) {
-                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
-                }
-            }
+            RestartUtil.setFirstStart(indexFile);
+//            if (!RestartUtil.IS_FIRST_START) {
+//                executorService = new ThreadPoolExecutor(300, 1000,
+//                        0L, TimeUnit.MILLISECONDS,
+//                        new LinkedBlockingQueue<Runnable>());
+//                for (int i = 0; i < 300; i++) {
+//                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
+//                }
+//            } else {
+//                executorService = new ThreadPoolExecutor(60, 120,
+//                        0L, TimeUnit.MILLISECONDS,
+//                        new LinkedBlockingQueue<Runnable>());
+//                for (int i = 0; i < 60; i++) {
+//                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
+//                }
+//            }
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
             }
@@ -98,6 +99,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
+        if (!RestartUtil.IS_FIRST_START) {
+            memoryTable.loadLastTsToMemory();
+        }
     }
 
     @Override
@@ -168,17 +172,21 @@ public class TSDBEngineImpl extends TSDBEngine {
         executeLatestQueryThreadSet.add(Thread.currentThread().getName());
         try {
             ArrayList<Row> rows = new ArrayList<>();
-            List<Future<Row>> rowFutureList = new ArrayList<>(pReadReq.getVins().size());
+//            List<Future<Row>> rowFutureList = new ArrayList<>(pReadReq.getVins().size());
             for (Vin vin : pReadReq.getVins()) {
-                final Future<Row> rowFuture = executorService.submit(() -> memoryTable.getLastRow(vin, pReadReq.getRequestedColumns()));
-                rowFutureList.add(rowFuture);
-            }
-            for (Future<Row> rowFuture : rowFutureList) {
-                final Row row = rowFuture.get();
-                if (row != null) {
-                    rows.add(row);
+                final Row lastRow = memoryTable.getLastRow(vin, pReadReq.getRequestedColumns());
+                if (lastRow != null) {
+                    rows.add(lastRow);
                 }
+//                final Future<Row> rowFuture = executorService.submit(() -> memoryTable.getLastRow(vin, pReadReq.getRequestedColumns()));
+//                rowFutureList.add(rowFuture);
             }
+//            for (Future<Row> rowFuture : rowFutureList) {
+//                final Row row = rowFuture.get();
+//                if (row != null) {
+//                    rows.add(row);
+//                }
+//            }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
             if (executeLatestQueryTimes.get() % 10000 == 0) {
                 System.out.println("executeLatestQuery query vin size:{}" + pReadReq.getVins().size());

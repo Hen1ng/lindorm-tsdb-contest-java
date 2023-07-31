@@ -4,7 +4,9 @@ import java.io.File;
 
 public class RestartUtil {
 
-    public static boolean isFirstStart(File file) {
-        return !file.exists();
+    public static boolean IS_FIRST_START = false;
+
+    public static void setFirstStart(File file) {
+        IS_FIRST_START = !file.exists();
     }
 }
