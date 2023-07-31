@@ -87,20 +87,25 @@ public class MapIndex {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                CopyOnWriteArrayList<Index> indices = new CopyOnWriteArrayList<>();
-                final String[] split1 = line.split("]");
-                final String s = split1[1];
-                final String[] s1 = s.split(" ");
-                for (String s2 : s1) {
-                    final String[] split2 = s2.split(",");
-                    indices.add(new Index(
-                            Long.parseLong(split2[0])
-                            , Long.parseLong(split2[1])
-                            , Long.parseLong(split2[2])
-                            , Integer.parseInt(split2[3])
-                            , Integer.parseInt(split2[4])));
+                try {
+                    CopyOnWriteArrayList<Index> indices = new CopyOnWriteArrayList<>();
+                    final String[] split1 = line.split("]");
+                    final String s = split1[1];
+                    final String[] s1 = s.split(" ");
+                    for (String s2 : s1) {
+                        final String[] split2 = s2.split(",");
+                        indices.add(new Index(
+                                Long.parseLong(split2[0])
+                                , Long.parseLong(split2[1])
+                                , Long.parseLong(split2[2])
+                                , Integer.parseInt(split2[3])
+                                , Integer.parseInt(split2[4])));
+                    }
+                    INDEX_MAP.put(new Vin(split1[0].getBytes(StandardCharsets.UTF_8)), indices);
+
+                } catch (Exception e) {
+                    System.out.println("loadMapIndexFromFile e" + e + "line " + line);
                 }
-                INDEX_MAP.put(new Vin(split1[0].getBytes(StandardCharsets.UTF_8)), indices);
 
             }
         }

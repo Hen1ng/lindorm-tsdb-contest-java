@@ -90,7 +90,7 @@ public class TSFileService {
                                 final ByteBuffer intBuffer = INT_BUFFER.get();
                                 intBuffer.clear();
                                 int off = (columnIndex * valueSize + i) * 4;
-                                tsFile.getFromOffsetByFileChannel(intBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
+                                tsFile.getFromOffsetByFileChannel(intBuffer, offset + valueSize * 8 + off);
                                 intBuffer.flip();
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(intBuffer.getInt()));
                             } catch (Exception e) {
@@ -100,8 +100,8 @@ public class TSFileService {
                             try {
                                 final ByteBuffer doubleBuffer = DOUBLE_BUFFER.get();
                                 doubleBuffer.clear();
-                                int off = valueSize * Constants.INT_NUMS * 4 + ((columnIndex - Constants.INT_NUMS) * Constants.CACHE_VINS_LINE_NUMS + i) * 8;
-                                tsFile.getFromOffsetByFileChannel(doubleBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
+                                int off = valueSize * Constants.INT_NUMS * 4 + ((columnIndex - Constants.INT_NUMS) * valueSize + i) * 8;
+                                tsFile.getFromOffsetByFileChannel(doubleBuffer, offset + valueSize * 8 + off);
                                 doubleBuffer.flip();
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubleBuffer.getDouble()));
                             } catch (Exception e) {
@@ -185,7 +185,7 @@ public class TSFileService {
                             final ByteBuffer intBuffer = INT_BUFFER.get();
                             intBuffer.clear();
                             int off = (columnIndex * valueSize + i) * 4;
-                            tsFile.getFromOffsetByFileChannel(intBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
+                            tsFile.getFromOffsetByFileChannel(intBuffer, offset + valueSize * 8 + off);
                             intBuffer.flip();
                             columns.put(requestedColumn, new ColumnValue.IntegerColumn(intBuffer.getInt()));
                         } catch (Exception e) {
@@ -195,8 +195,8 @@ public class TSFileService {
                         try {
                             final ByteBuffer doubleBuffer = DOUBLE_BUFFER.get();
                             doubleBuffer.clear();
-                            int off = valueSize * Constants.INT_NUMS * 4 + ((columnIndex - Constants.INT_NUMS) * Constants.CACHE_VINS_LINE_NUMS + i) * 8;
-                            tsFile.getFromOffsetByFileChannel(doubleBuffer, offset + Constants.CACHE_VINS_LINE_NUMS * 8 + off);
+                            int off = valueSize * Constants.INT_NUMS * 4 + ((columnIndex - Constants.INT_NUMS) * valueSize + i) * 8;
+                            tsFile.getFromOffsetByFileChannel(doubleBuffer, offset + valueSize * 8 + off);
                             doubleBuffer.flip();
                             columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubleBuffer.getDouble()));
 //                            System.out.println("read double");

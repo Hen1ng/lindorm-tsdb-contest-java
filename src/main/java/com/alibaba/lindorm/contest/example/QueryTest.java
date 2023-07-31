@@ -43,12 +43,12 @@ public class QueryTest {
             for (int i = 0; i < 45; i++) {
                 String key = String.valueOf(i);
                 columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
-                columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()));
+                columns.put(key, new ColumnValue.IntegerColumn(i));
             }
             for (int i = 0; i < 9; i++) {
                 String key = i + "double";
                 columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT);
-                columns.put(key, new ColumnValue.DoubleFloatColumn(random.nextDouble()));
+                columns.put(key, new ColumnValue.DoubleFloatColumn(i / 10d));
             }
             for (int i = 0; i < 6; i++) {
                 final StringBuilder sb = new StringBuilder();
@@ -99,17 +99,19 @@ public class QueryTest {
 //            tsdbEngineSample.shutdown();
             tsdbEngineSample.connect();
             List<Vin> list = new ArrayList<>();
-            list.add(new Vin("GOoR9hYQEiZFVH7ww".getBytes(StandardCharsets.UTF_8)));
+            list.add(new Vin("2ONrWuOGftkAJ96tz".getBytes(StandardCharsets.UTF_8)));
             Set<String> requestedColumns = new HashSet<>();
             requestedColumns.add("5String543210");
             requestedColumns.add("3String3210");
             requestedColumns.add("0String0");
             requestedColumns.add("0double");
+            requestedColumns.add("7double");
             requestedColumns.add("1");
+            requestedColumns.add("15");
 
             final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
             final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
-            final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("GOoR9hYQEiZFVH7ww".getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
+            final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("2ONrWuOGftkAJ96tz".getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
             final ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
             System.out.println(1);
             tsdbEngineSample.shutdown();
