@@ -54,6 +54,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.vinDictFile = new File(dataPath.getPath() + "/vinDict.txt");
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
         try {
+            RestartUtil.setFirstStart(indexFile);
             if (!dataPath.exists()) {
                 dataPath.createNewFile();
             }
@@ -102,6 +103,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (!RestartUtil.IS_FIRST_START) {
             memoryTable.loadLastTsToMemory();
         }
+        System.gc();
     }
 
     @Override
@@ -134,6 +136,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
         System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
         System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
+        System.out.println("empty string num: " + StateUtil.EMPTY_STRING_NUM.get());
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);

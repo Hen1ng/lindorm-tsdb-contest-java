@@ -47,6 +47,10 @@ public class TSFileService {
         return tsFiles[slot];
     }
 
+    public TSFile getTsFileByIndex(int i) {
+        return tsFiles[i];
+    }
+
     public int getHashCodeByByteArray(byte[] bytes) {
         int h = 0;
         for (int i = 0; i < 17; i++) {
@@ -55,13 +59,14 @@ public class TSFileService {
         return Math.abs(h);
     }
 
-    public ArrayList<Row> getByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns) {
+    public ArrayList<Row> getByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
         ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
         rowArrayList.clear();
         try {
             final long offset = index.getOffset();
             final int valueSize = index.getValueSize();
-            final TSFile tsFile = getTsFileByVin(vin);
+            int m = j % Constants.TS_FILE_NUMS;
+            final TSFile tsFile = getTsFileByIndex(m);
             ByteBuffer timestampBuffer;
             ByteBuffer stringLengthBuffer;
             if (valueSize == Constants.CACHE_VINS_LINE_NUMS) {
@@ -153,10 +158,11 @@ public class TSFileService {
 
     }
 
-    public Row getByIndex(Vin vin, long timestamp, Index index, Set<String> requestedColumns) {
+    public Row getByIndex(Vin vin, long timestamp, Index index, Set<String> requestedColumns, int j) {
         final long offset = index.getOffset();
         final int valueSize = index.getValueSize();
-        final TSFile tsFile = getTsFileByVin(vin);
+        int m = j % Constants.TS_FILE_NUMS;
+        final TSFile tsFile = getTsFileByIndex(m);
         ByteBuffer timestampBuffer;
         ByteBuffer stringLengthBuffer;
         if (valueSize == Constants.CACHE_VINS_LINE_NUMS) {
@@ -250,13 +256,14 @@ public class TSFileService {
      * @param valueList
      * @param lineNum
      */
-    public void write(Vin vin, List<Value> valueList, int lineNum) {
+    public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
             final long andIncrement = atomicLong.getAndIncrement();
             if (andIncrement % 1000000 == 0) {
                 System.out.println("write times:" + andIncrement);
             }
-            TSFile tsFile = getTsFileByVin(vin);
+            int m = j % Constants.TS_FILE_NUMS;
+            TSFile tsFile = getTsFileByIndex(m);
             String[] indexArray = SchemaUtil.getIndexArray();
             ByteBuffer intBuffer;
             ByteBuffer doubleBuffer;

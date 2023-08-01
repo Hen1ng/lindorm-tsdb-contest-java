@@ -54,7 +54,7 @@ public class MemoryTable {
             final SortedList<Value> valueSortedList = values[index];
             valueSortedList.add(new Value(ts, row.getColumns()));
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
-                tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS);
+                tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
             }
         } finally {
             spinLockArray.unlockWrite(lock);
@@ -90,7 +90,7 @@ public class MemoryTable {
             if (last != null && last.getLeft() != null) {
                 final Index index = last.getLeft();
                 final Long timestamp = last.getRight();
-                row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns);
+                row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns, i);
 //                System.out.println("getLastRow query from file row" + row);
             }
             if (row == null) {
@@ -204,7 +204,8 @@ public class MemoryTable {
         try {
             final List<Index> indexList = MapIndex.get(vin, timeLowerBound, timeUpperBound);
             for (Index index : indexList) {
-                final ArrayList<Row> byIndex = tsFileService.getByIndex(vin, timeLowerBound, timeUpperBound, index, requestedColumns);
+                final Integer integer = VinDictMap.get(vin);
+                final ArrayList<Row> byIndex = tsFileService.getByIndex(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
                 if (!byIndex.isEmpty()) {
                     rowArrayList.addAll(byIndex);
                 }
@@ -219,7 +220,8 @@ public class MemoryTable {
         for (int i = 0; i < values.length; i++) {
             SortedList<Value> valueList = values[i];
             if (valueList.root != null && valueList.size() >= 1) {
-                tsFileService.write(new Vin(VinDictMap.get(i)), valueList, valueList.size());
+                final Vin vin = new Vin(VinDictMap.get(i));
+                tsFileService.write(vin, valueList, valueList.size(), i);
             }
         }
     }
@@ -237,7 +239,8 @@ public class MemoryTable {
 //            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "pair:" + pair);
             final Index index = pair.getLeft();
             final Long timestamp = pair.getRight();
-            Row row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns);
+            final Integer integer = VinDictMap.get(vin);
+            Row row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns, integer);
             if (row == null) {
                 throw new RuntimeException("loadLastTsToMemory error, row is null");
             }
