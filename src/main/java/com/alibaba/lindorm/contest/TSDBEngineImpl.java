@@ -22,9 +22,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_TYPE_INTEGER;
-import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_TYPE_STRING;
-
 public class TSDBEngineImpl extends TSDBEngine {
 
     private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -109,19 +106,8 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void createTable(String tableName, Schema schema) throws IOException {
-        SchemaUtil.setSchema(schema);
         System.out.println("createTable tableName:" + tableName);
-        for (String string : schema.getColumnTypeMap().keySet()) {
-            final ColumnValue.ColumnType columnType = schema.getColumnTypeMap().get(string);
-            if (columnType.equals(COLUMN_TYPE_STRING)) {
-                System.out.println("key:" + string + " type: string");
-            } else if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                System.out.println("key:" + string + " type: int");
-            } else {
-                System.out.println("key:" + string + " type: float");
-
-            }
-        }
+        SchemaUtil.setSchema(schema);
     }
 
     @Override

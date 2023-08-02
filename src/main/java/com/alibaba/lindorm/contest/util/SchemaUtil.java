@@ -40,19 +40,19 @@ public class SchemaUtil {
         for (String key : INT_MAP.keySet()) {
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
-            System.out.println("key: " + key + " index : " + i);
+//            System.out.println("key: " + key + " index : " + i);
             i++;
         }
         for (String key : FLOAT_MAP.keySet()) {
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
-            System.out.println("key: " + key + " index : " + i);
+//            System.out.println("key: " + key + " index : " + i);
             i++;
         }
         for (String key : STRING_MAP.keySet()) {
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
-            System.out.println("key: " + key + " index : " + i);
+//            System.out.println("key: " + key + " index : " + i);
             i++;
         }
     }
