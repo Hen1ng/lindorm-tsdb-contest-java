@@ -83,7 +83,6 @@ public class MemoryTable {
             if (!RestartUtil.IS_FIRST_START) {
                 return getFromMemoryTable(vin, requestedColumns, i);
             }
-            System.out.println("getLastRow is not first start");
             final Row fromMemoryTable = getFromMemoryTable(vin, requestedColumns, i);
 //            System.out.println("getLastRow query from memory row" + fromMemoryTable);
             Row row = null;
@@ -225,7 +224,6 @@ public class MemoryTable {
         final Set<String> requestedColumns = SchemaUtil.getSchema().getColumnTypeMap().keySet();
         for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
             Pair<Index, Long> pair = MapIndex.getLast(vin);
-//            System.out.println("loadLastTsToMemory INDEX_MAP key " + vin + "pair:" + pair);
             final Index index = pair.getLeft();
             final Long timestamp = pair.getRight();
             final Integer integer = VinDictMap.get(vin);
