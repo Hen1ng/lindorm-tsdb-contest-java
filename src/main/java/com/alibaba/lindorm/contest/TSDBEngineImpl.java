@@ -123,6 +123,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
         System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
         System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
+        System.out.println("total string length:" + StateUtil.STRING_TOTAL_LENGTH.get());
+        System.out.println("compress string length:" + StateUtil.STRING_COMPRESS_LENGTH.get());
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);
@@ -134,6 +136,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);
         }
+
         GCUtil.printGCInfo();
         MemoryUtil.printMemory();
     }
@@ -180,7 +183,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
             if (executeLatestQueryTimes.get() % 100000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
-                System.out.println("executeLatestQuery query vin size:{}" + pReadReq.getVins().size());
+                System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());
             }
             return rows;
         } catch (Exception e) {

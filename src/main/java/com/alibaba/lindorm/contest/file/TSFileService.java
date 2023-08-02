@@ -10,6 +10,7 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.ArrayUtils;
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.SchemaUtil;
+import com.alibaba.lindorm.contest.util.StateUtil;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -350,6 +351,8 @@ public class TSFileService {
             }
             final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
             final byte[] compress = gzipCompress.compress(bytes);
+            StateUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength);
+            StateUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length);
 //            System.out.println("write compress, before length:" + bytes.length + "after length: " + compress.length);
             int total = lineNum * 8 //timestamp
                     + lineNum * Constants.INT_NUMS * 4 //int
