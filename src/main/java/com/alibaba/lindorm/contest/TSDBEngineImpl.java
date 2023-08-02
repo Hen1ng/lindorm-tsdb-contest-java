@@ -27,7 +27,7 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 
 public class TSDBEngineImpl extends TSDBEngine {
 
-    private ExecutorService executorService;
+    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
@@ -59,7 +59,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                 dataPath.createNewFile();
             }
             this.fileService = new TSFileService(dataPath.getPath(), indexFile);
-            RestartUtil.setFirstStart(indexFile);
 //            if (!RestartUtil.IS_FIRST_START) {
 //                executorService = new ThreadPoolExecutor(300, 1000,
 //                        0L, TimeUnit.MILLISECONDS,
@@ -104,6 +103,8 @@ public class TSDBEngineImpl extends TSDBEngine {
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
+        MemoryUtil.printMemory();
+//        executorService.scheduleAtFixedRate(MemoryUtil::printMemory, 10, 1, TimeUnit.SECONDS);
     }
 
     @Override
@@ -136,7 +137,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
         System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
         System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
-        System.out.println("empty string num: " + StateUtil.EMPTY_STRING_NUM.get());
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);
@@ -149,6 +149,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("shutdown error, e" + e);
         }
         GCUtil.printGCInfo();
+        MemoryUtil.printMemory();
     }
 
     @Override
@@ -192,6 +193,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 //            }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
             if (executeLatestQueryTimes.get() % 100000 == 0) {
+                MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:{}" + pReadReq.getVins().size());
             }
             return rows;
@@ -207,6 +209,10 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
         executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
+        if (executeTimeRangeQueryTimes.get() % 10000 == 0) {
+            MemoryUtil.printJVMHeapMemory();
+            System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedFields().size());
+        }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedFields());
         } catch (Exception e) {

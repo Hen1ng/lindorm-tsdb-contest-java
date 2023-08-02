@@ -138,14 +138,14 @@ public class BechmarkTest {
 //        map.get(vin1).add(1L);
 //        map.get(vin1).add(10L);
 //        System.out.println(map);
-        final String randomString = BytesUtil.getRandomString(1024 * 4 );
+        final String randomString = BytesUtil.getRandomString(20 );
 //        System.out.println(randomString);
         final ZlibCompress zlibCompress = new ZlibCompress();
         final GzipCompress gzipCompress = new GzipCompress();
         final DeflaterCompress deflaterCompress = new DeflaterCompress();
-        final byte[] compress = gzipCompress.compress(randomString.getBytes(StandardCharsets.UTF_8));
+        final byte[] compress = zlibCompress.compress(randomString.getBytes(StandardCharsets.UTF_8));
         System.out.println(compress.length);
-        System.out.println(new String(gzipCompress.deCompress(compress)).equals(randomString));
+        System.out.println(new String(deflaterCompress.deCompress(compress)).equals(randomString));
 
         final String randomString1 = BytesUtil.getRandomString(1024 * 4 );
         final byte[] compress1 = gzipCompress.compress(randomString1.getBytes(StandardCharsets.UTF_8));

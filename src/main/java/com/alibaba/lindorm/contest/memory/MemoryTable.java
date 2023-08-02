@@ -83,6 +83,7 @@ public class MemoryTable {
             if (!RestartUtil.IS_FIRST_START) {
                 return getFromMemoryTable(vin, requestedColumns, i);
             }
+            System.out.println("getLastRow is not first start");
             final Row fromMemoryTable = getFromMemoryTable(vin, requestedColumns, i);
 //            System.out.println("getLastRow query from memory row" + fromMemoryTable);
             Row row = null;
@@ -116,18 +117,6 @@ public class MemoryTable {
         if (size == 0) {
             return null;
         }
-//        long ts = Long.MIN_VALUE;
-//        Value value = null;
-//        int i = 0;
-//        for (int i1 = 0; i1 < size; i1++) {
-//            final Value value1 = values[slot].get(i1);
-//            if (value1.getTimestamp() > ts) {
-//                ts = value1.getTimestamp();
-//                value = value1;
-//                i = i1;
-//            }
-//        }
-//        System.out.println("value index" + i);
         Value value = values[slot].get(0);
         Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
         for (String requestedColumn : requestedColumns) {
