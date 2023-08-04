@@ -70,57 +70,60 @@ public class FloatCompress {
         return block;
     }
 
-    static Pair encode(double[] values) {
-        int offset = 0;
-        BitSet buffer = new BitSet();
+    public static Pair encode(double[] values) {
+        try {
+            int offset = 0;
+            BitSet buffer = new BitSet();
 
-        boolean ctrlBit;
-        double previous = values[0];
-        Block prevBlock = null;
-        for (int n = 1; n < values.length; n++) {
-            Block block = calcBlock(previous, values[n]);
-            if (block.getValue() == 0) {
-                buffer.clear(offset++);
-            } else {
-                buffer.set(offset++);
-                buffer.set(offset++, ctrlBit = !block.fallInSameBlock(prevBlock));
-                if (ctrlBit) {
-                    int leadingZero = block.getLeadingZero();
-                    int blockSize = block.getBlockSize();
-                    AssertUtil.assertTrue(leadingZero < (1 << 6));
-                    AssertUtil.assertTrue((blockSize < (1 << 7)));
-                    for (int i = 5; i > 0; i--) {
-                        buffer.set(offset++, ((leadingZero >> (i - 1)) & 0x1) > 0);
+            boolean ctrlBit;
+            double previous = values[0];
+            Block prevBlock = null;
+            for (int n = 1; n < values.length; n++) {
+                Block block = calcBlock(previous, values[n]);
+                if (block.getValue() == 0) {
+                    buffer.clear(offset++);
+                } else {
+                    buffer.set(offset++);
+                    buffer.set(offset++, ctrlBit = !block.fallInSameBlock(prevBlock));
+                    if (ctrlBit) {
+                        int leadingZero = block.getLeadingZero();
+                        int blockSize = block.getBlockSize();
+                        AssertUtil.assertTrue(leadingZero < (1 << 6));
+                        AssertUtil.assertTrue((blockSize < (1 << 7)));
+                        for (int i = 5; i > 0; i--) {
+                            buffer.set(offset++, ((leadingZero >> (i - 1)) & 0x1) > 0);
+                        }
+                        for (int i = 6; i > 0; i--) {
+                            buffer.set(offset++, ((blockSize >> (i - 1)) & 0x1) > 0);
+                        }
                     }
-                    for (int i = 6; i > 0; i--) {
-                        buffer.set(offset++, ((blockSize >> (i - 1)) & 0x1) > 0);
+                    for (int i = 0; i < block.getBlockSize(); i++) {
+                        buffer.set(offset++, block.valueOf(i));
                     }
                 }
-                for (int i = 0; i < block.getBlockSize(); i++) {
-                    buffer.set(offset++, block.valueOf(i));
-                }
+                previous = values[n];
+                prevBlock = block;
             }
-            previous = values[n];
-            prevBlock = block;
-        }
 
-        return Pair.of(Double.doubleToLongBits(values[0]), Pair.of(offset, buffer.toByteArray()));
+            return Pair.of(Double.doubleToLongBits(values[0]), Pair.of(offset, buffer.toByteArray()));
+        } catch (Exception e) {
+            System.out.println("float encode error," + e);
+        }
+        return null;
     }
 
-    static List<Double> decode(Pair<Long, Pair<Integer, byte[]>> data) {
-
-        long previous = data.getLeft();
-        int dataLen = data.getRight().getLeft();
-        BitSet buffer = BitSet.valueOf(data.getRight().getRight());
+    public static List<Double> decode(long previous, int dataLen, byte[] data) {
+        BitSet buffer = BitSet.valueOf(data);
 
         List<Double> values = new ArrayList<>();
         values.add(Double.longBitsToDouble(previous));
 
         int offset = 0;
         Block blockMeta = null;
+        double p = values.get(0);
         while (offset < dataLen) {
             if (!buffer.get(offset++)) {
-                values.add(0d);
+                values.add(p);
             } else {
                 boolean ctrlBit = buffer.get(offset++);
                 if (ctrlBit) {
@@ -143,7 +146,9 @@ public class FloatCompress {
                     value = (value << 1) | (buffer.get(offset++) ? 0x1 : 0x0);
                 }
                 previous ^= (value << blockMeta.getTailingZero());
-                values.add(Double.longBitsToDouble(previous));
+                p = Double.longBitsToDouble(previous);
+                values.add(p);
+
             }
         }
 
@@ -152,9 +157,10 @@ public class FloatCompress {
     }
 
     public static void main(String[] args) {
-        double[] values = new double[]{15.5, 14.0625, 3.25, 8.625, 13.1, 0, 25.5};
+        double[] values = new double[]{0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1,0.2,0.2,0.2};
         Pair<Long, Pair<Integer, byte[]>> data = encode(values);
         System.out.println(data.getRight().getLeft()); // 编码后的数据长度，单位 bits
-        System.out.println(decode(data)); // 解码后的数据
+        List<Double> a = decode(data.getLeft(), data.getRight().getLeft(), data.getRight().getRight()); // 解码后的数据
+        System.out.println(1);
     }
 }

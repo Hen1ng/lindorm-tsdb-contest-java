@@ -1,11 +1,24 @@
 package com.alibaba.lindorm.contest.index;
 
 
+import java.util.List;
+import java.util.Objects;
+
 public class Index {
 
     private long offset;
     private long maxTimestamp;
     private long minTimestamp;
+
+    public void setTimestampList(List<Long> timestampList) {
+        this.timestampList = timestampList;
+    }
+
+    public List<Long> getTimestampList() {
+        return timestampList;
+    }
+
+    private List<Long> timestampList;
 
     public int getValueSize() {
         return valueSize;
@@ -52,5 +65,18 @@ public class Index {
                 valueSize
                 ;
 
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Index index = (Index) o;
+        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp && valueSize == index.valueSize && length == index.length;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(offset, maxTimestamp, minTimestamp, valueSize, length);
     }
 }

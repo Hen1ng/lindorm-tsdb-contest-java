@@ -5,9 +5,7 @@ import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -24,6 +22,10 @@ public class MapIndex {
         } else {
             indices.add(index);
         }
+    }
+
+    public static List<Index> getByVin(Vin vin) {
+        return INDEX_MAP.get(vin);
     }
 
     public static List<Index> get(Vin vin, long timeLowerBound, long timeUpperBound) {
@@ -44,6 +46,29 @@ public class MapIndex {
             indexList.add(index);
         }
         return indexList;
+    }
+
+    public static Set<Index> getV2(Vin vin, long timeLowerBound, long timeUpperBound) {
+        CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
+        if (indices == null) {
+            return null;
+        }
+        Set<Index> resultSet = new HashSet<>();
+        for (Index index : indices) {
+            if (index.getMaxTimestamp() < timeLowerBound) {
+                continue;
+            }
+            if (index.getMinTimestamp() >= timeUpperBound) {
+                continue;
+            }
+            final List<Long> timestampList = index.getTimestampList();
+            for (Long aLong : timestampList) {
+                if (aLong >= timeLowerBound && aLong < timeUpperBound) {
+                    resultSet.add(index);
+                }
+            }
+        }
+        return resultSet;
     }
 
     public static Pair<Index, Long> getLast(Vin vin) {
