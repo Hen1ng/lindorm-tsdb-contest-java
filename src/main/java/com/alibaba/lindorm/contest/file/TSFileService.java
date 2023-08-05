@@ -315,8 +315,11 @@ public class TSFileService {
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
             final long andIncrement = atomicLong.getAndIncrement();
-            if (andIncrement % 1000000 == 0) {
+            if (andIncrement % 10000 == 0) {
                 System.out.println("write times:" + andIncrement);
+                for (Value value : valueList) {
+                    System.out.println("vin:" + vin + "value " + value);
+                }
             }
             int m = j % Constants.TS_FILE_NUMS;
             TSFile tsFile = getTsFileByIndex(m);

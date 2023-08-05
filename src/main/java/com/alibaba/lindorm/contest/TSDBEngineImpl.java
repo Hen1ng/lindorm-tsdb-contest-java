@@ -150,6 +150,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         try {
             final Collection<Row> rows = wReq.getRows();
             for (Row row : rows) {
+                System.out.println("upsert row " + row);
                 memoryTable.put(row);
             }
         } catch (Exception e) {
