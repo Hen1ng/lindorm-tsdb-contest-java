@@ -149,9 +149,9 @@ public class MemoryTable {
             if (i == null) {
                 return null;
             }
-            if (!RestartUtil.IS_FIRST_START) {
-                return getTimeRangeRowForQueryTest(vin, timeLowerBound, timeUpperBound, requestedColumns);
-            }
+//            if (!RestartUtil.IS_FIRST_START) {
+//                return getTimeRangeRowForQueryTest(vin, timeLowerBound, timeUpperBound, requestedColumns);
+//            }
             final ArrayList<Row> timeRangeRowFromMemoryTable = getTimeRangeRowFromMemoryTable(vin, timeLowerBound, timeUpperBound, requestedColumns, i);
             final ArrayList<Row> timeRangeRowFromTsFile = getTimeRangeRowFromTsFile(vin, timeLowerBound, timeUpperBound, requestedColumns);
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
@@ -273,28 +273,28 @@ public class MemoryTable {
                 final Value value = new Value(timestamp, row.getColumns());
                 valueSortedList.add(value);
             }
-            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
-            start = System.currentTimeMillis();
-            ExecutorService executorService = Executors.newFixedThreadPool(200);
-            final CountDownLatch countDownLatch = new CountDownLatch(MapIndex.INDEX_MAP.size());
-            for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
-                executorService.submit(() -> {
-                    final List<Index> indexList = MapIndex.getByVin(vin);
-                    for (Index index : indexList) {
-                        final Integer integer = VinDictMap.get(vin);
-                        final ByteBuffer timestampList = tsFileService.getTimestampList(index, integer);
-                        final int valueSize = index.getValueSize();
-                        List<Long> timestamps = new ArrayList<>(valueSize);
-                        for (int i = 0; i < valueSize; i++) {
-                            timestamps.add(timestampList.getLong());
-                        }
-                        index.setTimestampList(timestamps);
-                    }
-                    countDownLatch.countDown();
-                });
-            }
-            countDownLatch.await();
-            System.out.println("load timestamp to memory finish cost:" + (System.currentTimeMillis() - start) + " ms");
+//            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
+//            start = System.currentTimeMillis();
+//            ExecutorService executorService = Executors.newFixedThreadPool(200);
+//            final CountDownLatch countDownLatch = new CountDownLatch(MapIndex.INDEX_MAP.size());
+//            for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
+//                executorService.submit(() -> {
+//                    final List<Index> indexList = MapIndex.getByVin(vin);
+//                    for (Index index : indexList) {
+//                        final Integer integer = VinDictMap.get(vin);
+//                        final ByteBuffer timestampList = tsFileService.getTimestampList(index, integer);
+//                        final int valueSize = index.getValueSize();
+//                        List<Long> timestamps = new ArrayList<>(valueSize);
+//                        for (int i = 0; i < valueSize; i++) {
+//                            timestamps.add(timestampList.getLong());
+//                        }
+//                        index.setTimestampList(timestamps);
+//                    }
+//                    countDownLatch.countDown();
+//                });
+//            }
+//            countDownLatch.await();
+//            System.out.println("load timestamp to memory finish cost:" + (System.currentTimeMillis() - start) + " ms");
         } catch (Exception e) {
             System.out.println("loadLastTsToMemory error, e" + e);
         }

@@ -125,6 +125,13 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
         System.out.println("total string length:" + StateUtil.STRING_TOTAL_LENGTH.get());
         System.out.println("compress string length:" + StateUtil.STRING_COMPRESS_LENGTH.get());
+        if (StateUtil.STRING_TOTAL_LENGTH.get() != 0) {
+            System.out.println("compress string rate:" + StateUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StateUtil.STRING_TOTAL_LENGTH.get());
+        }
+        System.out.println("compress double length: " + StateUtil.DOUBLE_COMPRESS_LENGTH.get());
+        System.out.println("compress double rate: " + StateUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * Constants.FLOAT_NUMS * 8);
+        System.out.println("compress long length: " + StateUtil.LONG_COMPRESS_LENGTH.get());
+        System.out.println("compress long length: " + StateUtil.LONG_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * 8);
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);
@@ -150,7 +157,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         try {
             final Collection<Row> rows = wReq.getRows();
             for (Row row : rows) {
-                System.out.println("upsert row " + row);
                 memoryTable.put(row);
             }
         } catch (Exception e) {

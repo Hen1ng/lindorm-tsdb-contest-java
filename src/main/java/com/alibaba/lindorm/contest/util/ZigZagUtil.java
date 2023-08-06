@@ -2,21 +2,23 @@ package com.alibaba.lindorm.contest.util;
 
 public class ZigZagUtil {
 
-    public static int writeVarint32(int n, byte[] temp) {
-        int idx = 0;
+    public static int writeVarint32(int n, byte[] temp, int startPosition) {
+        int length = 0;
         while (true) {
             if ((n & ~0x7F) == 0) {
-                temp[idx++] = (byte) n;
+                temp[startPosition++] = (byte) n;
+                length++;
                 // writeByteDirect((byte)n);
                 break;
                 // return;
             } else {
-                temp[idx++] = (byte) ((n & 0x7F) | 0x80);
+                temp[startPosition++] = (byte) ((n & 0x7F) | 0x80);
+                length++;
                 // writeByteDirect((byte)((n & 0x7F) | 0x80));
                 n >>>= 7;
             }
         }
-        return idx;
+        return length;
     }
 
     public static int intToZigZag(int n) {
@@ -33,7 +35,7 @@ public class ZigZagUtil {
     public static void main(String[] args) {
         byte[] temp = new byte[1024];
         final int i = intToZigZag(247167);
-        final int i1 = writeVarint32(i, temp);
+        final int i1 = writeVarint32(Integer.MIN_VALUE, temp, 0);
         System.out.println(i1);
         final int i2 = readFromBuffer(temp, 3);
         final int i3 = zigzagToInt(i2);
