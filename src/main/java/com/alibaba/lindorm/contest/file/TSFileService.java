@@ -473,7 +473,7 @@ public class TSFileService {
             final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
             StateUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(8 + 4 + 4 + doubleCompress.length);
             StateUtil.LONG_COMPRESS_LENGTH.getAndAdd(8 + 4 + compress1.length);
-            StateUtil.INT_COMPRESS_LENGTH.getAndAdd(compress2.length * 4L + 4);
+            StateUtil.INT_COMPRESS_LENGTH.getAndAdd(compress2.length + 4);
 //            longBuffer.flip();
 //            byteBuffer.put(longBuffer.slice());
             byteBuffer.putLong(previousLong);

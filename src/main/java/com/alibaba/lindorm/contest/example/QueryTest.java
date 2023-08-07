@@ -80,7 +80,7 @@ public class QueryTest {
                     for (int j = 0; j < 1000; j++) {
                         List<Row> rowList = new ArrayList<>();
                         for (int i1 = 0; i1 < 60; i1++) {
-                            final Vin vin = vins[0];
+                            final Vin vin = vins[random.nextInt(30000)];
                             rowList.add(new Row( vin, atomicLong.getAndIncrement() * 1000, columns));
                         }
                         try {
