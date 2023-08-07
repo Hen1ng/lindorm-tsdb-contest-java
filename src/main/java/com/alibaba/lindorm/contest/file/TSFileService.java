@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.compress.FloatCompress;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
+import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
@@ -80,16 +81,18 @@ public class TSFileService {
             ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
             tsFile.getFromOffsetByFileChannel(compressLong, offset + 12);
             final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
+            int[] ints = null;
+            final ByteBuffer allocate = ByteBuffer.allocate(4);
+            tsFile.getFromOffsetByFileChannel(allocate, offset + 12 + compressLength);
+            allocate.flip();
+            final int intCompressLength = allocate.getInt();
             byte[] stringBytes = null;
-            Long doubleCompressPrevious = null;
-            Integer doubleCompressBitNums = null;
-            Integer doubleArrayLength = null;
             final ByteBuffer doubleMetaData = ByteBuffer.allocateDirect(8 + 4 + 4);
-            tsFile.getFromOffsetByFileChannel(doubleMetaData, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4);
+            tsFile.getFromOffsetByFileChannel(doubleMetaData, offset + 12 + compressLength + intCompressLength * 4 + 4);
             doubleMetaData.flip();
-            doubleCompressPrevious = doubleMetaData.getLong();
-            doubleCompressBitNums = doubleMetaData.getInt();
-            doubleArrayLength = doubleMetaData.getInt();
+            long doubleCompressPrevious = doubleMetaData.getLong();
+            int doubleCompressBitNums = doubleMetaData.getInt();
+            int doubleArrayLength = doubleMetaData.getInt();
             ByteBuffer doubleArray = null;
             List<Double> decode = null;
             int i = 0;//多少行
@@ -101,12 +104,20 @@ public class TSFileService {
                         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
+                                if (ints == null) {
+                                    final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength * 4);
+                                    tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
+                                    allocate1.flip();
+                                    int[] intCompress = new int[intCompressLength];
+                                    for (int i1 = 0; i1 < intCompressLength; i1++) {
+                                        intCompress[i1] = allocate1.getInt();
+                                    }
+                                    ints = IntCompress.decompress(intCompress);
+                                }
                                 final ByteBuffer intBuffer = INT_BUFFER.get();
                                 intBuffer.clear();
-                                int off = (columnIndex * valueSize + i) * 4;
-                                tsFile.getFromOffsetByFileChannel(intBuffer, offset + 12 + compressLength + off);
-                                intBuffer.flip();
-                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(intBuffer.getInt()));
+                                int off = columnIndex * valueSize + i;
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
@@ -119,7 +130,10 @@ public class TSFileService {
 //                                doubleBuffer.flip();
                                 if (doubleArray == null) {
                                     doubleArray = ByteBuffer.allocate(doubleArrayLength);
-                                    tsFile.getFromOffsetByFileChannel(doubleArray, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4 + 8 + 4 + 4);
+                                    tsFile.getFromOffsetByFileChannel(doubleArray, offset
+                                            + 12 + compressLength
+                                            + intCompressLength * 4 + 4
+                                            + 8 + 4 + 4);
                                     decode = FloatCompress.decode(doubleCompressPrevious, doubleCompressBitNums, doubleArray.array());
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
@@ -135,13 +149,24 @@ public class TSFileService {
                                 } else {
                                     stringLengthBuffer = ByteBuffer.allocateDirect(valueSize * Constants.STRING_NUMS * 4);
                                 }
-                                tsFile.getFromOffsetByFileChannel(stringLengthBuffer, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4 + doubleArrayLength + 4 + 4 + 8);
+                                tsFile.getFromOffsetByFileChannel(stringLengthBuffer, offset
+                                        + 12 + compressLength
+                                        + intCompressLength * 4 + 4
+                                        + doubleArrayLength + 4 + 4 + 8);
                                 stringLengthBuffer.flip();
                             }
                             if (stringBytes == null) {
-                                int stringLength = length - (12 + compressLength + valueSize * Constants.INT_NUMS * 4 + doubleArrayLength + 4 + 4 + 8 + valueSize * Constants.STRING_NUMS * 4);
+                                int stringLength = length - (
+                                        12 + compressLength
+                                                + intCompressLength * 4 + 4
+                                                + doubleArrayLength + 4 + 4 + 8
+                                                + valueSize * Constants.STRING_NUMS * 4);
                                 final ByteBuffer stringBuffer = ByteBuffer.allocate(stringLength);
-                                tsFile.getFromOffsetByFileChannel(stringBuffer, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4 + doubleArrayLength + 4 + 4 + 8 + valueSize * Constants.STRING_NUMS * 4);
+                                tsFile.getFromOffsetByFileChannel(stringBuffer, offset
+                                        + 12 + compressLength
+                                        + intCompressLength * 4 + 4
+                                        + doubleArrayLength + 4 + 4 + 8
+                                        + valueSize * Constants.STRING_NUMS * 4);
                                 stringBuffer.flip();
                                 GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
                                 stringBytes = gzipCompress.deCompress(stringBuffer.array());
@@ -202,17 +227,20 @@ public class TSFileService {
         ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
         tsFile.getFromOffsetByFileChannel(compressLong, offset + 12);
         final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
+        //解压int
+        int[] ints = null;
+        final ByteBuffer allocate = ByteBuffer.allocate(4);
+        tsFile.getFromOffsetByFileChannel(allocate, offset + 12 + compressLength);
+        allocate.flip();
+        final int intCompressLength = allocate.getInt();
         //解压double
-        Long doubleCompressPrevious = null;
-        Integer doubleCompressBitNums = null;
-        Integer doubleArrayLength = null;
         byte[] stringBytes = null;
         final ByteBuffer doubleMetaData = ByteBuffer.allocateDirect(8 + 4 + 4);
-        tsFile.getFromOffsetByFileChannel(doubleMetaData, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4);
+        tsFile.getFromOffsetByFileChannel(doubleMetaData, offset + 12 + compressLength + intCompressLength * 4 + 4);
         doubleMetaData.flip();
-        doubleCompressPrevious = doubleMetaData.getLong();
-        doubleCompressBitNums = doubleMetaData.getInt();
-        doubleArrayLength = doubleMetaData.getInt();
+        long doubleCompressPrevious = doubleMetaData.getLong();
+        int doubleCompressBitNums = doubleMetaData.getInt();
+        int doubleArrayLength = doubleMetaData.getInt();
         ByteBuffer doubleArray = null;
         List<Double> decode = null;
         int i = 0;//多少行
@@ -224,12 +252,23 @@ public class TSFileService {
                     final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                     if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                         try {
+                            if (ints == null) {
+                                final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength * 4);
+                                tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
+                                allocate1.flip();
+                                int[] intCompress = new int[intCompressLength];
+                                for (int i1 = 0; i1 < intCompressLength; i1++) {
+                                    intCompress[i1] = allocate1.getInt();
+                                }
+                                ints = IntCompress.decompress(intCompress);
+                            }
                             final ByteBuffer intBuffer = INT_BUFFER.get();
                             intBuffer.clear();
-                            int off = (columnIndex * valueSize + i) * 4;
-                            tsFile.getFromOffsetByFileChannel(intBuffer, offset + 12 + compressLength + off);
-                            intBuffer.flip();
-                            columns.put(requestedColumn, new ColumnValue.IntegerColumn(intBuffer.getInt()));
+                            int off = columnIndex * valueSize + i;
+
+//                            tsFile.getFromOffsetByFileChannel(intBuffer, offset + 12 + compressLength + off);
+//                            intBuffer.flip();
+                            columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
                         } catch (Exception e) {
                             System.out.println("getByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
@@ -237,7 +276,10 @@ public class TSFileService {
                         try {
                             if (doubleArray == null) {
                                 doubleArray = ByteBuffer.allocate(doubleArrayLength);
-                                tsFile.getFromOffsetByFileChannel(doubleArray, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4 + 8 + 4 + 4);
+                                tsFile.getFromOffsetByFileChannel(doubleArray, offset
+                                        + 12 + compressLength
+                                        + intCompressLength * 4 + 4
+                                        + 8 + 4 + 4);
                                 decode = FloatCompress.decode(doubleCompressPrevious, doubleCompressBitNums, doubleArray.array());
                             }
                             int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
@@ -264,9 +306,17 @@ public class TSFileService {
                                 stringLengthBuffer.flip();
                             }
                             if (stringBytes == null) {
-                                int stringLength = length - (12 + compressLength + valueSize * Constants.INT_NUMS * 4 + doubleArrayLength + 4 + 4 + 8 + valueSize * Constants.STRING_NUMS * 4);
+                                int stringLength = length -
+                                        (12 + compressLength
+                                                + intCompressLength * 4 + 4
+                                                + doubleArrayLength + 4 + 4 + 8
+                                                + valueSize * Constants.STRING_NUMS * 4);
                                 final ByteBuffer stringBuffer = ByteBuffer.allocate(stringLength);
-                                tsFile.getFromOffsetByFileChannel(stringBuffer, offset + 12 + compressLength + valueSize * Constants.INT_NUMS * 4 + doubleArrayLength + 4 + 4 + 8 + valueSize * Constants.STRING_NUMS * 4);
+                                tsFile.getFromOffsetByFileChannel(stringBuffer, offset
+                                        + 12 + compressLength
+                                        + intCompressLength * 4 + 4
+                                        + doubleArrayLength + 4 + 4 + 8
+                                        + valueSize * Constants.STRING_NUMS * 4);
                                 stringBuffer.flip();
                                 GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
                                 stringBytes = gzipCompress.deCompress(stringBuffer.array());
@@ -314,12 +364,12 @@ public class TSFileService {
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
             final long andIncrement = atomicLong.getAndIncrement();
-            if (andIncrement % 10000 == 0) {
-                System.out.println("write times:" + andIncrement);
+//            if (andIncrement % 10000 == 0) {
+//                System.out.println("write times:" + andIncrement);
 //                for (Value value : valueList) {
 //                    System.out.println("vin:" + vin + "value " + value);
 //                }
-            }
+//            }
             int m = j % Constants.TS_FILE_NUMS;
             TSFile tsFile = getTsFileByIndex(m);
             String[] indexArray = SchemaUtil.getIndexArray();
@@ -330,8 +380,10 @@ public class TSFileService {
             List<ByteBuffer> stringList;
             double[] doubles = null;
             long[] longs = new long[lineNum];
+            int[] ints = new int[lineNum * Constants.INT_NUMS * 4];
             int longPosition = 0;
             int doublePosition = 0;
+            int intPositioin = 0;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
                 intBuffer = TOTAL_INT_BUFFER.get();
                 doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
@@ -370,7 +422,8 @@ public class TSFileService {
                     Map<String, ColumnValue> columns = value.getColumns();
                     if (i < 45) {
                         int integerValue = columns.get(key).getIntegerValue();
-                        intBuffer.putInt(integerValue);
+//                        intBuffer.putInt(integerValue);
+                        ints[intPositioin++] = integerValue;
                     } else if (i < 54) {
                         if (doubles == null) {
                             doubles = new double[lineNum * Constants.FLOAT_NUMS];
@@ -407,22 +460,31 @@ public class TSFileService {
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
+
+            //压缩int
+            final int[] compress2 = IntCompress.compress(ints);
+
 //            System.out.println("write compress, before length:" + bytes.length + "after length: " + compress.length);
             int total = 8 + 4 + compress1.length //timestamp
-                    + lineNum * Constants.INT_NUMS * 4 //int
+                    + compress2.length * 4 + 4 //int
                     + (8 + 4 + 4 + doubleCompress.length) //double
                     + lineNum * Constants.STRING_NUMS * 4 //string长度记录
                     + compress.length; //string存储string
             final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
             StateUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(8 + 4 + 4 + doubleCompress.length);
             StateUtil.LONG_COMPRESS_LENGTH.getAndAdd(8 + 4 + compress1.length);
+            StateUtil.INT_COMPRESS_LENGTH.getAndAdd(compress2.length * 4L + 4);
 //            longBuffer.flip();
 //            byteBuffer.put(longBuffer.slice());
             byteBuffer.putLong(previousLong);
             byteBuffer.putInt(compress1.length);
             byteBuffer.put(compress1);
-            intBuffer.flip();
-            byteBuffer.put(intBuffer.slice());
+//            intBuffer.flip();
+            byteBuffer.putInt( compress2.length);
+            for (int i : compress2) {
+                byteBuffer.putInt(i);
+            }
+//            byteBuffer.put(intBuffer.slice());
 //            doubleBuffer.flip();
 ////            byteBuffer.put(doubleBuffer.slice());
             byteBuffer.putLong(doubleCompressPrevious);

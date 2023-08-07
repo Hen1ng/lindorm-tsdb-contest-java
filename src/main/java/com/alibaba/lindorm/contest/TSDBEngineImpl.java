@@ -131,7 +131,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress double length: " + StateUtil.DOUBLE_COMPRESS_LENGTH.get());
         System.out.println("compress double rate: " + StateUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * Constants.FLOAT_NUMS * 8);
         System.out.println("compress long length: " + StateUtil.LONG_COMPRESS_LENGTH.get());
-        System.out.println("compress long length: " + StateUtil.LONG_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * 8);
+        System.out.println("compress long rate: " + StateUtil.LONG_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * 8);
+        System.out.println("compress int length: " + StateUtil.INT_COMPRESS_LENGTH.get());
+        System.out.println("compress int rate: " + StateUtil.INT_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * Constants.FLOAT_NUMS * 4);
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);

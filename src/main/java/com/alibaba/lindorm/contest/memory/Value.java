@@ -29,5 +29,11 @@ public class Value {
         return timestamp == value.timestamp ;
     }
 
-
+    @Override
+    public String toString() {
+        return "Value{" +
+                "timestamp=" + timestamp +
+                ", columns=" + columns +
+                '}';
+    }
 }
