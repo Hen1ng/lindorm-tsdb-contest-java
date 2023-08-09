@@ -1,7 +1,12 @@
 package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
+import com.alibaba.lindorm.contest.util.ArrayUtils;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Random;
 
 public class IntCompress {
 
@@ -30,19 +35,36 @@ public class IntCompress {
     static int[] testNum3 = new int[]{24,237,114,246,71, 15, 70,27,243,97,220,77,85,20,38,36,30,100,83,84,160,227,239,81,197,186,108,18,113
     };
 
-    public static void main(String[] args) {
-        final int[] compress = compress(testNum3);
-
-        final int[] decompress = decompress(compress);
-        System.out.println(1);
+    static int[] testNum4 = new int[1575];
+    static  {
+        Random random = new Random();
+        for (int i = 0; i < 1575; i++) {
+            testNum4[i] = Math.abs(random.nextInt(30000));
+        }
     }
 
-    public static int[] compress(int[] ints) {
-        final int[] gapArray = toGapArray(ints);
-        for (int i = 0; i < gapArray.length; i++) {
-            gapArray[i] = ZigZagUtil.intToZigZag(gapArray[i]);
+
+    public static void main(String[] args) {
+        long start = System.currentTimeMillis();
+        int[] data = testNum4.clone();
+        final byte[] compress = compress(data);
+        System.out.println("cost:" + (System.currentTimeMillis() - start) + " ms");
+        final int[] decompress = decompress(compress);
+        boolean b = Arrays.equals(testNum4, decompress);
+        System.out.println(b);
+    }
+
+    public static byte[] compress(int[] ints) {
+//        int[] gapArray = toGapArray(ints);
+//        for (int i = 0; i < gapArray.length; i++) {
+//            gapArray[i] = ZigZagUtil.intToZigZag(gapArray[i]);
+//        }
+        int[] ints1 = Simple9Codes.innerEncode(ints);
+        ByteBuffer allocate = ByteBuffer.allocate(ints1.length * 4);
+        for (int i : ints1) {
+            allocate.putInt(i);
         }
-        return Simple9Codes.innerEncode(gapArray);
+        return allocate.array();
     }
 
     protected static int[] toGapArray(int[] numbers) {
@@ -56,14 +78,19 @@ public class IntCompress {
 
     }
 
-    public static int[] decompress(int[] ints) {
+    public static int[] decompress(byte[] bytes) {
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        int[] ints = new int[bytes.length / 4];
+        for (int j = 0; j < ints.length; j++) {
+            ints[j] = wrap.getInt();
+        }
         final int[] decode = Simple9Codes.decode(ints);
-        for (int i = 0; i < decode.length; i++) {
-            decode[i] = ZigZagUtil.zigzagToInt(decode[i]);
-        }
-        for (int i = 1; i < decode.length; i++) {
-            decode[i] = decode[i - 1] + decode[i];
-        }
+//        for (int i = 0; i < decode.length; i++) {
+//            decode[i] = ZigZagUtil.zigzagToInt(decode[i]);
+//        }
+//        for (int i = 1; i < decode.length; i++) {
+//            decode[i] = decode[i - 1] + decode[i];
+//        }
         return decode;
     }
 }

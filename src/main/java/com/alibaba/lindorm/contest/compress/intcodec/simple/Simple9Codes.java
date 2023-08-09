@@ -23,8 +23,9 @@ public class Simple9Codes {
 
 				int res = 0;
 				int compressedNum = codeNum[selector];
-				if( numbers.length <= currentPos + compressedNum -1 )
+				if( numbers.length <= currentPos + compressedNum -1 ) {
 					continue;
+				}
 				int b = bitLength[selector];
 				int max = 1 << b;
 				int i = 0;
