@@ -1,8 +1,7 @@
 package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
-import com.alibaba.lindorm.contest.util.ArrayUtils;
-import com.alibaba.lindorm.contest.util.ZigZagUtil;
+
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -64,7 +63,9 @@ public class IntCompress {
         for (int i : ints1) {
             allocate.putInt(i);
         }
-        return allocate.array();
+        final byte[] array = allocate.array();
+        final GzipCompress gzipCompress = new GzipCompress();
+        return gzipCompress.compress(array);
     }
 
     protected static int[] toGapArray(int[] numbers) {
@@ -79,8 +80,10 @@ public class IntCompress {
     }
 
     public static int[] decompress(byte[] bytes) {
-        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-        int[] ints = new int[bytes.length / 4];
+        final GzipCompress gzipCompress = new GzipCompress();
+        final byte[] bytes1 = gzipCompress.deCompress(bytes);
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
+        int[] ints = new int[bytes1.length / 4];
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
         }
