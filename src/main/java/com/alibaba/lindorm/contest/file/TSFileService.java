@@ -429,7 +429,7 @@ public class TSFileService {
             double[] doubles = null;
             long[] longs = new long[lineNum];
             int[] ints = new int[lineNum * Constants.INT_NUMS];
-            int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS * 4];
+            int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
             int longPosition = 0;
             int doublePosition = 0;
