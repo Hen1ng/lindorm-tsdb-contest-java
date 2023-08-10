@@ -68,37 +68,37 @@ public class QueryTest {
                 }
             }
 
-//            Schema schema = new Schema(columnTypeMap);
-//            tsdbEngineSample.createTable("haha", schema);
-//            tsdbEngineSample.connect();
-//            String v1 =  BytesUtil.getRandomString(17);
-//            System.out.println("V1 " + v1);
-//            AtomicLong atomicLong = new AtomicLong(0);
-//            long start = System.currentTimeMillis();
-//            for (int i = 0; i < threadNum; i++) {
-//                new Thread(() -> {
-//                    for (int j = 0; j < 1; j++) {
-//                        List<Row> rowList = new ArrayList<>();
-//                        for (int i1 = 0; i1 < 1; i1++) {
-//                            final Vin vin = vins[0];
-//                            rowList.add(new Row( vin, atomicLong.getAndIncrement() * 1000, columns));
-//                        }
-//                        try {
-//                            tsdbEngineSample.upsert(new WriteRequest("test", rowList));
-////
-//                        } catch (Exception e) {
+            Schema schema = new Schema(columnTypeMap);
+            tsdbEngineSample.createTable("haha", schema);
+            tsdbEngineSample.connect();
+            String v1 =  BytesUtil.getRandomString(17);
+            System.out.println("V1 " + v1);
+            AtomicLong atomicLong = new AtomicLong(0);
+            long start = System.currentTimeMillis();
+            for (int i = 0; i < threadNum; i++) {
+                new Thread(() -> {
+                    for (int j = 0; j < 1; j++) {
+                        List<Row> rowList = new ArrayList<>();
+                        for (int i1 = 0; i1 < 1; i1++) {
+                            final Vin vin = vins[0];
+                            rowList.add(new Row( vin, atomicLong.getAndIncrement() * 1000, columns));
+                        }
+                        try {
+                            tsdbEngineSample.upsert(new WriteRequest("test", rowList));
 //
-//                        }
-//                    }
-//                    countDownLatch.countDown();
-//
-//                }).start();
-//            }
-//
-//            countDownLatch.await();
-//            System.out.println("cost:" +(System.currentTimeMillis() - start) + " ms");
-//
-//            tsdbEngineSample.shutdown();
+                        } catch (Exception e) {
+
+                        }
+                    }
+                    countDownLatch.countDown();
+
+                }).start();
+            }
+
+            countDownLatch.await();
+            System.out.println("cost:" +(System.currentTimeMillis() - start) + " ms");
+
+            tsdbEngineSample.shutdown();
             tsdbEngineSample.connect();
             List<Vin> list = new ArrayList<>();
             list.add(new Vin("XrPyN8aeiZnQWVmD1".getBytes(StandardCharsets.UTF_8)));

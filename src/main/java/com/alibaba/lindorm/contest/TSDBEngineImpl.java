@@ -191,10 +191,10 @@ public class TSDBEngineImpl extends TSDBEngine {
 //                }
 //            }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 100000 == 0) {
-                MemoryUtil.printJVMHeapMemory();
-                System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());
-            }
+//            if (executeLatestQueryTimes.get() % 100000 == 0) {
+//                MemoryUtil.printJVMHeapMemory();
+//                System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());
+//            }
             return rows;
         } catch (Exception e) {
             System.out.println("executeLatestQuery error, e" + e);
@@ -208,10 +208,10 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
         executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
-        if (executeTimeRangeQueryTimes.get() % 10000 == 0) {
-            MemoryUtil.printJVMHeapMemory();
-            System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedFields().size());
-        }
+//        if (executeTimeRangeQueryTimes.get() % 10000 == 0) {
+//            MemoryUtil.printJVMHeapMemory();
+//            System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedFields().size());
+//        }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedFields());
         } catch (Exception e) {
