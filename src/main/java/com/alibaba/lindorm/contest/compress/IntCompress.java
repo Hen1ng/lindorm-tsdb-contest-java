@@ -1,8 +1,7 @@
 package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
-import com.alibaba.lindorm.contest.util.ArrayUtils;
-import com.alibaba.lindorm.contest.util.ZigZagUtil;
+
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -35,6 +34,9 @@ public class IntCompress {
     static int[] testNum3 = new int[]{24,237,114,246,71, 15, 70,27,243,97,220,77,85,20,38,36,30,100,83,84,160,227,239,81,197,186,108,18,113
     };
 
+    static int[] testNum5 = new int[]{1,-3,5,-2,4
+    };
+
     static int[] testNum4 = new int[1575];
     static  {
         Random random = new Random();
@@ -64,7 +66,9 @@ public class IntCompress {
         for (int i : ints1) {
             allocate.putInt(i);
         }
-        return allocate.array();
+        final byte[] array = allocate.array();
+        final GzipCompress gzipCompress = new GzipCompress();
+        return gzipCompress.compress(array);
     }
 
     protected static int[] toGapArray(int[] numbers) {
@@ -79,8 +83,10 @@ public class IntCompress {
     }
 
     public static int[] decompress(byte[] bytes) {
-        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-        int[] ints = new int[bytes.length / 4];
+        final GzipCompress gzipCompress = new GzipCompress();
+        final byte[] bytes1 = gzipCompress.deCompress(bytes);
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
+        int[] ints = new int[bytes1.length / 4];
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
         }

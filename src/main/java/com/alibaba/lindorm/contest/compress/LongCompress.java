@@ -11,7 +11,7 @@ public class LongCompress {
         for (int i = 0; i < longs.length - 1; i++) {
             deltaArray[i] = (longs[i] - longs[i + 1]) / 1000;
         }
-        final int compress = Simple8.compress(deltaArray, output);
+        final int compress = Simple8RLE.compress(deltaArray, output);
         byte[] result = new byte[compress * 8];
         int position = 0;
         for (int i = 0; i < compress; i++) {
@@ -34,7 +34,7 @@ public class LongCompress {
         final long[] longs = new long[lineNum - 1];
         final long[] result = new long[lineNum];
         result[lineNum - 1] = previous;
-        Simple8.decompress(output, 0, bytes.length / 8, longs, 0);
+        Simple8RLE.decompress(output, 0, bytes.length / 8, longs, 0);
         for (int j = lineNum - 2; j >= 0; j--) {
             result[j] = result[j + 1] + longs[j] * 1000;
         }
