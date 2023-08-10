@@ -2,7 +2,7 @@ package com.alibaba.lindorm.contest.util;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class StateUtil {
+public class StaticsUtil {
     public static AtomicLong STRING_TOTAL_LENGTH = new AtomicLong(0);
     public static AtomicLong STRING_COMPRESS_LENGTH = new AtomicLong(0);
     public static AtomicLong LONG_COMPRESS_LENGTH = new AtomicLong(0);

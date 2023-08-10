@@ -1,6 +1,11 @@
 package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
+import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.Composition;
+import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.FastPFOR;
+import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.IntWrapper;
+import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.VariableByte;
+import com.alibaba.lindorm.contest.file.TSFileService;
 
 
 import java.nio.ByteBuffer;
@@ -45,12 +50,51 @@ public class IntCompress {
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
-        int[] data = testNum4.clone();
+        int[] data = testNum3.clone();
         final byte[] compress = compress(data);
         System.out.println("cost:" + (System.currentTimeMillis() - start) + " ms");
         final int[] decompress = decompress(compress);
-        boolean b = Arrays.equals(testNum4, decompress);
+        boolean b = Arrays.equals(testNum3, decompress);
+
+
+        final byte[] bytes = compress2(testNum3);
+        final int[] output = new int[testNum3.length];
+        decompress2(bytes, output);
+
+        boolean a = Arrays.equals(testNum3, output);
         System.out.println(b);
+    }
+
+    public static byte[] compress2(int[] ints) {
+        try {
+            final Composition composition = new Composition(new FastPFOR(), new VariableByte());
+            IntWrapper aOffset = new IntWrapper(0);
+            IntWrapper bOffset = new IntWrapper(0);
+            int[] output = new int[ints.length];
+            composition.compress(ints, aOffset, ints.length, output, bOffset);
+            final int length = bOffset.get();
+            final ByteBuffer allocate = ByteBuffer.allocate(length * 4);
+            for (int i = 0; i < length; i++) {
+                allocate.putInt(output[i]);
+            }
+            return allocate.array();
+        } catch (Exception e) {
+            System.out.println("compress2 error, e" + e);
+        }
+        return null;
+    }
+
+    public static int[] decompress2(byte[] bytes, int[] output) {
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        int[] ints = new int[bytes.length / 4];
+        for (int j = 0; j < ints.length; j++) {
+            ints[j] = wrap.getInt();
+        }
+        final Composition composition = new Composition(new FastPFOR(), new VariableByte());
+        IntWrapper aOffset = new IntWrapper(0);
+        IntWrapper bOffset = new IntWrapper(0);
+        composition.uncompress(ints, aOffset, ints.length, output, bOffset);
+        return output;
     }
 
     public static byte[] compress(int[] ints) {
@@ -64,7 +108,7 @@ public class IntCompress {
             allocate.putInt(i);
         }
         final byte[] array = allocate.array();
-        final GzipCompress gzipCompress = new GzipCompress();
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
         return gzipCompress.compress(array);
     }
 
@@ -80,7 +124,7 @@ public class IntCompress {
     }
 
     public static int[] decompress(byte[] bytes) {
-        final GzipCompress gzipCompress = new GzipCompress();
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
         final byte[] bytes1 = gzipCompress.deCompress(bytes);
         final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
         int[] ints = new int[bytes1.length / 4];

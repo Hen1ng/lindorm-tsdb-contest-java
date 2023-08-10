@@ -11,12 +11,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MapIndex {
 
-    public static final Map<Vin, CopyOnWriteArrayList<Index>> INDEX_MAP = new ConcurrentHashMap<>();
+    public static final Map<Vin, List<Index>> INDEX_MAP = new ConcurrentHashMap<>();
 
     public static void put(Vin vin, Index index) {
-        CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
+        List<Index> indices = INDEX_MAP.get(vin);
         if (indices == null) {
-            indices = new CopyOnWriteArrayList<>();
+            indices = new ArrayList<>();
             indices.add(index);
             INDEX_MAP.put(vin, indices);
         } else {
@@ -29,7 +29,7 @@ public class MapIndex {
     }
 
     public static List<Index> get(Vin vin, long timeLowerBound, long timeUpperBound) {
-        CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
+        List<Index> indices = INDEX_MAP.get(vin);
         List<Index> indexList = new ArrayList<>();
         if (indices == null) {
             return indexList;
@@ -49,7 +49,7 @@ public class MapIndex {
     }
 
     public static Set<Index> getV2(Vin vin, long timeLowerBound, long timeUpperBound) {
-        CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
+        List<Index> indices = INDEX_MAP.get(vin);
         if (indices == null) {
             return null;
         }
@@ -72,7 +72,7 @@ public class MapIndex {
     }
 
     public static Pair<Index, Long> getLast(Vin vin) {
-        CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
+        List<Index> indices = INDEX_MAP.get(vin);
         if (indices == null) {
             return null;
         }
@@ -94,7 +94,7 @@ public class MapIndex {
                     final byte[] vin1 = vin.getVin();
                     writer.write(new String(vin1));
                     writer.write("]");
-                    final CopyOnWriteArrayList<Index> indices = INDEX_MAP.get(vin);
+                    final List<Index> indices = INDEX_MAP.get(vin);
                     for (Index index : indices) {
                         writer.write(index.toString());
                         writer.write(" ");

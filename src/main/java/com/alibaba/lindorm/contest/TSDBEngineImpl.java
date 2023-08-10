@@ -29,9 +29,9 @@ public class TSDBEngineImpl extends TSDBEngine {
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
     private final AtomicLong executeTimeRangeQueryTimes;
-    private final Set<String> writeThreadSet = new HashSet<>();
-    private final Set<String> executeLatestQueryThreadSet = new HashSet<>();
-    private final Set<String> executeTimeRangeQueryThreadSet = new HashSet<>();
+//    private final Set<String> writeThreadSet = new HashSet<>();
+//    private final Set<String> executeLatestQueryThreadSet = new HashSet<>();
+//    private final Set<String> executeTimeRangeQueryThreadSet = new HashSet<>();
     private TSFileService fileService = null;
     private final MemoryTable memoryTable;
     private Unsafe unsafe = UnsafeUtil.getUnsafe();
@@ -56,21 +56,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                 dataPath.createNewFile();
             }
             this.fileService = new TSFileService(dataPath.getPath(), indexFile);
-//            if (!RestartUtil.IS_FIRST_START) {
-//                executorService = new ThreadPoolExecutor(300, 1000,
-//                        0L, TimeUnit.MILLISECONDS,
-//                        new LinkedBlockingQueue<Runnable>());
-//                for (int i = 0; i < 300; i++) {
-//                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
-//                }
-//            } else {
-//                executorService = new ThreadPoolExecutor(60, 120,
-//                        0L, TimeUnit.MILLISECONDS,
-//                        new LinkedBlockingQueue<Runnable>());
-//                for (int i = 0; i < 60; i++) {
-//                    executorService.submit(() -> System.out.println("init thread threadName:" + Thread.currentThread().getName()));
-//                }
-//            }
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
             }
@@ -101,7 +86,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         System.gc();
         MemoryUtil.printMemory();
-//        executorService.scheduleAtFixedRate(MemoryUtil::printMemory, 10, 1, TimeUnit.SECONDS);
     }
 
     @Override
@@ -112,28 +96,26 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void shutdown() {
-        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
+//        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
         System.out.println("upsertTimes:" + upsertTimes.get());
-        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());
-        System.out.println("executeLatestQueryTimes: " + executeLatestQueryTimes.get());
-        System.out.println("writeThreadSet size: " + writeThreadSet.size());
-        for (String threadName : writeThreadSet) {
-            System.out.println("threadName: " + threadName);
+//        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());
+//        System.out.println("executeLatestQueryTimes: " + executeLatestQueryTimes.get());
+//        System.out.println("writeThreadSet size: " + writeThreadSet.size());
+//        System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
+//        System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
+//        System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
+        System.out.println("total string length:" + StaticsUtil.STRING_TOTAL_LENGTH.get());
+        System.out.println("compress string length:" + StaticsUtil.STRING_COMPRESS_LENGTH.get());
+        if (StaticsUtil.STRING_TOTAL_LENGTH.get() != 0) {
+            System.out.println("compress string rate:" + StaticsUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StaticsUtil.STRING_TOTAL_LENGTH.get());
         }
-        System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
-        System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
-        System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
-        System.out.println("total string length:" + StateUtil.STRING_TOTAL_LENGTH.get());
-        System.out.println("compress string length:" + StateUtil.STRING_COMPRESS_LENGTH.get());
-        if (StateUtil.STRING_TOTAL_LENGTH.get() != 0) {
-            System.out.println("compress string rate:" + StateUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StateUtil.STRING_TOTAL_LENGTH.get());
-        }
-        System.out.println("compress double length: " + StateUtil.DOUBLE_COMPRESS_LENGTH.get());
-        System.out.println("compress double rate: " + StateUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600L * Constants.FLOAT_NUMS * 8);
-        System.out.println("compress long length: " + StateUtil.LONG_COMPRESS_LENGTH.get());
-        System.out.println("compress long rate: " + StateUtil.LONG_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600 * 8);
-        System.out.println("compress int length: " + StateUtil.INT_COMPRESS_LENGTH.get());
-        System.out.println("compress int rate: " + StateUtil.INT_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600L * Constants.FLOAT_NUMS * 4);
+        System.out.println("compress double length: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get());
+        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / 30000L * 3600L * 45L * 8L);
+        System.out.println("compress long length: " + StaticsUtil.LONG_COMPRESS_LENGTH.get());
+        System.out.println("compress long rate: " + StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d / 30000L * 3600L * 8L);
+        System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
+        System.out.println("compress int rate: " + StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600L * 9L * 4L);
+        System.out.println("indexFile size: " + indexFile.length());
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);
@@ -155,7 +137,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (upsertTimes.incrementAndGet() == 1) {
             System.out.println("start upsert, ts:" + System.currentTimeMillis());
         }
-        writeThreadSet.add(Thread.currentThread().getName());
+//        writeThreadSet.add(Thread.currentThread().getName());
         try {
             final Collection<Row> rows = wReq.getRows();
             for (Row row : rows) {
@@ -171,24 +153,15 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeLatestQueryTimes.incrementAndGet() == 1) {
             System.out.println("executeLatestQuery start, ts:" + System.currentTimeMillis());
         }
-        executeLatestQueryThreadSet.add(Thread.currentThread().getName());
+//        executeLatestQueryThreadSet.add(Thread.currentThread().getName());
         try {
             ArrayList<Row> rows = new ArrayList<>();
-//            List<Future<Row>> rowFutureList = new ArrayList<>(pReadReq.getVins().size());
             for (Vin vin : pReadReq.getVins()) {
                 final Row lastRow = memoryTable.getLastRow(vin, pReadReq.getRequestedColumns());
                 if (lastRow != null) {
                     rows.add(lastRow);
                 }
-//                final Future<Row> rowFuture = executorService.submit(() -> memoryTable.getLastRow(vin, pReadReq.getRequestedColumns()));
-//                rowFutureList.add(rowFuture);
             }
-//            for (Future<Row> rowFuture : rowFutureList) {
-//                final Row row = rowFuture.get();
-//                if (row != null) {
-//                    rows.add(row);
-//                }
-//            }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
             if (executeLatestQueryTimes.get() % 100000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
@@ -206,7 +179,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeTimeRangeQueryTimes.getAndIncrement() == 1) {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
-        executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
+//        executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
         if (executeTimeRangeQueryTimes.get() % 10000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedFields().size());

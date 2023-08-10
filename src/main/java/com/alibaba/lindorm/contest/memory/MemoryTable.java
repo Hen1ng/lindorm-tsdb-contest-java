@@ -11,9 +11,6 @@ import com.alibaba.lindorm.contest.util.list.SortedList;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -35,7 +32,7 @@ public class MemoryTable {
         this.size = size;
         this.values = new SortedList[size];
         this.tsFileService = tsFileService;
-        this.spinLockArray = new SpinLockArray(size);
+        this.spinLockArray = new SpinLockArray(60000);
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
