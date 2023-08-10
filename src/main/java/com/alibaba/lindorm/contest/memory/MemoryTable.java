@@ -266,7 +266,7 @@ public class MemoryTable {
                 final Integer integer = VinDictMap.get(vin);
                 Row row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns, integer);
                 if (row == null) {
-                    throw new RuntimeException("loadLastTsToMemory error, row is null");
+                    throw new RuntimeException("loadLastTsToMemory error, row is null, index:" + index + "vin " + vin + "timestamp " + timestamp);
                 }
                 Integer i = VinDictMap.get(vin);
                 final SortedList<Value> valueSortedList = this.values[i];

@@ -88,6 +88,7 @@ public class MapIndex {
     }
 
     public static void saveMapToFile(File file) {
+        int line = 0;
         try {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                 for (Vin vin : INDEX_MAP.keySet()) {
@@ -100,11 +101,13 @@ public class MapIndex {
                         writer.write(" ");
                     }
                     writer.newLine();
+                    line++;
                 }
             }
         } catch (Exception e) {
             System.out.println("saveMapToFile error, e" + e);
         }
+        System.out.println("saveMapToFile finish, line: " + line);
     }
 
     public static void loadMapFromFile(File file)
@@ -134,6 +137,7 @@ public class MapIndex {
 
             }
         }
+        System.out.println("loadMapFromFile size:" + INDEX_MAP.size());
     }
 
     public static void main(String[] args) throws IOException {
