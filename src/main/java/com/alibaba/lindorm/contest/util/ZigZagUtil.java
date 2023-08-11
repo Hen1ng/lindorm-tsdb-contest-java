@@ -33,14 +33,17 @@ public class ZigZagUtil {
     }
 
     public static void main(String[] args) {
-        byte[] temp = new byte[1024];
-        final int i = intToZigZag(247167);
-        final int i4 = zigzagToInt(i);
-        final int i1 = writeVarint32(Integer.MIN_VALUE, temp, 0);
-        System.out.println(i1);
-        final int i2 = readFromBuffer(temp, 3);
-        final int i3 = zigzagToInt(i2);
-        System.out.println(i3);
+//        byte[] temp = new byte[1024];
+//        final int i = intToZigZag(247167);
+//        final int i4 = zigzagToInt(i);
+//        final int i1 = writeVarint32(Integer.MIN_VALUE, temp, 0);
+//        System.out.println(i1);
+//        final int i2 = readFromBuffer(temp, 3);
+//        final int i3 = zigzagToInt(i2);
+//        System.out.println(i3);
+        final int i = intToZigZag(1);
+        final int i1 = zigzagToInt(i);
+
     }
 
     //    public static int readVarint32() {

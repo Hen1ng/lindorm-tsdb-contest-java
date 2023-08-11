@@ -114,8 +114,7 @@ public class TSFileService {
 //                                for (int i1 = 0; i1 < intCompressLength; i1++) {
 //                                    intCompress[i1] = allocate1.getInt();
 //                                }
-                                    ints = new int[valueSize * 45];
-                                    IntCompress.decompress2(allocate1.array(), ints);
+                                    ints = IntCompress.decompress(allocate1.array());
 //                                    final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
 //                                    final byte[] bytes = gzipCompress.deCompress(allocate1.array());
 //                                    ints = new int[bytes.length / 4];
@@ -176,8 +175,7 @@ public class TSFileService {
                                         + doubleArrayLength + 4 + 4 + 8
                                         + 4);
                                 final byte[] array = byteBuffer.array();
-                                final int[] decompress1 = new int[valueSize * 6];
-                                IntCompress.decompress2(array, decompress1);
+                                final int[] decompress1 = IntCompress.decompress(array);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 4);
                                 for (int i1 : decompress1) {
                                     stringLengthBuffer.putInt(i1);
@@ -297,8 +295,8 @@ public class TSFileService {
 //                                ints = IntCompress.decompress(intCompress);
 //                                final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
 //                                ints = IntCompress.decompress(allocate1.array());
-                                ints = new int[valueSize * 45];
-                                IntCompress.decompress2(allocate1.array(), ints);
+//                                ints = new int[valueSize * 45];
+                                ints = IntCompress.decompress(allocate1.array());
 //                                ints = new int[bytes.length / 4];
 //                                final ByteBuffer wrap = ByteBuffer.wrap(bytes);
 //                                for (int i1 = 0; i1 < ints.length; i1++) {
@@ -362,8 +360,7 @@ public class TSFileService {
                                         + doubleArrayLength + 4 + 4 + 8
                                         + 4);
                                 final byte[] array = byteBuffer.array();
-                                final int[] decompress1 = new int[valueSize * 6];
-                                        IntCompress.decompress2(array, decompress1);
+                                final int[] decompress1 = IntCompress.decompress(array);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 4);
                                 for (int i1 : decompress1) {
                                     stringLengthBuffer.putInt(i1);
@@ -528,8 +525,8 @@ public class TSFileService {
             byte[] compress2 = null;
             byte[] stringLengthArrayCompress = null;
             try {
-                compress2 = IntCompress.compress2(ints);
-                stringLengthArrayCompress = IntCompress.compress2(stringLengthArray);
+                compress2 = IntCompress.compress(ints);
+                stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
             } catch (Exception e) {
                 System.out.println("compress int error" + e);
             }
