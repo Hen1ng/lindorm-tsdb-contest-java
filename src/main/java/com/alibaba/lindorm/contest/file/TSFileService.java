@@ -1,9 +1,6 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.FloatCompress;
-import com.alibaba.lindorm.contest.compress.GzipCompress;
-import com.alibaba.lindorm.contest.compress.IntCompress;
-import com.alibaba.lindorm.contest.compress.LongCompress;
+import com.alibaba.lindorm.contest.compress.*;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;

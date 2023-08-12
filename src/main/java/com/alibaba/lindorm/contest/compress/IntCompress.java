@@ -6,6 +6,9 @@ import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.FastPFO
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.IntWrapper;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.VariableByte;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.structs.Constant;
+import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.ZigZagUtil;
 
 
 import java.nio.ByteBuffer;
@@ -103,6 +106,11 @@ public class IntCompress {
 //            gapArray[i] = ZigZagUtil.intToZigZag(gapArray[i]);
 //        }
         int[] ints1 = Simple9Codes.innerEncode(ints);
+        if (Constants.USE_ZIGZAG) {
+            for (int i = 0; i < ints1.length; i++) {
+                ints1[i] = ZigZagUtil.intToZigZag(ints1[i]);
+            }
+        }
         ByteBuffer allocate = ByteBuffer.allocate(ints1.length * 4);
         for (int i : ints1) {
             allocate.putInt(i);
@@ -130,6 +138,11 @@ public class IntCompress {
         int[] ints = new int[bytes1.length / 4];
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
+        }
+        if (Constants.USE_ZIGZAG) {
+            for (int j = 0; j < ints.length; j++) {
+                ints[j] = ZigZagUtil.zigzagToInt(ints[j]);
+            }
         }
         final int[] decode = Simple9Codes.decode(ints);
 //        for (int i = 0; i < decode.length; i++) {
