@@ -48,7 +48,7 @@
                     <artifactId>commons-compress</artifactId>
                     <version>1.23.0</version>
                     <scope>system</scope>
-                    <systemPath>${project.basedir}/thirdlibs/snappy-1.1.7.jar</systemPath>
+                    <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
                 </dependency>
     </dependencies>
 
