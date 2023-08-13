@@ -117,15 +117,18 @@ public class BechmarkTest {
     }
 
     public static void main(String[] args) throws Exception {
-//        SortedList<Long> sortedList = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
-//        SortedList<Long> sortedList1 = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
-//        SortedList<Long> sortedList2 = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
-//        sortedList.add(2L);
-//        sortedList.add(2L);
-//        sortedList.add(1L);
-//        sortedList.add(7L);
-//        sortedList.add(0L);
-//        sortedList.add(10L);
+        SortedList<Long> sortedList = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
+
+        sortedList.add(2L);
+        sortedList.add(2L);
+        sortedList.add(1L);
+        sortedList.add(7L);
+        sortedList.add(0L);
+        sortedList.add(10L);
+        SortedList<Long> sortedList1 = sortedList;
+        sortedList.clear();
+        System.out.println(sortedList1.size());
+
 //        for (Long aLong : sortedList) {
 //            System.out.println(aLong);
 //        }
