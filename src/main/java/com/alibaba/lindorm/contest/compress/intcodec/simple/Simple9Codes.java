@@ -15,6 +15,7 @@ public class Simple9Codes {
 	public static int[] innerEncode ( int[] numbers ){
 
 		List<Integer> resultList = new ArrayList<Integer>();
+		boolean madeProgress = false;
 
 		int currentPos = 0;
 		while( currentPos < numbers.length ){
@@ -41,9 +42,7 @@ public class Simple9Codes {
 					currentPos += compressedNum;
 					break;
 				}
-
 			}
-
 		}
 
 		int resultNum	  = resultList.size();
