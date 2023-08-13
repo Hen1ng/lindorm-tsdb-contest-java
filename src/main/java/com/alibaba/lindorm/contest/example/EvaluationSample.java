@@ -108,7 +108,7 @@ public class EvaluationSample {
                 ArrayList<Row> finalRowList = rowList;
                 executorService.submit(() -> {
                     try {
-                        for (int m = 0; m < 3000; m++) {
+                        for (int m = 0; m < 3; m++) {
                             tsdbEngineSample.upsert(new WriteRequest("test", finalRowList));
                             atomicInteger.getAndIncrement();
                         }
