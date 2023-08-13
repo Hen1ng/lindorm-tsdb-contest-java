@@ -42,4 +42,7 @@ public class SpinLockArray {
     }
 
 
+    public int length() {
+        return spinLocks.length();
+    }
 }

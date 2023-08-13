@@ -114,5 +114,6 @@ public class SchemaUtil {
             Constants.setFloatNums(doubleNums);
             Constants.setIntNums(intNums);
         }
+        file.delete();
     }
 }

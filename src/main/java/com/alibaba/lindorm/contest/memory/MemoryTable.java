@@ -43,7 +43,7 @@ public class MemoryTable {
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();
         final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % Constants.TOTAL_VIN_NUMS;
+        int lock = hash % spinLockArray.length();
         spinLockArray.lockWrite(lock);
         try {
             Integer index = VinDictMap.get(vin);
@@ -73,8 +73,8 @@ public class MemoryTable {
     public Row getLastRow(Vin vin, Set<String> requestedColumns) {
         final byte[] vin1 = vin.getVin();
         final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int slot = keyHash % size;
-        spinLockArray.lockRead(slot);
+        int lock = keyHash % spinLockArray.length();
+        spinLockArray.lockRead(lock);
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -106,7 +106,7 @@ public class MemoryTable {
         } catch (Exception e) {
             System.out.println("getLastRowFromMemoryTable e" + e);
         } finally {
-            spinLockArray.unlockRead(slot);
+            spinLockArray.unlockRead(lock);
         }
         return null;
     }
@@ -139,8 +139,8 @@ public class MemoryTable {
     public ArrayList<Row> getTimeRangeRow(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns) {
         final byte[] vin1 = vin.getVin();
         final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int slot = keyHash % size;
-        spinLockArray.lockRead(slot);
+        int lock = keyHash % spinLockArray.length();
+        spinLockArray.lockRead(lock);
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -154,7 +154,7 @@ public class MemoryTable {
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
             return timeRangeRowFromMemoryTable;
         } finally {
-            spinLockArray.unlockRead(slot);
+            spinLockArray.unlockRead(lock);
         }
     }
 

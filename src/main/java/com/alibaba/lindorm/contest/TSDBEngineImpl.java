@@ -7,6 +7,7 @@
 
 package com.alibaba.lindorm.contest;
 
+import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.index.MapIndex;
@@ -38,6 +39,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     private File indexFile;
     private File vinDictFile;
     private File schemaFile;
+    private FilePosition filePosition;
 
 
     /**
@@ -52,6 +54,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
         try {
             RestartUtil.setFirstStart(indexFile);
+            this.filePosition = new FilePosition(dataPath.getPath() + "/file_position.txt");
             if (!dataPath.exists()) {
                 dataPath.createNewFile();
             }
@@ -123,6 +126,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             SchemaUtil.saveMapToFile(schemaFile);
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
+            }
+            if (RestartUtil.IS_FIRST_START) {
+                filePosition.save(fileService.getTsFiles());
             }
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);

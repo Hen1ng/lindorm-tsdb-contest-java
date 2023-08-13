@@ -134,6 +134,7 @@ public class MapIndex {
 
             }
         }
+        file.delete();
     }
 
     public static void main(String[] args) throws IOException {

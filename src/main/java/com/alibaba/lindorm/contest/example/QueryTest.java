@@ -77,10 +77,10 @@ public class QueryTest {
 //            long start = System.currentTimeMillis();
 //            for (int i = 0; i < threadNum; i++) {
 //                new Thread(() -> {
-//                    for (int j = 0; j < 1; j++) {
+//                    for (int j = 0; j < 1000; j++) {
 //                        List<Row> rowList = new ArrayList<>();
 //                        for (int i1 = 0; i1 < 1; i1++) {
-//                            final Vin vin = vins[0];
+//                            final Vin vin = vins[random.nextInt(100)];
 //                            rowList.add(new Row( vin, atomicLong.getAndIncrement() * 1000, columns));
 //                        }
 //                        try {
@@ -101,7 +101,7 @@ public class QueryTest {
 //            tsdbEngineSample.shutdown();
             tsdbEngineSample.connect();
             List<Vin> list = new ArrayList<>();
-            list.add(new Vin("oRHQpNIKqFMIJoSRk".getBytes(StandardCharsets.UTF_8)));
+            list.add(new Vin("SPxSNu1NpbBJDbYBo".getBytes(StandardCharsets.UTF_8)));
             Set<String> requestedColumns = new HashSet<>();
             requestedColumns.add("5String543210");
             requestedColumns.add("3String3210");
@@ -113,7 +113,7 @@ public class QueryTest {
 
             final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
             final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
-            final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("oRHQpNIKqFMIJoSRk".getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
+            final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("SPxSNu1NpbBJDbYBo".getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
             final ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
             System.out.println(1);
             tsdbEngineSample.shutdown();

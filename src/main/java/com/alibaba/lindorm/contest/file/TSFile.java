@@ -1,6 +1,7 @@
 package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.RestartUtil;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -25,6 +26,7 @@ public class TSFile {
     private long fileSize;
     private int fileName;
     private File file;
+    private byte[] array;
 
     public TSFile(String filePath, int fileName, long initPosition) {
         try {
@@ -34,11 +36,21 @@ public class TSFile {
             this.initPosition = initPosition;
             this.position = new AtomicLong(0);
             this.file = new File(tsFilePath);
+            this.lock = new ReentrantLock();
+            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
             if (!file.exists()) {
                 file.createNewFile();
             }
-            this.lock = new ReentrantLock();
-            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+            if (!RestartUtil.IS_FIRST_START) {
+                if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
+                    final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
+                    final ByteBuffer allocate = ByteBuffer.allocate((int)position);
+                    getFromOffsetByFileChannel(allocate, initPosition);
+                    array = allocate.array();
+                    final boolean delete = file.delete();
+                    System.out.println("delete file " + fileName + "result " + delete);
+                }
+            }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
         } catch (Exception e) {
             System.out.println("create TSFile error, e" + e);
@@ -64,6 +76,10 @@ public class TSFile {
 
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset) {
         try {
+            if (array != null) {
+                byteBuffer.put(array, (int)(offset - initPosition), byteBuffer.capacity());
+                return;
+            }
             this.fileChannel.read(byteBuffer, offset - initPosition);
         } catch (Exception e) {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset + "initPosition " + initPosition);

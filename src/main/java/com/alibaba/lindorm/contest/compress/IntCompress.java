@@ -106,11 +106,11 @@ public class IntCompress {
 //            gapArray[i] = ZigZagUtil.intToZigZag(gapArray[i]);
 //        }
         int[] ints1 = Simple9Codes.innerEncode(ints);
-        if (Constants.USE_ZIGZAG) {
-            for (int i = 0; i < ints1.length; i++) {
-                ints1[i] = ZigZagUtil.intToZigZag(ints1[i]);
-            }
-        }
+//        if (Constants.USE_ZIGZAG) {
+//            for (int i = 0; i < ints1.length; i++) {
+//                ints1[i] = ZigZagUtil.intToZigZag(ints1[i]);
+//            }
+//        }
         ByteBuffer allocate = ByteBuffer.allocate(ints1.length * 4);
         for (int i : ints1) {
             allocate.putInt(i);

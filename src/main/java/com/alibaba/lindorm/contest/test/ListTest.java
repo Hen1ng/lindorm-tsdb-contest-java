@@ -1,6 +1,12 @@
 package com.alibaba.lindorm.contest.test;
 
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
+import org.apache.commons.compress.compressors.lzma.LZMACompressorOutputStream;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.zip.GZIPOutputStream;
 
 public class ListTest {
     public static void main(String[] args) {
