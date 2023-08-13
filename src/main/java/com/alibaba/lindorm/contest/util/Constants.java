@@ -15,6 +15,8 @@ public class Constants {
 
     public static final int TOTAL_VIN_NUMS = 30000;
 
+    public static final int TOTAL_BUFFER_NUMS = 10000;
+
     public static void setIntNums(int intNums) {
         INT_NUMS = intNums;
         System.out.println("Schema int num:" + intNums);

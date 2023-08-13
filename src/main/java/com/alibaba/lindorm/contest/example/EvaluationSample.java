@@ -117,7 +117,6 @@ public class EvaluationSample {
                         e.printStackTrace();
                     }
                 });
-
             }
             countDownLatch.await();
             System.out.println("upsert times " + atomicInteger.get());

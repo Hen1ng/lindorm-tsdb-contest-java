@@ -141,7 +141,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         try {
             final Collection<Row> rows = wReq.getRows();
             for (Row row : rows) {
-                memoryTable.put(row);
+                memoryTable.asyncPut(row);
             }
         } catch (Exception e) {
             System.out.println("upsert error, e" + e);
