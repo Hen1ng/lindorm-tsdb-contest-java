@@ -1,5 +1,8 @@
 package com.alibaba.lindorm.contest.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Constants {
     public static final int OS_PAGE_SIZE = 1024 * 4;
 
@@ -10,6 +13,15 @@ public class Constants {
     public static final int LOAD_FILE_TO_MEMORY_NUM = 15;
 
     public static final int CACHE_VINS_LINE_NUMS = 35;
+    public static final List<String> SPARSE_COLUMN_INDEX = new ArrayList<>();
+    public static int SPARSE_COLUMN_NUM;
+
+    static {
+        SPARSE_COLUMN_INDEX.add("FDJGZLB");
+        SPARSE_COLUMN_INDEX.add("DW");
+        SPARSE_COLUMN_NUM = SPARSE_COLUMN_INDEX.size();
+    }
+
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;

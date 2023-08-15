@@ -18,8 +18,13 @@ public class ArrayUtils {
     }
 
     public  static synchronized void print(int[] ints) {
+        int i = 0;
         for (int anInt : ints) {
             System.out.print(anInt + ",");
+            if (i % 35 == 0) {
+                System.out.println(SchemaUtil.getIndexArray()[i]);
+            }
+            i += 1;
         }
         System.out.println("----------------------------------------------------------------------");
     }
