@@ -45,7 +45,7 @@ public final class Simple9 implements IntegerCODEC, SkippableIntegerCODEC {
 			}
 			final int selector = 8;
 			if (in[currentPos] >= 1 << bitLength[selector])
-				throw new RuntimeException("Too big a number");
+				throw new RuntimeException("Too big a number number:" + in[currentPos]);
 			out[tmpoutpos++] = in[currentPos++] | (selector << 28);
 		}
 		outer: while (currentPos < finalin) {
@@ -72,7 +72,7 @@ public final class Simple9 implements IntegerCODEC, SkippableIntegerCODEC {
 			}
 			final int selector = 8;
 			if (in[currentPos] >= 1 << bitLength[selector])
-				throw new RuntimeException("Too big a number");
+				throw new RuntimeException("Too big a number number:" + in[currentPos]);
 			out[tmpoutpos++] = in[currentPos++] | (selector << 28);
 		}
 		inpos.set(currentPos);
