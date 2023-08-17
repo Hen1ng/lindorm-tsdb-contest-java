@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class MemoryTable {
 
-    private final ExecutorService fixThreadPool;
+    public final ExecutorService fixThreadPool;
     private final Lock  bufferValuesLock;
 
     private final Condition hasFreeBuffer;
@@ -35,7 +35,7 @@ public class MemoryTable {
     private final HashMap<Vin, Integer> vinToBufferIndex;
 
     private final Queue<Integer> freeList;
-    private final ArrayList<Value>[] bufferValues;
+    private final SortedList<Value>[] bufferValues;
     private final SortedList<Value>[] values;
 
     private final int size;
@@ -47,7 +47,7 @@ public class MemoryTable {
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
         this.values = new SortedList[size];
-        this.bufferValues = new ArrayList[Constants.TOTAL_BUFFER_NUMS];
+        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new SpinLockArray(60000);
         this.bufferValuesLock = new ReentrantLock();
@@ -59,7 +59,7 @@ public class MemoryTable {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
         for(int i=0;i<Constants.TOTAL_BUFFER_NUMS;i++){
-            bufferValues[i] = new ArrayList<>();
+            bufferValues[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
             freeList.add(i);
         }
     }
@@ -82,8 +82,9 @@ public class MemoryTable {
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
                 int bufferIndex = getFreeBufferIndex(vin);
                 // maybe used copy will be speed up
-                bufferValues[bufferIndex].addAll(valueSortedList);
-                values[index].clear();
+                assert(bufferValues[bufferIndex].isEmpty());
+                values[index] = bufferValues[bufferIndex];
+                bufferValues[bufferIndex] = valueSortedList;
                 Integer finalIndex = index;
                 Integer finalBufferIndex = bufferIndex;
                 fixThreadPool.submit( () -> {
@@ -172,13 +173,16 @@ public class MemoryTable {
         final int size = values[slot].size();
         Value value;
         if (size == 0) {
-            bufferValuesLock.lock();
-            if(!vinToBufferIndex.containsKey(vin)){
-                return null;
+            try {
+                bufferValuesLock.lock();
+                if (!vinToBufferIndex.containsKey(vin)) {
+                    return null;
+                }
+                int bufferIndex = vinToBufferIndex.get(vin);
+                value = bufferValues[bufferIndex].get(0);
+            }finally {
+                bufferValuesLock.unlock();
             }
-            int bufferIndex = vinToBufferIndex.get(vin);
-            value = bufferValues[bufferIndex].get(0);
-            bufferValuesLock.unlock();
         }else{
             value = values[slot].get(0);
         }
@@ -259,6 +263,7 @@ public class MemoryTable {
             while (freeList.isEmpty()){
                 hasFreeBuffer.await();
             }
+            StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER,freeList.size());
             int i = freeList.poll();
             assert(bufferValues[i].isEmpty());
             vinToBufferIndex.put(vin,i);

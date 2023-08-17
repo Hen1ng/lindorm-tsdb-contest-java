@@ -99,6 +99,13 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void shutdown() {
+        try {
+            memoryTable.fixThreadPool.shutdown();
+            memoryTable.fixThreadPool.awaitTermination(60, TimeUnit.SECONDS);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        System.out.println("fixThreadPool completed shutdown");
 //        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
         System.out.println("upsertTimes:" + upsertTimes.get());
 //        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());
@@ -119,6 +126,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
         System.out.println("compress int rate: " + StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600L * 9L * 4L);
         System.out.println("indexFile size: " + indexFile.length());
+        System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         try {
             memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);

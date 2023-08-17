@@ -1,4 +1,4 @@
 .DS_Store
-target/classes/com/
+target/**
 data_dir/
 thirdlibs/

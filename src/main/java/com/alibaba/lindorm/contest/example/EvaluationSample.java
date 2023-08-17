@@ -86,7 +86,7 @@ public class EvaluationSample {
                 for (int i = 0; i < 45; i++) {
                     String key = String.valueOf(i);
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
-                    columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()));
+                    columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%10));
                 }
                 for (int i = 0; i < 9; i++) {
                     String key = i + "haha";
@@ -98,7 +98,7 @@ public class EvaluationSample {
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_STRING);
                     columns.put(key, new ColumnValue.StringColumn(buffer));
                 }
-                final long timestamp = Math.abs(random.nextLong());
+                final long timestamp = Math.abs(random.nextLong()%1000);
                 rowList.add(new Row(new Vin(vin.getBytes(StandardCharsets.UTF_8)), timestamp, columns));
             }
             CountDownLatch countDownLatch = new CountDownLatch(threadNum);
@@ -108,7 +108,7 @@ public class EvaluationSample {
                 ArrayList<Row> finalRowList = rowList;
                 executorService.submit(() -> {
                     try {
-                        for (int m = 0; m < 3; m++) {
+                        for (int m = 0; m < 3000; m++) {
                             tsdbEngineSample.upsert(new WriteRequest("test", finalRowList));
                             atomicInteger.getAndIncrement();
                         }

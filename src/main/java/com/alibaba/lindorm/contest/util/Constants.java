@@ -9,14 +9,14 @@ public class Constants {
     public static final boolean USE_ZIGZAG = false;
     public static final int LOAD_FILE_TO_MEMORY_NUM = 15;
 
-    public static final int CACHE_VINS_LINE_NUMS = 35;
+    public static final int CACHE_VINS_LINE_NUMS = 40;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;
 
     public static final int TOTAL_VIN_NUMS = 30000;
 
-    public static final int TOTAL_BUFFER_NUMS = 10000;
+    public static final int TOTAL_BUFFER_NUMS = 30000;
 
     public static void setIntNums(int intNums) {
         INT_NUMS = intNums;
