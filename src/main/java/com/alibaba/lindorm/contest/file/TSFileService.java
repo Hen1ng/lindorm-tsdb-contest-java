@@ -105,7 +105,7 @@ public class TSFileService {
                                 //
                                 if (Constants.BIGINT_COLUMN_INDEX.contains(requestedColumn)) {
                                     int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM) - 1) * valueSize + i;
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMap.get(Constants.bigIntArray.get(index.getBigIntOffset() + off))));
+                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMapReverse.get(Constants.bigIntArray.get(index.getBigIntOffset() + off))));
                                 } else {
                                     if (ints == null) {
                                         final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
@@ -260,7 +260,7 @@ public class TSFileService {
                         try {
                             if (Constants.BIGINT_COLUMN_INDEX.contains(requestedColumn)) {
                                 int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM) - 1) * valueSize + i;
-                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMap.get(
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMapReverse.get(
                                         Constants.bigIntArray.get(index.getBigIntOffset() + off))));
                             } else {
                                 if (ints == null) {
@@ -442,6 +442,7 @@ public class TSFileService {
                             } else {
                                 int i1 = Constants.INT_NUMBER_INDEX.getAndAdd(1);
                                 Constants.IntCompressMap.put(integerValue, i1);
+                                Constants.IntCompressMapReverse.put(i1, integerValue);
                                 integerValue = i1;
                             }
                             bigInts[BigIntPosition++] = integerValue;

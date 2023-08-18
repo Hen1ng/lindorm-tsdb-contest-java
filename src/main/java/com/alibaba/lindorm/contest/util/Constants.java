@@ -34,6 +34,7 @@ public class Constants {
     public static int BIGINT_COLUMN_NUM;
 
     public static ConcurrentHashMap<Integer,Integer> IntCompressMap;
+    public static ConcurrentHashMap<Integer,Integer> IntCompressMapReverse;
 
     public static  AtomicInteger INT_NUMBER_INDEX;
 
@@ -70,6 +71,7 @@ public class Constants {
                     Integer value = Integer.parseInt(parts[1].trim());
 
                     IntCompressMap.put(key, value);
+                    IntCompressMapReverse.put(value, key);
                 }
             }
         } catch (IOException e) {
@@ -86,6 +88,7 @@ public class Constants {
         BIGINT_COLUMN_NUM = BIGINT_COLUMN_INDEX.size();
         INT_NUMBER_INDEX = new AtomicInteger(0);
         IntCompressMap = new ConcurrentHashMap<>();
+        IntCompressMapReverse = new ConcurrentHashMap<>();
         bigIntArray = new BigIntArray();
         YXMSset = new ConcurrentSkipListSet<>();
     }

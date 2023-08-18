@@ -72,6 +72,12 @@ public class TSDBEngineImpl extends TSDBEngine {
             if (!schemaFile.exists()) {
                 schemaFile.createNewFile();
             }
+            if (!bigIntMapFile.exists()) {
+                bigIntMapFile.createNewFile();
+            }
+            if (!bigIntFile.exists()) {
+                bigIntFile.createNewFile();
+            }
         } catch (Exception e) {
             System.out.println("create dataPath error, e" + e);
         }
@@ -88,9 +94,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
-        Constants.bigIntArray.loadFromFile(bigIntFile);
-        Constants.loadBigIntMapFromFile(bigIntMapFile);
         if (!RestartUtil.IS_FIRST_START) {
+            Constants.bigIntArray.loadFromFile(bigIntFile);
+            Constants.loadBigIntMapFromFile(bigIntMapFile);
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
