@@ -39,6 +39,8 @@ public class TSDBEngineImpl extends TSDBEngine {
     private File indexFile;
     private File vinDictFile;
     private File schemaFile;
+    private File bigIntFile;
+    private File bigIntMapFile;
     private FilePosition filePosition;
 
 
@@ -52,6 +54,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.indexFile = new File(dataPath.getPath() + "/index.txt");
         this.vinDictFile = new File(dataPath.getPath() + "/vinDict.txt");
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
+        this.bigIntFile = new File(dataPath.getPath()+"/bigInt.txt");
+        this.bigIntMapFile = new File(dataPath.getPath()+"/bigIntMap.txt");
         try {
             RestartUtil.setFirstStart(indexFile);
             this.filePosition = new FilePosition(dataPath.getPath() + "/file_position.txt");
@@ -84,6 +88,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
+        Constants.bigIntArray.loadFromFile(bigIntFile);
+        Constants.loadBigIntMapFromFile(bigIntMapFile);
         if (!RestartUtil.IS_FIRST_START) {
             memoryTable.loadLastTsToMemory();
         }
@@ -106,6 +112,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             e.printStackTrace();
         }
         System.out.println("fixThreadPool completed shutdown");
+        System.out.println("YXMSSet size : " + Constants.YXMSset.size());
 //        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
         System.out.println("upsertTimes:" + upsertTimes.get());
 //        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());
@@ -120,11 +127,11 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("compress string rate:" + StaticsUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StaticsUtil.STRING_TOTAL_LENGTH.get());
         }
         System.out.println("compress double length: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get());
-        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / 30000L * 3600L * 45L * 8L);
+        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (30000L * 3600L * 45L * 8L));
         System.out.println("compress long length: " + StaticsUtil.LONG_COMPRESS_LENGTH.get());
-        System.out.println("compress long rate: " + StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d / 30000L * 3600L * 8L);
+        System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (30000L * 3600L * 8L));
         System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
-        System.out.println("compress int rate: " + StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d / 30000 * 3600L * 9L * 4L);
+        System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) /( 30000 * 3600L * 9L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         try {
@@ -132,6 +139,8 @@ public class TSDBEngineImpl extends TSDBEngine {
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);
             SchemaUtil.saveMapToFile(schemaFile);
+            Constants.bigIntArray.savaToFile(bigIntFile);
+            Constants.saveBigIntMapToFile(bigIntMapFile);
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }

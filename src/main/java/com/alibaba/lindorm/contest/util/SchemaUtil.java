@@ -38,9 +38,18 @@ public class SchemaUtil {
         Constants.setStringNums(STRING_MAP.size());
         int i = 0;
         for (String key : INT_MAP.keySet()) {
+            if (Constants.BIGINT_COLUMN_INDEX.contains(key)) {
+                continue;
+            }
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
-//            System.out.println("key: " + key + " index : " + i);
+            System.out.println("key: " + key + " index : " + i);
+            i++;
+        }
+        for (String sparseColumn : Constants.BIGINT_COLUMN_INDEX) {
+            INDEX_ARRAY[i] = sparseColumn;
+            COLUMNS_INDEX.put(sparseColumn, i);
+            System.out.println("key: " + sparseColumn + " index : " + i);
             i++;
         }
         for (String key : FLOAT_MAP.keySet()) {

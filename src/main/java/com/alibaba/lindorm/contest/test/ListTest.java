@@ -1,8 +1,6 @@
 package com.alibaba.lindorm.contest.test;
 
 import com.alibaba.lindorm.contest.util.list.SortedList;
-import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream;
-import org.apache.commons.compress.compressors.lzma.LZMACompressorOutputStream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

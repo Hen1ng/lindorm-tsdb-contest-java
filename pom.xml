@@ -39,24 +39,10 @@
             <dependency>
                 <groupId>me.lemire.integercompression</groupId>
                 <artifactId>JavaFastPFOR</artifactId>
-                <version>[0.1,)</version>
+                <version>0.1.12</version>
                 <scope>system</scope>
                 <systemPath>${project.basedir}/thirdlibs/JavaFastPFOR-0.1.12.jar</systemPath>
             </dependency>
-                <dependency>
-                    <groupId>org.xerial</groupId>
-                    <artifactId>snappy</artifactId>
-                    <version>1.1.7</version>
-                    <scope>system</scope>
-                    <systemPath>${project.basedir}/thirdlibs/snappy-1.1.7.jar</systemPath>
-                </dependency>
-                <dependency>
-                    <groupId>org.apache.commons</groupId>
-                    <artifactId>commons-compress</artifactId>
-                    <version>1.23.0</version>
-                    <scope>system</scope>
-                    <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
-                </dependency>
     </dependencies>
 
 

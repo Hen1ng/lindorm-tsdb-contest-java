@@ -124,7 +124,9 @@ public class MapIndex {
                                 , Long.parseLong(split2[1])
                                 , Long.parseLong(split2[2])
                                 , Integer.parseInt(split2[3])
-                                , Integer.parseInt(split2[4])));
+                                , Integer.parseInt(split2[4])
+                                , Integer.parseInt(split2[5])
+                        ));
                     }
                     INDEX_MAP.put(new Vin(split1[0].getBytes(StandardCharsets.UTF_8)), indices);
 
@@ -141,13 +143,13 @@ public class MapIndex {
         Map<Vin, CopyOnWriteArrayList<Index>> indexMap = new ConcurrentHashMap<>();
         CopyOnWriteArrayList<Index> list = new CopyOnWriteArrayList<>();
 
-        list.add(new Index(100L, 1, 0, 10, 3));
-        list.add(new Index(200L, 19, 10, 8, 2));
+        list.add(new Index(100L, 1, 0, 10, 3,1));
+        list.add(new Index(200L, 19, 10, 8, 2,1));
         MapIndex.INDEX_MAP.put(new Vin("19293857575".getBytes(StandardCharsets.UTF_8)), list);
 
         CopyOnWriteArrayList<Index> list1 = new CopyOnWriteArrayList<>();
-        list1.add(new Index(999, 1, 0, 10, 1));
-        list1.add(new Index(1002, 19, 10, 8, 4));
+        list1.add(new Index(999, 1, 0, 10, 1,1));
+        list1.add(new Index(1002, 19, 10, 8, 4,1));
         MapIndex.INDEX_MAP.put(new Vin("9hhahdiennhtlajd".getBytes(StandardCharsets.UTF_8)), list1);
         final File file = new File("./data_dir/index.txt");
         if (!file.exists()) {

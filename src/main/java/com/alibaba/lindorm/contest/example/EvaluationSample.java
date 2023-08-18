@@ -30,10 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -83,10 +80,16 @@ public class EvaluationSample {
                 buffer.put((byte) 72);
                 buffer.flip();
                 String vin = BytesUtil.getRandomString(17);
-                for (int i = 0; i < 45; i++) {
+                String[] bigIntKey = {"LATITUDE","LONGITUDE"};
+                for (int i = 0; i < 43; i++) {
                     String key = String.valueOf(i);
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
                     columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%10));
+                }
+                for (int i = 0; i < 2; i++) {
+                    String key = bigIntKey[i];
+                    columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
+                    columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()));
                 }
                 for (int i = 0; i < 9; i++) {
                     String key = i + "haha";
@@ -122,9 +125,15 @@ public class EvaluationSample {
             System.out.println("upsert times " + atomicInteger.get());
 
             tsdbEngineSample.shutdown();
+            try {
+                executorService.shutdown();
+                executorService.awaitTermination(60, TimeUnit.SECONDS);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
 
 //      // Stage2: read
-//      tsdbEngineSample.connect();
+      tsdbEngineSample.connect();
 //
 //      ArrayList<Vin> vinList = new ArrayList<>();
 //      vinList.add(new Vin(str.getBytes(StandardCharsets.UTF_8)));
@@ -132,10 +141,10 @@ public class EvaluationSample {
 //      ArrayList<Row> resultSet = tsdbEngineSample.executeLatestQuery(new LatestQueryRequest("test", vinList, requestedColumns));
 //      showResult(resultSet);
 //
-//      tsdbEngineSample.shutdown();
+      tsdbEngineSample.shutdown();
 //
 //      // Stage3: overwrite
-//      tsdbEngineSample.connect();
+      tsdbEngineSample.connect();
 //
 //      buffer.flip();
 //      columns = new HashMap<>();
