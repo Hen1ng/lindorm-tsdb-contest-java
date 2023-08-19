@@ -16,9 +16,9 @@ public class Constants {
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;
     public static final long WARM_FILE_SIZE = 1024 * 1024 * 1024;
     public static final boolean USE_ZIGZAG = false;
-    public static final int LOAD_FILE_TO_MEMORY_NUM = 15;
+    public static final int LOAD_FILE_TO_MEMORY_NUM = 16;
 
-    public static final int CACHE_VINS_LINE_NUMS = 40;
+    public static final int CACHE_VINS_LINE_NUMS = 45;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;
@@ -41,6 +41,11 @@ public class Constants {
     public static BigIntArray bigIntArray;
 
     public static ConcurrentSkipListSet<Integer> YXMSset;
+    public static ConcurrentSkipListSet<Integer> DCDCset;
+    public static ConcurrentSkipListSet<Integer> RLDCRLXHLSet;
+    public static ConcurrentSkipListSet<Integer> LJLCSet;
+    public static ConcurrentSkipListSet<Integer> DCDTDYZGZSet;
+    public static ConcurrentSkipListSet<Integer> RLDCDYSet;
 
     public static void saveBigIntMapToFile(File file) {
         try {
@@ -91,6 +96,11 @@ public class Constants {
         IntCompressMapReverse = new ConcurrentHashMap<>();
         bigIntArray = new BigIntArray();
         YXMSset = new ConcurrentSkipListSet<>();
+        RLDCRLXHLSet = new ConcurrentSkipListSet<>();
+        DCDCset = new ConcurrentSkipListSet<>();
+        LJLCSet = new ConcurrentSkipListSet<>();
+        DCDTDYZGZSet = new ConcurrentSkipListSet<>();
+        RLDCDYSet = new ConcurrentSkipListSet<>();
     }
 
     public static void setIntNums(int intNums) {

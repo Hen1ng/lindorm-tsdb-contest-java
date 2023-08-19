@@ -119,6 +119,11 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         System.out.println("fixThreadPool completed shutdown");
         System.out.println("YXMSSet size : " + Constants.YXMSset.size());
+        System.out.println("DCDC size : " + Constants.DCDCset.size());
+        System.out.println("RLDCRLXHLSet size : " + Constants.RLDCRLXHLSet.size());
+        System.out.println("LJLCSet size : " + Constants.LJLCSet.size());
+        System.out.println("DCDTDYZGZSet size : " + Constants.DCDTDYZGZSet.size());
+        System.out.println("RLDCDYSet size : " + Constants.RLDCDYSet.size());
 //        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
         System.out.println("upsertTimes:" + upsertTimes.get());
 //        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());

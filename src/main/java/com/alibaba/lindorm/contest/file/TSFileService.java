@@ -104,7 +104,7 @@ public class TSFileService {
                             try {
                                 //
                                 if (Constants.BIGINT_COLUMN_INDEX.contains(requestedColumn)) {
-                                    int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM) - 1) * valueSize + i;
+                                    int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM)) * valueSize + i;
                                     columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMapReverse.get(Constants.bigIntArray.get(index.getBigIntOffset() + off))));
                                 } else {
                                     if (ints == null) {
@@ -259,7 +259,7 @@ public class TSFileService {
                     if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                         try {
                             if (Constants.BIGINT_COLUMN_INDEX.contains(requestedColumn)) {
-                                int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM) - 1) * valueSize + i;
+                                int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM)) * valueSize + i;
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMapReverse.get(
                                         Constants.bigIntArray.get(index.getBigIntOffset() + off))));
                             } else {
@@ -436,6 +436,21 @@ public class TSFileService {
                         if (key.equals("YXMS")) {
                             Constants.YXMSset.add(integerValue);
                         }
+                        if ("RLDCRLXHL".equals(key)) {
+                            Constants.RLDCRLXHLSet.add(integerValue);
+                        }
+                        if ("DCDC".equals(key)) {
+                            Constants.DCDCset.add(integerValue);
+                        }
+                        if ("LJLC".equals(key)) {
+                            Constants.LJLCSet.add(integerValue);
+                        }
+                        if ("DCDTDYZGZ".equals(key)) {
+                            Constants.DCDTDYZGZSet.add(integerValue);
+                        }
+                        if ("RLDCDY".equals(key)) {
+                            Constants.RLDCDYSet.add(integerValue);
+                        }
                         if (Constants.BIGINT_COLUMN_INDEX.contains(key)) {
                             if (Constants.IntCompressMap.containsKey(integerValue)) {
                                 integerValue = Constants.IntCompressMap.get(integerValue);
@@ -548,7 +563,7 @@ public class TSFileService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("write to file error, e :" + e.getLocalizedMessage());
+            System.out.println("write to file error, e :" + e.getLocalizedMessage() + "value size:" + valueList.size());
         }
     }
 

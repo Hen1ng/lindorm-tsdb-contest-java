@@ -25,6 +25,7 @@ public class BigIntArray {
     public void savaToFile(File file){
         GzipCompress gzipCompress = new GzipCompress();
         byte[] compress = gzipCompress.compress(data);
+        System.out.println("BigIntArray compress size:" + compress.length);
         try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(compress);
         } catch (IOException e) {
@@ -57,6 +58,7 @@ public class BigIntArray {
 
         // Decompress the data
         this.data = gzipCompress.deCompress(compressedData);
+        file.delete();
     }
 
 }

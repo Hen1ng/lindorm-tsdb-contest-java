@@ -166,23 +166,23 @@ public class IntCompress {
     }
 
     public static byte[]  compress(int[] ints) {
-//        ints = Simple9Codes.innerEncode(ints);
+        ints = Simple9Codes.innerEncode(ints);
 
-        int [] compressed = new int[ints.length+1024];
-        IntWrapper aOffset = new IntWrapper(0);
-        IntWrapper bOffset = new IntWrapper(0);
-        codec.compress(ints,aOffset,ints.length,compressed,bOffset);
-        ints = Arrays.copyOf(compressed,bOffset.intValue());
+//        int [] compressed = new int[ints.length+1024];
+//        IntWrapper aOffset = new IntWrapper(0);
+//        IntWrapper bOffset = new IntWrapper(0);
+//        codec.compress(ints,aOffset,ints.length,compressed,bOffset);
+//        ints = Arrays.copyOf(compressed,bOffset.intValue());
 
 //        int[] gapArray = toGapArray(ints);
 //        for (int i = 0; i < gapArray.length; i++) {
 //            gapArray[i] = ZigZagUtil.intToZigZag(gapArray[i]);
 //        }
-        if (Constants.USE_ZIGZAG) {
-            for (int i = 0; i < ints.length; i++) {
-                ints[i] = ZigZagUtil.intToZigZag(ints[i]);
-            }
-        }
+//        if (Constants.USE_ZIGZAG) {
+//            for (int i = 0; i < ints.length; i++) {
+//                ints[i] = ZigZagUtil.intToZigZag(ints[i]);
+//            }
+//        }
         ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
         for (int i : ints) {
             allocate.putInt(i);
@@ -206,17 +206,17 @@ public class IntCompress {
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
         }
-        if (Constants.USE_ZIGZAG) {
-            for (int j = 0; j < ints.length; j++) {
-                ints[j] = ZigZagUtil.zigzagToInt(ints[j]);
-            }
-        }
-        IntWrapper aOffset = new IntWrapper(0);
-        IntWrapper bOffset = new IntWrapper(0);
-        int[] output = new int[ints.length+1024];
-        codec.uncompress(ints,aOffset,ints.length,output,bOffset);
-        ints = Arrays.copyOf(output,bOffset.intValue());
-        System.out.println(bOffset.intValue());
+//        if (Constants.USE_ZIGZAG) {
+//            for (int j = 0; j < ints.length; j++) {
+//                ints[j] = ZigZagUtil.zigzagToInt(ints[j]);
+//            }
+//        }
+//        IntWrapper aOffset = new IntWrapper(0);
+//        IntWrapper bOffset = new IntWrapper(0);
+//        int[] output = new int[ints.length+1024];
+//        codec.uncompress(ints,aOffset,ints.length,output,bOffset);
+//        ints = Arrays.copyOf(output,bOffset.intValue());
+//        System.out.println(bOffset.intValue());
 
 
         //        for (int i = 0; i < decode.length; i++) {
@@ -225,8 +225,8 @@ public class IntCompress {
 //        for (int i = 1; i < decode.length; i++) {
 //            decode[i] = decode[i - 1] + decode[i];
 //        }
-//        return Simple9Codes.decode(ints);
-        return ints;
+        return Simple9Codes.decode(ints);
+//        return ints;
     }
     protected static int[] toGapArray(int[] numbers) {
         int prev = numbers[0];
