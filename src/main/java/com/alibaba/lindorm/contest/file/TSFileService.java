@@ -1,9 +1,6 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.FloatCompress;
-import com.alibaba.lindorm.contest.compress.GzipCompress;
-import com.alibaba.lindorm.contest.compress.IntCompress;
-import com.alibaba.lindorm.contest.compress.LongCompress;
+import com.alibaba.lindorm.contest.compress.*;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -103,9 +100,20 @@ public class TSFileService {
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
                                 //
-                                if (Constants.BIGINT_COLUMN_INDEX.contains(requestedColumn)) {
-                                    int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM) - 1) * valueSize + i;
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMapReverse.get(Constants.bigIntArray.get(index.getBigIntOffset() + off))));
+                                if ("LATITUDE".equals(requestedColumn)) {
+                                    BigIntArrayNew.latitudeLock.lock();
+                                    final byte latitudeByte = BigIntArrayNew.LATITUDE_BYTES[index.latitudeOffset + i];
+                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(BigIntArrayNew.latitudeMapReverse.get(latitudeByte)));
+                                    BigIntArrayNew.latitudeLock.unlock();
+                                } else if ("LONGITUDE".equals(requestedColumn)) {
+                                    final byte longitudeByte = BigIntArrayNew.LONGITUDE_BYTES[index.longitudeOffset + i];
+                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(BigIntArrayNew.longitudeMapReverse.get(longitudeByte)));
+                                    BigIntArrayNew.longitudeLock.unlock();
+                                } else if ("YXMS".equals(requestedColumn)) {
+                                    BigIntArrayNew.yxmsLock.lock();
+                                    final byte yxmsByte = BigIntArrayNew.YXMS_BYTES[index.yxmsOffset + i];
+                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(BigIntArrayNew.yxmsMapReverse.get(yxmsByte)));
+                                    BigIntArrayNew.yxmsLock.unlock();
                                 } else {
                                     if (ints == null) {
                                         final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
@@ -258,10 +266,20 @@ public class TSFileService {
                     final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                     if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                         try {
-                            if (Constants.BIGINT_COLUMN_INDEX.contains(requestedColumn)) {
-                                int off = (columnIndex - (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM) - 1) * valueSize + i;
-                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(Constants.IntCompressMapReverse.get(
-                                        Constants.bigIntArray.get(index.getBigIntOffset() + off))));
+                            if ("LATITUDE".equals(requestedColumn)) {
+                                BigIntArrayNew.latitudeLock.lock();
+                                final byte latitudeByte = BigIntArrayNew.LATITUDE_BYTES[index.latitudeOffset + i];
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(BigIntArrayNew.latitudeMapReverse.get(latitudeByte)));
+                                BigIntArrayNew.latitudeLock.unlock();
+                            } else if ("LONGITUDE".equals(requestedColumn)) {
+                                final byte longitudeByte = BigIntArrayNew.LONGITUDE_BYTES[index.longitudeOffset + i];
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(BigIntArrayNew.longitudeMapReverse.get(longitudeByte)));
+                                BigIntArrayNew.longitudeLock.unlock();
+                            } else if ("YXMS".equals(requestedColumn)) {
+                                BigIntArrayNew.yxmsLock.lock();
+                                final byte yxmsByte = BigIntArrayNew.YXMS_BYTES[index.yxmsOffset + i];
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(BigIntArrayNew.yxmsMapReverse.get(yxmsByte)));
+                                BigIntArrayNew.yxmsLock.unlock();
                             } else {
                                 if (ints == null) {
                                     final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
@@ -387,12 +405,16 @@ public class TSFileService {
             double[] doubles = null;
             long[] longs = new long[lineNum];
             int[] ints = new int[lineNum * (Constants.INT_NUMS - Constants.BIGINT_COLUMN_NUM)];
-            int[] bigInts = new int[lineNum * Constants.BIGINT_COLUMN_NUM];
+            byte[] latitudeBytes = new byte[lineNum];
+            int latitudePosition = 0;
+            byte[] longitudeBytes = new byte[lineNum];
+            int longitudePosition = 0;
+            byte[] yxmsBytes = new byte[lineNum];
+            int yxmsPosition = 0;
             int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
             int longPosition = 0;
             int doublePosition = 0;
-            int BigIntPosition = 0;
             int intPosition = 0;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
                 intBuffer = TOTAL_INT_BUFFER.get();
@@ -431,21 +453,44 @@ public class TSFileService {
                     }
                     Map<String, ColumnValue> columns = value.getColumns();
                     if (i < 45) {
-
                         int integerValue = columns.get(key).getIntegerValue();
-                        if (key.equals("YXMS")) {
-                            Constants.YXMSset.add(integerValue);
-                        }
-                        if (Constants.BIGINT_COLUMN_INDEX.contains(key)) {
-                            if (Constants.IntCompressMap.containsKey(integerValue)) {
-                                integerValue = Constants.IntCompressMap.get(integerValue);
+                        if ("LATITUDE".equals(key)) {
+                            BigIntArrayNew.latitudeLock.lock();
+                            if (BigIntArrayNew.latitudeMap.containsKey(integerValue)) {
+                                integerValue = BigIntArrayNew.latitudeMap.get(integerValue);
                             } else {
-                                int i1 = Constants.INT_NUMBER_INDEX.getAndAdd(1);
-                                Constants.IntCompressMap.put(integerValue, i1);
-                                Constants.IntCompressMapReverse.put(i1, integerValue);
+                                int i1 = BigIntArrayNew.latitudeMappingIndex.getAndIncrement();
+                                BigIntArrayNew.latitudeMap.put(integerValue, (byte) i1);
+                                BigIntArrayNew.latitudeMapReverse.put((byte) i1, integerValue);
                                 integerValue = i1;
                             }
-                            bigInts[BigIntPosition++] = integerValue;
+                            latitudeBytes[latitudePosition++] = (byte)integerValue;
+                            BigIntArrayNew.latitudeLock.unlock();
+                        } else if ("LONGITUDE".equals(key)) {
+                            BigIntArrayNew.longitudeLock.lock();
+                            if (BigIntArrayNew.longitudeMap.containsKey(integerValue)) {
+                                integerValue = BigIntArrayNew.longitudeMap.get(integerValue);
+                            } else {
+                                int i1 = BigIntArrayNew.longitudeMappingIndex.getAndIncrement();
+                                BigIntArrayNew.longitudeMap.put(integerValue, (byte) i1);
+                                BigIntArrayNew.longitudeMapReverse.put((byte) i1, integerValue);
+                                integerValue = i1;
+                            }
+                            longitudeBytes[longitudePosition++] = (byte)integerValue;
+                            BigIntArrayNew.longitudeLock.unlock();
+                        } else if ("YXMS".equals(key)) {
+                            BigIntArrayNew.yxmsLock.lock();
+                            if (BigIntArrayNew.yxmsMap.containsKey(integerValue)) {
+                                integerValue = BigIntArrayNew.yxmsMap.get(integerValue);
+                            } else {
+                                int i1 = BigIntArrayNew.yxmsMappingIndex.getAndIncrement();
+                                BigIntArrayNew.yxmsMap.put(integerValue, (byte) i1);
+                                BigIntArrayNew.yxmsMapReverse.put((byte) i1, integerValue);
+                                integerValue = i1;
+
+                            }
+                            yxmsBytes[yxmsPosition++] = (byte)integerValue;
+                            BigIntArrayNew.yxmsLock.unlock();
                         } else {
 //                        intBuffer.putInt(integerValue);
                             ints[intPosition++] = integerValue;
@@ -497,12 +542,17 @@ public class TSFileService {
                 System.out.println("compress int error" + e);
             }
             // 存储bigInt
-            final int bigIntOffset = Constants.bigIntArray.position.getAndAdd(bigInts.length);
-            for (int i = 0; i < bigInts.length; i++) {
-                if (bigInts[i] > 255) {
-                    throw new IllegalArgumentException("Int value at index " + i + " value :" + bigInts[i] + "cannot be safely converted to byte");
-                }
-                Constants.bigIntArray.data[bigIntOffset + i] = (byte) (bigInts[i] & 0xFF);
+            int latitudeOffset = 0;
+            if (latitudePosition != 0) {
+                latitudeOffset = BigIntArrayNew.copyLatitude(latitudeBytes);
+            }
+            int longitudeOffset = 0;
+            if (longitudePosition != 0) {
+                BigIntArrayNew.copyLongitude(longitudeBytes);
+            }
+            int yxmsOffset = 0;
+            if (yxmsPosition != 0) {
+                yxmsOffset = BigIntArrayNew.copyYxms(yxmsBytes);
             }
             int total = 8 + 4 + compress1.length //timestamp
                     + compress2.length + 4 //int
@@ -540,7 +590,9 @@ public class TSFileService {
                         , minTimestamp
                         , total
                         , lineNum
-                        , bigIntOffset);
+                        , latitudeOffset
+                        , longitudeOffset
+                        , yxmsOffset);
                 MapIndex.put(vin, index);
                 valueList.clear();
             } catch (Exception e) {

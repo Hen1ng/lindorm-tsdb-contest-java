@@ -10,8 +10,6 @@ public class Index {
     private long maxTimestamp;
     private long minTimestamp;
 
-    private int bigIntOffset;
-
     public void setTimestampList(List<Long> timestampList) {
         this.timestampList = timestampList;
     }
@@ -26,7 +24,13 @@ public class Index {
         return valueSize;
     }
 
-    private int valueSize;
+    public int valueSize;
+
+    public int latitudeOffset;
+
+    public int longitudeOffset;
+
+    public int yxmsOffset;
 
 
     public long getOffset() {
@@ -47,13 +51,15 @@ public class Index {
 
     private int length;
 
-    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize,int bigIntOffset) {
+    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize, int latitudeOffset, int longitudeOffset, int yxmsOffset) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
         this.minTimestamp = minTimestamp;
         this.length = length;
         this.valueSize = valueSize;
-        this.bigIntOffset = bigIntOffset;
+        this.latitudeOffset = latitudeOffset;
+        this.longitudeOffset = longitudeOffset;
+        this.yxmsOffset = yxmsOffset;
     }
 
     @Override
@@ -68,7 +74,11 @@ public class Index {
                 "," +
                 valueSize +
                 "," +
-                bigIntOffset
+                latitudeOffset +
+                "," +
+                longitudeOffset +
+                "," +
+                yxmsOffset
                 ;
 
     }
@@ -84,14 +94,6 @@ public class Index {
     @Override
     public int hashCode() {
         return Objects.hash(offset, maxTimestamp, minTimestamp, valueSize, length);
-    }
-
-    public int getBigIntOffset() {
-        return bigIntOffset;
-    }
-
-    public void setBigIntOffset(int offset){
-        this.bigIntOffset = offset;
     }
 
 }

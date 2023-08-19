@@ -7,6 +7,7 @@
 
 package com.alibaba.lindorm.contest;
 
+import com.alibaba.lindorm.contest.compress.BigIntArrayNew;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
@@ -54,8 +55,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.indexFile = new File(dataPath.getPath() + "/index.txt");
         this.vinDictFile = new File(dataPath.getPath() + "/vinDict.txt");
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
-        this.bigIntFile = new File(dataPath.getPath()+"/bigInt.txt");
-        this.bigIntMapFile = new File(dataPath.getPath()+"/bigIntMap.txt");
+//        this.bigIntFile = new File(dataPath.getPath()+"/bigInt.txt");
+//        this.bigIntMapFile = new File(dataPath.getPath()+"/bigIntMap.txt");
         try {
             RestartUtil.setFirstStart(indexFile);
             this.filePosition = new FilePosition(dataPath.getPath() + "/file_position.txt");
@@ -95,8 +96,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
         if (!RestartUtil.IS_FIRST_START) {
-            Constants.bigIntArray.loadFromFile(bigIntFile);
-            Constants.loadBigIntMapFromFile(bigIntMapFile);
+            BigIntArrayNew.load(dataPath.getPath());
+//            Constants.bigIntArray.loadFromFile(bigIntFile);
+//            Constants.loadBigIntMapFromFile(bigIntMapFile);
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
@@ -145,8 +147,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);
             SchemaUtil.saveMapToFile(schemaFile);
-            Constants.bigIntArray.savaToFile(bigIntFile);
-            Constants.saveBigIntMapToFile(bigIntMapFile);
+            BigIntArrayNew.shutdown(dataPath.getPath());
+//            Constants.bigIntArray.savaToFile(bigIntFile);
+//            Constants.saveBigIntMapToFile(bigIntMapFile);
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
