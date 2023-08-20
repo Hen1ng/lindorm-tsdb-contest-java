@@ -491,7 +491,7 @@ public class TSFileService {
             }
             final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
             final byte[] compress = gzipCompress.compress(bytes);
-
+            ArrayUtils.printDouble(doubles);
             //压缩double
             Pair<Long, Pair<Integer, byte[]>> encode = FloatCompress.encode(doubles);
             final Long doubleCompressPrevious = encode.getLeft();
