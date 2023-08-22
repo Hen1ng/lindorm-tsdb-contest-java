@@ -124,6 +124,24 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("LJLCSet size : " + Constants.LJLCSet.size());
         System.out.println("DCDTDYZGZSet size : " + Constants.DCDTDYZGZSet.size());
         System.out.println("RLDCDYSet size : " + Constants.RLDCDYSet.size());
+
+        System.out.println("DJKZQDLSet size : " + Constants.DJKZQDLSet.size());
+        System.out.println("DJKZQDYSet size : " + Constants.DJKZQDYSet.size());
+        System.out.println("JYDZSet size : " + Constants.JYDZSet.size());
+        System.out.println("QDDJGSSet size : " + Constants.QDDJGSSet.size());
+        System.out.println("QDDJKZWDSet size : " + Constants.QDDJKZWDSet.size());
+        System.out.println("QDDJWDSet size : " + Constants.QDDJWDSet.size());
+        System.out.println("QDDJXHSet size : " + Constants.QDDJXHSet.size());
+        System.out.println("QDDJZJSet size : " + Constants.QDDJZJSet.size());
+        System.out.println("QDDJZSSet size : " + Constants.QDDJZSSet.size());
+        System.out.println("CSSet size : " + Constants.CSSet.size());
+        System.out.println("DCDTDYZDZSet size : " + Constants.DCDTDYZDZSet.size());
+        System.out.println("KCDCNZZGZDMLBSet size : " + Constants.KCDCNZZGZDMLBSet.size());
+        System.out.println("QDDJZTSet size : " + Constants.QDDJZTSet.size());
+        System.out.println("QZZSSet size : " + Constants.QZZSSet.size());
+        System.out.println("RLDCTZGSSet size : " + Constants.RLDCTZGSSet.size());
+
+
 //        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
         System.out.println("upsertTimes:" + upsertTimes.get());
 //        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());
@@ -138,7 +156,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("compress string rate:" + StaticsUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StaticsUtil.STRING_TOTAL_LENGTH.get());
         }
         System.out.println("compress double length: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get());
-        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (30000L * 3600L * 45L * 8L));
+        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (30000L * 3600L * 9L * 8L));
         System.out.println("compress long length: " + StaticsUtil.LONG_COMPRESS_LENGTH.get());
         System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (30000L * 3600L * 8L));
         System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());

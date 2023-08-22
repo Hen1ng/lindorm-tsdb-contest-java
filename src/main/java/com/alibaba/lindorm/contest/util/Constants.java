@@ -16,9 +16,9 @@ public class Constants {
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;
     public static final long WARM_FILE_SIZE = 1024 * 1024 * 1024;
     public static final boolean USE_ZIGZAG = false;
-    public static final int LOAD_FILE_TO_MEMORY_NUM = 16;
+    public static final int LOAD_FILE_TO_MEMORY_NUM = 17;
 
-    public static final int CACHE_VINS_LINE_NUMS = 45;
+    public static final int CACHE_VINS_LINE_NUMS = 35;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;
@@ -46,6 +46,21 @@ public class Constants {
     public static ConcurrentSkipListSet<Integer> LJLCSet;
     public static ConcurrentSkipListSet<Integer> DCDTDYZGZSet;
     public static ConcurrentSkipListSet<Integer> RLDCDYSet;
+    public static ConcurrentSkipListSet<Double> DJKZQDLSet = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> DJKZQDYSet = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> JYDZSet    = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> QDDJGSSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> QDDJKZWDSet= new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> QDDJWDSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> QDDJXHSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> QDDJZJSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<Double> QDDJZSSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<String> CSSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<String> DCDTDYZDZSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<String> KCDCNZZGZDMLBSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<String> QDDJZTSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<String> QZZSSet  = new ConcurrentSkipListSet<>();
+    public static ConcurrentSkipListSet<String> RLDCTZGSSet  = new ConcurrentSkipListSet<>();
 
     public static void saveBigIntMapToFile(File file) {
         try {
