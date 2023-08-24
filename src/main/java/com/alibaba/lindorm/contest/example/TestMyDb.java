@@ -57,8 +57,7 @@ public class TestMyDb {
             buffer.put((byte) 72);
             buffer.flip();
             columns.put("col1", new ColumnValue.IntegerColumn(123));
-            columns.put("LATITUDE", new ColumnValue.IntegerColumn(123));
-            columns.put("LONGITUDE", new ColumnValue.IntegerColumn(123112));
+
             columns.put("col2", new ColumnValue.DoubleFloatColumn(1.23));
             columns.put("col3", new ColumnValue.StringColumn(buffer));
             String str = "12345678912345678";
@@ -67,8 +66,7 @@ public class TestMyDb {
 
             Map<String, ColumnValue.ColumnType> cols = new HashMap<>();
             cols.put("col1", ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
-            cols.put("LATITUDE", ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
-            cols.put("LONGITUDE", ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
+
             cols.put("col2", ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT);
             cols.put("col3", ColumnValue.ColumnType.COLUMN_TYPE_STRING);
             Schema schema = new Schema(cols);

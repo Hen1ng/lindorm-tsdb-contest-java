@@ -9,8 +9,11 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.list.SortedList;
 
+import javax.swing.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +35,7 @@ public class MemoryTable {
     private final Condition hasFreeBuffer;
 
 
-    private final HashMap<Vin, Integer> vinToBufferIndex;
+    private final ConcurrentHashMap<Vin, Queue<Integer>> vinToBufferIndex;
 
     private final Queue<Integer> freeList;
     private final SortedList<Value>[] bufferValues;
@@ -54,7 +57,7 @@ public class MemoryTable {
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
         this.fixThreadPool = Executors.newFixedThreadPool(16);
-        this.vinToBufferIndex = new HashMap<>();
+        this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
@@ -178,7 +181,8 @@ public class MemoryTable {
                 if (!vinToBufferIndex.containsKey(vin)) {
                     return null;
                 }
-                int bufferIndex = vinToBufferIndex.get(vin);
+                Queue<Integer> indexs = vinToBufferIndex.get(vin);
+                int bufferIndex = indexs.poll();
                 value = bufferValues[bufferIndex].get(0);
             }finally {
                 bufferValuesLock.unlock();
@@ -266,7 +270,14 @@ public class MemoryTable {
             StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER,freeList.size());
             int i = freeList.poll();
             assert(bufferValues[i].isEmpty());
-            vinToBufferIndex.put(vin,i);
+            if(vinToBufferIndex.containsKey(vin)) {
+                Queue<Integer> integers = vinToBufferIndex.get(vin);
+                integers.add(i);
+            }else{
+                LinkedList<Integer> integers = new LinkedList<>();
+                integers.add(i);
+                vinToBufferIndex.put(vin,integers);
+            }
             return i;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -293,7 +304,10 @@ public class MemoryTable {
             final SortedList<Value> sortedList = values[slot];
             this.bufferValuesLock.lock();
             if(vinToBufferIndex.containsKey(vin)){
-                sortedList.addAll(bufferValues[vinToBufferIndex.get(vin)]);
+                Queue<Integer> indexs = vinToBufferIndex.get(vin);
+                for (Integer index : indexs) {
+                    sortedList.addAll(bufferValues[index]);
+                }
             }
             this.bufferValuesLock.unlock();
             for (Value value : sortedList) {

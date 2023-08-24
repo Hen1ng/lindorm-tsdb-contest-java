@@ -22,6 +22,8 @@ public class TSFile {
     private FileChannel fileChannel;
     private AtomicLong position;
     private long initPosition;
+
+    private int offsetLine;
     private Lock lock;
     private long fileSize;
     private int fileName;

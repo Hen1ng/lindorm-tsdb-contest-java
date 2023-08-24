@@ -7,6 +7,9 @@
 
 package com.alibaba.lindorm.contest;
 
+import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
+import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
+import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
@@ -94,9 +97,21 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
-        if (!RestartUtil.IS_FIRST_START) {
-            Constants.bigIntArray.loadFromFile(bigIntFile);
-            Constants.loadBigIntMapFromFile(bigIntMapFile);
+        if(RestartUtil.IS_FIRST_START){
+            Constants.intColumnHashMapCompress = new IntColumnHashMapCompress();
+            Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress();
+            Constants.stringColumnHashMapCompress = new StringColumnHashMapCompress();
+            Constants.intColumnHashMapCompress.addColumns("LATITUDE", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("LONGITUDE", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
+//            Constants.doubleColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
+            Constants.intColumnHashMapCompress.Prepare();
+            Constants.doubleColumnHashMapCompress.Prepare();
+            Constants.stringColumnHashMapCompress.Prepare();
+        }else  {
+            Constants.intColumnHashMapCompress = IntColumnHashMapCompress.loadFromFile(dataPath.getPath());
+            Constants.doubleColumnHashMapCompress = DoubleColumnHashMapCompress.loadFromFile(dataPath.getPath());
+            Constants.stringColumnHashMapCompress = StringColumnHashMapCompress.loadFromFile(dataPath.getPath());
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
@@ -133,11 +148,11 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("compress string rate:" + StaticsUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StaticsUtil.STRING_TOTAL_LENGTH.get());
         }
         System.out.println("compress double length: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get());
-        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (30000L * 3600L * 45L * 8L));
+        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (30000L * 3600L * 9L * 8L));
         System.out.println("compress long length: " + StaticsUtil.LONG_COMPRESS_LENGTH.get());
         System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (30000L * 3600L * 8L));
         System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
-        System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) /( 30000 * 3600L * 9L * 4L));
+        System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) /( 30000 * 3600L * 45L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         try {
@@ -145,8 +160,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);
             SchemaUtil.saveMapToFile(schemaFile);
-            Constants.bigIntArray.savaToFile(bigIntFile);
-            Constants.saveBigIntMapToFile(bigIntMapFile);
+            Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
+            Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
+            Constants.stringColumnHashMapCompress.saveToFile(dataPath.getPath());
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
@@ -174,6 +190,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             }
         } catch (Exception e) {
             System.out.println("upsert error, e" + e);
+            System.out.println(memoryTable);
         }
     }
 

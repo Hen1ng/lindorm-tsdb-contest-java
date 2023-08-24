@@ -81,7 +81,7 @@ public class EvaluationSample {
                 buffer.flip();
                 String vin = BytesUtil.getRandomString(17);
                 String[] bigIntKey = {"LATITUDE","LONGITUDE"};
-                for (int i = 0; i < 43; i++) {
+                for (int i = 0; i < 42; i++) {
                     String key = String.valueOf(i);
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
                     columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%10));
@@ -89,7 +89,12 @@ public class EvaluationSample {
                 for (int i = 0; i < 2; i++) {
                     String key = bigIntKey[i];
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
-                    columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()));
+                    columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%100));
+                }
+                {
+                    String key = "YXMS";
+                    columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
+                    columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%100));
                 }
                 for (int i = 0; i < 9; i++) {
                     String key = i + "haha";

@@ -213,12 +213,9 @@ public class IntCompress {
         }
         IntWrapper aOffset = new IntWrapper(0);
         IntWrapper bOffset = new IntWrapper(0);
-        int[] output = new int[ints.length+1024];
+        int[] output = new int[ints.length+10240];
         codec.uncompress(ints,aOffset,ints.length,output,bOffset);
         ints = Arrays.copyOf(output,bOffset.intValue());
-        System.out.println(bOffset.intValue());
-
-
         //        for (int i = 0; i < decode.length; i++) {
 //            decode[i] = ZigZagUtil.zigzagToInt(decode[i]);
 //        }

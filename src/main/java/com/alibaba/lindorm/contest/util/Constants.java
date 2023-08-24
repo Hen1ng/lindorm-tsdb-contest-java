@@ -1,6 +1,9 @@
 package com.alibaba.lindorm.contest.util;
 
 import com.alibaba.lindorm.contest.compress.BigIntArray;
+import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
+import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
+import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -27,69 +30,21 @@ public class Constants {
 
     public static final int TOTAL_BUFFER_NUMS = 10000;
 
-    public static final List<String> BIGINT_COLUMN_INDEX;
 
 
     // ---------- BIGINT DICT COMPRESS --------------------
-    public static int BIGINT_COLUMN_NUM;
 
-    public static ConcurrentHashMap<Integer,Integer> IntCompressMap;
-    public static ConcurrentHashMap<Integer,Integer> IntCompressMapReverse;
-
-    public static  AtomicInteger INT_NUMBER_INDEX;
-
-    public static BigIntArray bigIntArray;
 
     public static ConcurrentSkipListSet<Integer> YXMSset;
 
-    public static void saveBigIntMapToFile(File file) {
-        try {
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                for (Integer key : IntCompressMap.keySet()) {
-                    writer.write(String.valueOf(key));
-                    writer.write(":");
-                    writer.write(String.valueOf(IntCompressMap.get(key)));
-                    writer.newLine();
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("saveMapToFile error, e" + e);
-        }
-    }
+    public static IntColumnHashMapCompress intColumnHashMapCompress;
 
-    public static void loadBigIntMapFromFile(File file) {
-        try {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(":");
-                    if (parts.length != 2) {
-                        System.out.println("Invalid line format: " + line);
-                        continue;
-                    }
-                    Integer key = Integer.parseInt(parts[0].trim());
-                    Integer value = Integer.parseInt(parts[1].trim());
+    public static DoubleColumnHashMapCompress doubleColumnHashMapCompress;
+    public static StringColumnHashMapCompress stringColumnHashMapCompress;
 
-                    IntCompressMap.put(key, value);
-                    IntCompressMapReverse.put(value, key);
-                }
-            }
-        } catch (IOException e) {
-            System.out.println("loadMapFromFile error, e: " + e);
-        } catch (NumberFormatException nfe) {
-            System.out.println("Error parsing number: " + nfe.getMessage());
-        }
-    }
+
 
     static{
-        BIGINT_COLUMN_INDEX = new ArrayList<>();
-        BIGINT_COLUMN_INDEX.add("LATITUDE");
-        BIGINT_COLUMN_INDEX.add("LONGITUDE");
-        BIGINT_COLUMN_NUM = BIGINT_COLUMN_INDEX.size();
-        INT_NUMBER_INDEX = new AtomicInteger(0);
-        IntCompressMap = new ConcurrentHashMap<>();
-        IntCompressMapReverse = new ConcurrentHashMap<>();
-        bigIntArray = new BigIntArray();
         YXMSset = new ConcurrentSkipListSet<>();
     }
 

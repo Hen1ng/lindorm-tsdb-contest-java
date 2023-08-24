@@ -33,6 +33,10 @@ public class Index {
         return offset;
     }
 
+    public int getOffsetLine(){
+        return offsetLine;
+    }
+
     public long getMaxTimestamp() {
         return maxTimestamp;
     }
@@ -47,13 +51,15 @@ public class Index {
 
     private int length;
 
-    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize,int bigIntOffset) {
+    private int offsetLine;
+
+    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize,int offsetLine) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
         this.minTimestamp = minTimestamp;
         this.length = length;
         this.valueSize = valueSize;
-        this.bigIntOffset = bigIntOffset;
+        this.offsetLine = offsetLine;
     }
 
     @Override
@@ -68,7 +74,7 @@ public class Index {
                 "," +
                 valueSize +
                 "," +
-                bigIntOffset
+                offsetLine
                 ;
 
     }
