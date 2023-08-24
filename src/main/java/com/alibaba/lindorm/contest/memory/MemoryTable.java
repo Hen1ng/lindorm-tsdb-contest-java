@@ -53,7 +53,7 @@ public class MemoryTable {
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
-        this.fixThreadPool = Executors.newFixedThreadPool(160);
+        this.fixThreadPool = Executors.newFixedThreadPool(48);
         this.vinToBufferIndex = new HashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));

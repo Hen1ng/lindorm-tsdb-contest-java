@@ -1,6 +1,5 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.FloatCompress;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;

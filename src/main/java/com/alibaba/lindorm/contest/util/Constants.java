@@ -16,9 +16,9 @@ public class Constants {
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;
     public static final long WARM_FILE_SIZE = 1024 * 1024 * 1024;
     public static final boolean USE_ZIGZAG = false;
-    public static final int LOAD_FILE_TO_MEMORY_NUM = 17;
+    public static final int LOAD_FILE_TO_MEMORY_NUM = 18;
 
-    public static final int CACHE_VINS_LINE_NUMS = 35;
+    public static final int CACHE_VINS_LINE_NUMS = 45;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;

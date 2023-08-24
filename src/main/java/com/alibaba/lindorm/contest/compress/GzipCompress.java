@@ -41,7 +41,7 @@ public class GzipCompress implements Compress {
         GZIPInputStream ungzip = null;
         try {
             ungzip = new GZIPInputStream(in);
-            byte[] buffer = new byte[2048];
+            byte[] buffer = new byte[1024];
             int n;
             while ((n = ungzip.read(buffer)) >= 0) {
                 out.write(buffer, 0, n);
