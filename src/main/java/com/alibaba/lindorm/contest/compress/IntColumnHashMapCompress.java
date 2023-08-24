@@ -28,6 +28,7 @@ public class IntColumnHashMapCompress implements  Serializable {
 
     private ConcurrentHashMap<Integer,Integer>[] hashMaps;
 
+    //todo 最好能直接用array，ArrayList肯定不如直接用array，另外如果用arrayList需要初始化的时候制定长度，否则涉及到扩容，影响性能
     private ArrayList<ArrayList<Integer>> hashMapReverses;
 
     private byte[][] data;
@@ -57,6 +58,7 @@ public class IntColumnHashMapCompress implements  Serializable {
         columnNameToBytesMap.put(compressColumnNum,columnBytes);
         compressColumnNum++;
     }
+    //todo 这个性能不知道有没有问题
     public boolean Exist(String columnName){
         return columnNameToIndexMap.containsKey(columnName);
     }
@@ -80,6 +82,7 @@ public class IntColumnHashMapCompress implements  Serializable {
         }
     }
 
+    //todo 这个是一个线程不安全的操作，可以为增加一个成员变量Lock[]，为每个单独压缩的列搞一个锁，得判断加锁和解锁的地方，是在这个方法里面还是在这个方法外面，write里面
     public int addElement(String column,Integer element){
         Integer i = columnNameToIndexMap.get(column);
         int andAdd;
