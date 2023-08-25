@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class IntColumnHashMapCompress implements  Serializable {
     private static final long serialVersionUID = 1L;
@@ -29,7 +31,9 @@ public class IntColumnHashMapCompress implements  Serializable {
     private ConcurrentHashMap<Integer,Integer>[] hashMaps;
 
     //todo 最好能直接用array，ArrayList肯定不如直接用array，另外如果用arrayList需要初始化的时候制定长度，否则涉及到扩容，影响性能
-    private ArrayList<ArrayList<Integer>> hashMapReverses;
+    private int[][] hashMapReverses;
+
+    private Lock[] locks;
 
     private byte[][] data;
 
@@ -67,10 +71,12 @@ public class IntColumnHashMapCompress implements  Serializable {
         columnNames = new String[compressColumnNum];
         hashMaps = new ConcurrentHashMap[compressColumnNum];
         positionAtomic = new AtomicInteger();
-        hashMapReverses = new ArrayList<>();
+        hashMapReverses = new int[compressColumnNum][];
+        locks = new ReentrantLock[compressColumnNum];
         for(int i=0;i<compressColumnNum;i++){
+            locks[i] = new ReentrantLock();
             hashMaps[i] = new ConcurrentHashMap<>();
-            hashMapReverses.add(new ArrayList<>(Collections.nCopies(120, 0)));
+            hashMapReverses[i] = new int[120];
         }
         data = new byte[compressColumnNum][];
         for(int i=0;i<data.length;i++){
@@ -82,16 +88,21 @@ public class IntColumnHashMapCompress implements  Serializable {
         }
     }
 
-    //todo 这个是一个线程不安全的操作，可以为增加一个成员变量Lock[]，为每个单独压缩的列搞一个锁，得判断加锁和解锁的地方，是在这个方法里面还是在这个方法外面，write里面
-    public int addElement(String column,Integer element){
+    //todo-Done 这个是一个线程不安全的操作，可以为增加一个成员变量Lock[]，为每个单独压缩的列搞一个锁，得判断加锁和解锁的地方，是在这个方法里面还是在这个方法外面，write里面
+    public int addElement(String column,Integer element) {
         Integer i = columnNameToIndexMap.get(column);
         int andAdd;
-        if(!hashMaps[i].containsKey(element)) {
-            andAdd = autoIncrementArray[i].getAndAdd(1);
-            hashMapReverses.get(i).set(andAdd,element);
-            hashMaps[i].put(element,andAdd);
-        }else{
-            andAdd =  hashMaps[i].get(element);
+        try {
+            locks[i].lock();
+            if (!hashMaps[i].containsKey(element)) {
+                andAdd = autoIncrementArray[i].getAndAdd(1);
+                hashMapReverses[i][andAdd] = element;
+                hashMaps[i].put(element, andAdd);
+            } else {
+                andAdd = hashMaps[i].get(element);
+            }
+        } finally {
+            locks[i].unlock();
         }
         return andAdd;
     }
@@ -120,7 +131,7 @@ public class IntColumnHashMapCompress implements  Serializable {
         try {
             Integer i = columnNameToIndexMap.get(column);
             int b = data[i][index] & 0xFF;
-            return hashMapReverses.get(i).get(b);
+            return hashMapReverses[i][b];
         }catch (IndexOutOfBoundsException e){
             System.out.println(column+ " IntHashMapCompress.getElement outofIndex " + index );
         }

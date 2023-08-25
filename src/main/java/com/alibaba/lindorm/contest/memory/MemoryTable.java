@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * key:Vin, value:timestamp
@@ -43,7 +44,7 @@ public class MemoryTable {
 
     private final int size;
     private final AtomicInteger atomicIndex = new AtomicInteger(0);
-    private final SpinLockArray spinLockArray;
+    private final ReentrantReadWriteLock[] spinLockArray;
     private final TSFileService tsFileService;
 
 
@@ -52,7 +53,10 @@ public class MemoryTable {
         this.values = new SortedList[size];
         this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
-        this.spinLockArray = new SpinLockArray(60000);
+        this.spinLockArray = new ReentrantReadWriteLock[60000];
+        for(int i=0;i<60000;i++){
+            this.spinLockArray[i] = new ReentrantReadWriteLock();
+        }
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
@@ -73,7 +77,7 @@ public class MemoryTable {
         final byte[] vin1 = vin.getVin();
         final int hash = getStringHash(vin1, 0, vin1.length);
         int lock = hash % Constants.TOTAL_VIN_NUMS;
-        spinLockArray.lockWrite(lock);
+        spinLockArray[lock].writeLock().lock();
         try {
             Integer index = VinDictMap.get(vin);
             if (index == null) {
@@ -96,7 +100,7 @@ public class MemoryTable {
                 });
             }
         } finally {
-            spinLockArray.unlockWrite(lock);
+            spinLockArray[lock].writeLock().unlock();
         }
     }
 
@@ -105,8 +109,8 @@ public class MemoryTable {
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();
         final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % spinLockArray.length();
-        spinLockArray.lockWrite(lock);
+        int lock = hash % spinLockArray.length;
+        spinLockArray[lock].writeLock().lock();
         try {
             Integer index = VinDictMap.get(vin);
             if (index == null) {
@@ -119,7 +123,7 @@ public class MemoryTable {
                 tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
             }
         } finally {
-            spinLockArray.unlockWrite(lock);
+            spinLockArray[lock].writeLock().unlock();
         }
     }
 
@@ -134,8 +138,8 @@ public class MemoryTable {
     public Row getLastRow(Vin vin, Set<String> requestedColumns) {
         final byte[] vin1 = vin.getVin();
         final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int lock = keyHash % spinLockArray.length();
-        spinLockArray.lockRead(lock);
+        int lock = keyHash % spinLockArray.length;
+        spinLockArray[lock].readLock().lock();
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -167,7 +171,7 @@ public class MemoryTable {
         } catch (Exception e) {
             System.out.println("getLastRowFromMemoryTable e" + e);
         } finally {
-            spinLockArray.unlockRead(lock);
+            spinLockArray[lock].readLock().unlock();
         }
         return null;
     }
@@ -212,8 +216,8 @@ public class MemoryTable {
     public ArrayList<Row> getTimeRangeRow(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns) {
         final byte[] vin1 = vin.getVin();
         final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int lock = keyHash % spinLockArray.length();
-        spinLockArray.lockRead(lock);
+        int lock = keyHash % spinLockArray.length;
+        spinLockArray[lock].readLock().lock();
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -227,7 +231,7 @@ public class MemoryTable {
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
             return timeRangeRowFromMemoryTable;
         } finally {
-            spinLockArray.unlockRead(lock);
+            spinLockArray[lock].readLock().unlock();
         }
     }
 
@@ -235,7 +239,7 @@ public class MemoryTable {
         final byte[] vin1 = vin.getVin();
         final int keyHash = getStringHash(vin1, 0, vin1.length);
         int slot = keyHash % size;
-        spinLockArray.lockRead(slot);
+        spinLockArray[slot].readLock().lock();
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -257,7 +261,7 @@ public class MemoryTable {
             }
             return rowArrayList;
         } finally {
-            spinLockArray.unlockRead(slot);
+            spinLockArray[slot].readLock().lock();
         }
     }
 
@@ -269,7 +273,6 @@ public class MemoryTable {
             }
             StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER,freeList.size());
             int i = freeList.poll();
-            assert(bufferValues[i].isEmpty());
             if(vinToBufferIndex.containsKey(vin)) {
                 Queue<Integer> integers = vinToBufferIndex.get(vin);
                 integers.add(i);
