@@ -109,11 +109,11 @@ public class IntCompress {
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
         int[] data = testNum3.clone();
-        int[][] splitArray = splitArray(data, 35,100*35);
-        for (int[] ints : splitArray) {
-            System.out.println(Arrays.toString(ints));
-        }
-        data = combineArray(splitArray);
+//        int[][] splitArray = splitArray(data, 35,100*35);
+//        for (int[] ints : splitArray) {
+//            System.out.println(Arrays.toString(ints));
+//        }
+//        data = combineArray(splitArray);
         final byte[] compress = compress(data);
         System.out.println("cost:" + (System.currentTimeMillis() - start) + " ms");
         final int[] decompress = decompress(compress);
@@ -129,6 +129,15 @@ public class IntCompress {
         decompress2(bytes, output);
 
         boolean a = Arrays.equals(testNum3, output);
+
+        final ByteBuffer allocate = ByteBuffer.allocate(data.length * 4);
+        for (int datum : data) {
+            allocate.putInt(datum);
+        }
+        final GzipCompress gzipCompress = new GzipCompress();
+        final byte[] compress1 = gzipCompress.compress(allocate.array());
+        final byte[] bytes1 = gzipCompress.deCompress(compress1);
+
         System.out.println(b);
         System.out.println("compress rate : " +1.0d*compress.length/(data.length*4));
     }
@@ -166,13 +175,13 @@ public class IntCompress {
     }
 
     public static byte[]  compress(int[] ints) {
-//        ints = Simple9Codes.innerEncode(ints);
+        ints = Simple9Codes.innerEncode(ints);
 
-        int [] compressed = new int[ints.length+1024];
-        IntWrapper aOffset = new IntWrapper(0);
-        IntWrapper bOffset = new IntWrapper(0);
-        codec.compress(ints,aOffset,ints.length,compressed,bOffset);
-        ints = Arrays.copyOf(compressed,bOffset.intValue());
+//        int [] compressed = new int[ints.length+1024];
+//        IntWrapper aOffset = new IntWrapper(0);
+//        IntWrapper bOffset = new IntWrapper(0);
+//        codec.compress(ints,aOffset,ints.length,compressed,bOffset);
+//        ints = Arrays.copyOf(compressed,bOffset.intValue());
 
 //        int[] gapArray = toGapArray(ints);
 //        for (int i = 0; i < gapArray.length; i++) {
@@ -206,24 +215,27 @@ public class IntCompress {
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
         }
-        if (Constants.USE_ZIGZAG) {
-            for (int j = 0; j < ints.length; j++) {
-                ints[j] = ZigZagUtil.zigzagToInt(ints[j]);
-            }
-        }
-        IntWrapper aOffset = new IntWrapper(0);
-        IntWrapper bOffset = new IntWrapper(0);
-        int[] output = new int[ints.length+10240];
-        codec.uncompress(ints,aOffset,ints.length,output,bOffset);
-        ints = Arrays.copyOf(output,bOffset.intValue());
+//        if (Constants.USE_ZIGZAG) {
+//            for (int j = 0; j < ints.length; j++) {
+//                ints[j] = ZigZagUtil.zigzagToInt(ints[j]);
+//            }
+//        }
+//        IntWrapper aOffset = new IntWrapper(0);
+//        IntWrapper bOffset = new IntWrapper(0);
+//        int[] output = new int[ints.length+1024];
+//        codec.uncompress(ints,aOffset,ints.length,output,bOffset);
+//        ints = Arrays.copyOf(output,bOffset.intValue());
+//        System.out.println(bOffset.intValue());
+
+
         //        for (int i = 0; i < decode.length; i++) {
 //            decode[i] = ZigZagUtil.zigzagToInt(decode[i]);
 //        }
 //        for (int i = 1; i < decode.length; i++) {
 //            decode[i] = decode[i - 1] + decode[i];
 //        }
-//        return Simple9Codes.decode(ints);
-        return ints;
+        return Simple9Codes.decode(ints);
+//        return ints;
     }
     protected static int[] toGapArray(int[] numbers) {
         int prev = numbers[0];

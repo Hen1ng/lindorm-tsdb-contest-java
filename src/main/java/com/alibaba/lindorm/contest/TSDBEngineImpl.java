@@ -156,7 +156,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         try {
-            memoryTable.writeToFileBeforeShutdown();
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);
             SchemaUtil.saveMapToFile(schemaFile);
@@ -167,6 +166,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
             if (RestartUtil.IS_FIRST_START) {
+                memoryTable.writeToFileBeforeShutdown();
                 filePosition.save(fileService.getTsFiles());
             }
         } catch (Exception e) {

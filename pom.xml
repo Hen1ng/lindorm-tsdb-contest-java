@@ -36,13 +36,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
-            <dependency>
-                <groupId>me.lemire.integercompression</groupId>
-                <artifactId>JavaFastPFOR</artifactId>
-                <version>0.1.12</version>
-                <scope>system</scope>
-                <systemPath>${project.basedir}/thirdlibs/JavaFastPFOR-0.1.12.jar</systemPath>
-            </dependency>
+<!--            <dependency>-->
+<!--                <groupId>me.lemire.integercompression</groupId>-->
+<!--                <artifactId>JavaFastPFOR</artifactId>-->
+<!--                <version>0.1.12</version>-->
+<!--                <scope>system</scope>-->
+<!--                <systemPath>${project.basedir}/thirdlibs/snappy-1.1.7.jar</systemPath>-->
+<!--            </dependency>-->
     </dependencies>
 
 

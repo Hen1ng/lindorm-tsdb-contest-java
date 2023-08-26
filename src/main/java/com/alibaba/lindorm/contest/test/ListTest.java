@@ -9,6 +9,7 @@ import java.util.zip.GZIPOutputStream;
 
 public class ListTest {
     public static void main(String[] args) {
+        var i = 0;
         final CopyOnWriteArrayList<Integer> integers = new CopyOnWriteArrayList<>();
         new Thread() {
             @Override

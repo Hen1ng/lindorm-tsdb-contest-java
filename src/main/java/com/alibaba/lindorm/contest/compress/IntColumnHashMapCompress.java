@@ -90,21 +90,26 @@ public class IntColumnHashMapCompress implements  Serializable {
 
     //todo-Done 这个是一个线程不安全的操作，可以为增加一个成员变量Lock[]，为每个单独压缩的列搞一个锁，得判断加锁和解锁的地方，是在这个方法里面还是在这个方法外面，write里面
     public int addElement(String column,Integer element) {
-        Integer i = columnNameToIndexMap.get(column);
-        int andAdd;
         try {
-            locks[i].lock();
-            if (!hashMaps[i].containsKey(element)) {
-                andAdd = autoIncrementArray[i].getAndAdd(1);
-                hashMapReverses[i][andAdd] = element;
-                hashMaps[i].put(element, andAdd);
-            } else {
-                andAdd = hashMaps[i].get(element);
+            Integer i = columnNameToIndexMap.get(column);
+            int andAdd;
+            try {
+                locks[i].lock();
+                if (!hashMaps[i].containsKey(element)) {
+                    andAdd = autoIncrementArray[i].getAndAdd(1);
+                    hashMapReverses[i][andAdd] = element;
+                    hashMaps[i].put(element, andAdd);
+                } else {
+                    andAdd = hashMaps[i].get(element);
+                }
+            } finally {
+                locks[i].unlock();
             }
-        } finally {
-            locks[i].unlock();
+            return andAdd;
+        } catch (Exception e) {
+            System.out.println("IntColumnHashMapCompress error, e" + e );
         }
-        return andAdd;
+        return -1;
     }
     public int GetColumnIndex(String key){
         return columnNameToIndexMap.get(key);
@@ -114,17 +119,22 @@ public class IntColumnHashMapCompress implements  Serializable {
     }
 
     public int CompressAndadd(int[][] ints){
-        int offSet = positionAtomic.getAndAdd(ints[0].length);
-        for (int i=0;i<ints.length;i++) {
-            assert(ints[i].length == ints[0].length);
-            for (int j = 0; j < ints[i].length; j++) {
-                if (ints[i][j] > 255) {
-                    throw new IllegalArgumentException("Int value at index " + i + " value :" + ints[i] + "cannot be safely converted to byte");
+        try {
+            int offSet = positionAtomic.getAndAdd(ints[0].length);
+            for (int i = 0; i < ints.length; i++) {
+                assert (ints[i].length == ints[0].length);
+                for (int j = 0; j < ints[i].length; j++) {
+                    if (ints[i][j] > 255) {
+                        throw new IllegalArgumentException("Int value at index " + i + " value :" + ints[i] + "cannot be safely converted to byte");
+                    }
+                    data[i][offSet + j] = (byte) (ints[i][j] & 0xFF);
                 }
-                data[i][offSet+j] = (byte) (ints[i][j] & 0xFF);
             }
+            return offSet;
+        } catch (Exception e) {
+            System.out.println("CompressAndadd error, e" + e);
         }
-        return offSet;
+        return -1;
     }
 
     public Integer getElement(String column,int index){
@@ -162,6 +172,7 @@ public class IntColumnHashMapCompress implements  Serializable {
         File file = new File(filePath);
         final boolean delete = file.delete();
         System.out.println("delete file "+ filePath + " result :" + delete);
+        System.out.println("IntColumnHashMapCompress data.length" + obj.data.length + "data[0].length" + obj.data[0].length);
         return obj;
     }
 

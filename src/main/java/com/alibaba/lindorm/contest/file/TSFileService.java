@@ -606,7 +606,7 @@ public class TSFileService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("write to file error, e :" + e.getLocalizedMessage());
+            System.out.println("write to file error, e :" + e.getLocalizedMessage() + "value size:" + valueList.size()) ;
         }
     }
 
