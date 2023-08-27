@@ -4,9 +4,7 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Schema;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SchemaUtil {
@@ -16,6 +14,8 @@ public class SchemaUtil {
     private static final TreeMap<String, ColumnValue.ColumnType> FLOAT_MAP = new TreeMap<>();
     private static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
     private static final String[] INDEX_ARRAY = new String[60];
+    public static final Map<String, Set<Integer>> maps = new ConcurrentHashMap();
+
 
     public static Schema getSchema() {
         return schema1;
@@ -81,6 +81,9 @@ public class SchemaUtil {
             COLUMNS_INDEX.put(sparseColumn.getKey(), i);
             System.out.println("key: " + sparseColumn + " index : " + i);
             i++;
+        }
+        for (String s : INDEX_ARRAY) {
+            maps.put(s, new HashSet<>());
         }
     }
 

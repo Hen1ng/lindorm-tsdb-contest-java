@@ -502,6 +502,7 @@ public class TSFileService {
                     Map<String, ColumnValue> columns = value.getColumns();
                     if (i < 45) {
                         int integerValue = columns.get(key).getIntegerValue();
+                        SchemaUtil.maps.get(key).add(integerValue);
                         if (key.equals("YXMS")) {
                             Constants.YXMSset.add(integerValue);
                         }

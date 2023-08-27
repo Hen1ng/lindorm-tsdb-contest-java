@@ -160,6 +160,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) /( 30000 * 3600L * 45L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
+        for (String s : SchemaUtil.maps.keySet()) {
+            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size()) ;
+        }
         try {
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);
