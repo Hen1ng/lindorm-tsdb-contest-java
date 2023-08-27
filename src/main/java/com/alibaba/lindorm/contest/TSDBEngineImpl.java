@@ -104,6 +104,11 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.intColumnHashMapCompress.addColumns("LATITUDE", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("LONGITUDE", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("LJLC", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("DCDC", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("RLDCDY", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("DCDTDYZGZ", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("RLDCRLXHL", 3600 * 30000);
 //            Constants.doubleColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
             Constants.intColumnHashMapCompress.Prepare();
             Constants.doubleColumnHashMapCompress.Prepare();
