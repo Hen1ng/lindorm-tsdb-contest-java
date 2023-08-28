@@ -109,6 +109,14 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.intColumnHashMapCompress.addColumns("RLDCDY", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("DCDTDYZGZ", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("RLDCRLXHL", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("QQZGYLCGQDH", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("RLDCDL", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("QQZGND", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("CDZT", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("QDDJGZZS", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("ZDDYDCZXTDH", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("QQZGNDCGQDH", 3600 * 30000);
+            Constants.intColumnHashMapCompress.addColumns("QQZGYL", 3600 * 30000);
 //            Constants.doubleColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
             Constants.intColumnHashMapCompress.Prepare();
             Constants.doubleColumnHashMapCompress.Prepare();
@@ -217,7 +225,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
             }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 100000 == 0) {
+            if (executeLatestQueryTimes.get() % 400000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());
             }
@@ -234,7 +242,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
 //        executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
-        if (executeTimeRangeQueryTimes.get() % 10000 == 0) {
+        if (executeTimeRangeQueryTimes.get() % 400000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedFields().size());
         }

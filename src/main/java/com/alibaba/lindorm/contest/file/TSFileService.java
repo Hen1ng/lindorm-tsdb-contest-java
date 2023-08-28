@@ -106,24 +106,28 @@ public class TSFileService {
                         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
-                                if (Constants.intColumnHashMapCompress.Exist(requestedColumn)) {
-                                    try {
-                                        Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
-                                    }catch (Exception e){
-                                        System.out.println("intColumnHashMapCompress COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                                    }
+                                if (Constants.ZEROSET.contains(requestedColumn)) {
+                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
                                 } else {
-                                    if (ints == null) {
-                                        final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
-                                        tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
-                                        allocate1.flip();
-                                        ints = IntCompress.decompress(allocate1.array());
+                                    if (Constants.intColumnHashMapCompress.Exist(requestedColumn)) {
+                                        try {
+                                            Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
+                                            columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
+                                        } catch (Exception e) {
+                                            System.out.println("intColumnHashMapCompress COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                                        }
+                                    } else {
+                                        if (ints == null) {
+                                            final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
+                                            tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
+                                            allocate1.flip();
+                                            ints = IntCompress.decompress(allocate1.array());
+                                        }
+                                        final ByteBuffer intBuffer = INT_BUFFER.get();
+                                        intBuffer.clear();
+                                        int off = columnIndex * valueSize + i;
+                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
                                     }
-                                    final ByteBuffer intBuffer = INT_BUFFER.get();
-                                    intBuffer.clear();
-                                    int off = columnIndex * valueSize + i;
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
                                 }
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
@@ -294,27 +298,31 @@ public class TSFileService {
                     final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                     if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                         try {
-                            if (Constants.intColumnHashMapCompress.Exist(requestedColumn)) {
-                                try {
-                                    Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
-                                }catch (Exception e){
-                                    System.out.println("getBigInt COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                                }
+                            if (Constants.ZEROSET.contains(requestedColumn)) {
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
                             } else {
-                                try {
-                                    if (ints == null) {
-                                        final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
-                                        tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
-                                        allocate1.flip();
-                                        ints = IntCompress.decompress(allocate1.array());
+                                if (Constants.intColumnHashMapCompress.Exist(requestedColumn)) {
+                                    try {
+                                        Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
+                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
+                                    } catch (Exception e) {
+                                        System.out.println("getBigInt COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                                     }
-                                    final ByteBuffer intBuffer = INT_BUFFER.get();
-                                    intBuffer.clear();
-                                    int off = columnIndex * valueSize + i;
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
-                                }catch (Exception e){
-                                    System.out.println("getNormalIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                                } else {
+                                    try {
+                                        if (ints == null) {
+                                            final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
+                                            tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
+                                            allocate1.flip();
+                                            ints = IntCompress.decompress(allocate1.array());
+                                        }
+                                        final ByteBuffer intBuffer = INT_BUFFER.get();
+                                        intBuffer.clear();
+                                        int off = columnIndex * valueSize + i;
+                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
+                                    } catch (Exception e) {
+                                        System.out.println("getNormalIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                                    }
                                 }
                             }
                         } catch (Exception e) {
@@ -503,8 +511,8 @@ public class TSFileService {
                     if (i < 45) {
                         int integerValue = columns.get(key).getIntegerValue();
                         SchemaUtil.maps.get(key).add(integerValue);
-                        if (key.equals("YXMS")) {
-                            Constants.YXMSset.add(integerValue);
+                        if (Constants.ZEROSET.contains(key)) {
+                            continue;
                         }
                         if(Constants.intColumnHashMapCompress.Exist(key)){
                             int i1 = Constants.intColumnHashMapCompress.GetColumnIndex(key);

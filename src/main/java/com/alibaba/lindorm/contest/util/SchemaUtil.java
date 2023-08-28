@@ -41,9 +41,18 @@ public class SchemaUtil {
             if (Constants.intColumnHashMapCompress.Exist(key)) {
                 continue;
             }
+            if (Constants.ZEROSET.contains(key)) {
+                continue;
+            }
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
             System.out.println("key: " + key + " index : " + i);
+            i++;
+        }
+        for (String s : Constants.ZEROSET) {
+            INDEX_ARRAY[i] = s;
+            COLUMNS_INDEX.put(s, i);
+            System.out.println("key: " + s + " index : " + i);
             i++;
         }
         for (Map.Entry<String, Integer> sparseColumn : Constants.intColumnHashMapCompress.GetcolumnNameToIndexMap().entrySet()) {

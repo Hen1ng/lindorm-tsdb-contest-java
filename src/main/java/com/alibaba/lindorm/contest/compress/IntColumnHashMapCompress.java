@@ -132,7 +132,9 @@ public class IntColumnHashMapCompress implements  Serializable {
             }
             return offSet;
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("CompressAndadd error, e" + e);
+            System.exit(1);
         }
         return -1;
     }
