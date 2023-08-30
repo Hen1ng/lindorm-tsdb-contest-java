@@ -38,7 +38,7 @@ public class SchemaUtil {
         Constants.setStringNums(STRING_MAP.size());
         int i = 0;
         for (String key : INT_MAP.keySet()) {
-            if (Constants.intColumnHashMapCompress.Exist(key)) {
+            if (Constants.intColumnHashMapCompress.exist(key)) {
                 continue;
             }
             if (Constants.ZEROSET.contains(key)) {
@@ -55,7 +55,7 @@ public class SchemaUtil {
             System.out.println("key: " + s + " index : " + i);
             i++;
         }
-        for (Map.Entry<String, Integer> sparseColumn : Constants.intColumnHashMapCompress.GetcolumnNameToIndexMap().entrySet()) {
+        for (Map.Entry<String, Integer> sparseColumn : Constants.intColumnHashMapCompress.getColumnNameToIndexMap().entrySet()) {
             INDEX_ARRAY[i] = sparseColumn.getKey();
             COLUMNS_INDEX.put(sparseColumn.getKey(), i);
             System.out.println("key: " + sparseColumn.getKey() + " index : " + i);

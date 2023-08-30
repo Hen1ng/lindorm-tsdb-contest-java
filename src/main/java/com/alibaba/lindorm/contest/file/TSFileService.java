@@ -1,6 +1,5 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.FloatCompress;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;
@@ -109,7 +108,7 @@ public class TSFileService {
                                 if (Constants.ZEROSET.contains(requestedColumn)) {
                                     columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
                                 } else {
-                                    if (Constants.intColumnHashMapCompress.Exist(requestedColumn)) {
+                                    if (Constants.intColumnHashMapCompress.exist(requestedColumn)) {
                                         try {
                                             Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
                                             columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
@@ -301,7 +300,7 @@ public class TSFileService {
                             if (Constants.ZEROSET.contains(requestedColumn)) {
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
                             } else {
-                                if (Constants.intColumnHashMapCompress.Exist(requestedColumn)) {
+                                if (Constants.intColumnHashMapCompress.exist(requestedColumn)) {
                                     try {
                                         Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
                                         columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
@@ -451,15 +450,15 @@ public class TSFileService {
             List<ByteBuffer> stringList;
             double[] doubles = null;
             long[] longs = new long[lineNum];
-            int[] ints = new int[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.GetColumnSize())];
-            int[][] bigInts = Constants.intColumnHashMapCompress.GetTempArray(lineNum);
+            int[] ints = new int[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
+            int[][] bigInts = Constants.intColumnHashMapCompress.getTempArray(lineNum);
             int[][] doubleInts = Constants.doubleColumnHashMapCompress.GetTempArray(lineNum);
             int[][] stringInts = Constants.stringColumnHashMapCompress.GetTempArray(lineNum);
             int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
             int longPosition = 0;
             int doublePosition = 0;
-            AtomicInteger[] BigIntPosition =  new AtomicInteger[Constants.intColumnHashMapCompress.GetColumnSize()];
+            AtomicInteger[] BigIntPosition =  new AtomicInteger[Constants.intColumnHashMapCompress.getColumnSize()];
             for(int i=0;i<BigIntPosition.length;i++){
                 BigIntPosition[i] = new AtomicInteger();
             }
@@ -467,7 +466,7 @@ public class TSFileService {
             for(int i=0;i<doubleIntPosition.length;i++){
                 doubleIntPosition[i] = new AtomicInteger();
             }
-            AtomicInteger[] stringIntPosition =  new AtomicInteger[Constants.intColumnHashMapCompress.GetColumnSize()];
+            AtomicInteger[] stringIntPosition =  new AtomicInteger[Constants.intColumnHashMapCompress.getColumnSize()];
             for(int i=0;i<stringIntPosition.length;i++){
                 stringIntPosition[i] = new AtomicInteger();
             }
@@ -514,8 +513,8 @@ public class TSFileService {
                         if (Constants.ZEROSET.contains(key)) {
                             continue;
                         }
-                        if(Constants.intColumnHashMapCompress.Exist(key)){
-                            int i1 = Constants.intColumnHashMapCompress.GetColumnIndex(key);
+                        if(Constants.intColumnHashMapCompress.exist(key)){
+                            int i1 = Constants.intColumnHashMapCompress.getColumnIndex(key);
                             integerValue = Constants.intColumnHashMapCompress.addElement(key,integerValue);
                             bigInts[i1][BigIntPosition[i1].getAndAdd(1)] = integerValue;
                         } else {
@@ -587,7 +586,7 @@ public class TSFileService {
                 System.out.println("compress int error" + e);
             }
             // 存储bigInt
-            int offsetLine = Constants.intColumnHashMapCompress.CompressAndadd(bigInts);
+            int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd(bigInts);
             // 存储DoubleHashMapCompress
             Constants.doubleColumnHashMapCompress.CompressAndadd(doubleInts);
             // 存储StringHashMapCompress
