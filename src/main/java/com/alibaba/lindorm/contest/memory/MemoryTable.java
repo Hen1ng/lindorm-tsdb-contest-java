@@ -12,10 +12,7 @@ import com.alibaba.lindorm.contest.util.list.SortedList;
 import javax.swing.*;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -46,10 +43,12 @@ public class MemoryTable {
     private final AtomicInteger atomicIndex = new AtomicInteger(0);
     private final ReentrantReadWriteLock[] spinLockArray;
     private final TSFileService tsFileService;
+    private final MemoryBuffer memoryBuffer;
 
 
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
+        this.memoryBuffer = new MemoryBuffer();
         this.values = new SortedList[size];
         this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
@@ -60,7 +59,7 @@ public class MemoryTable {
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
-        this.fixThreadPool = Executors.newFixedThreadPool(16);
+        this.fixThreadPool = Executors.newFixedThreadPool(16 * 3);
         this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
@@ -97,6 +96,41 @@ public class MemoryTable {
                 fixThreadPool.submit( () -> {
                     tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex);
                     freeBufferByIndex(vin,finalBufferIndex);
+                });
+            }
+        } finally {
+            spinLockArray[lock].writeLock().unlock();
+        }
+    }
+
+    public void asyncPutV2(Row row){
+        Vin vin = row.getVin();
+        long ts = row.getTimestamp();
+        final byte[] vin1 = vin.getVin();
+        final int hash = getStringHash(vin1, 0, vin1.length);
+        int lock = hash % Constants.TOTAL_VIN_NUMS;
+        spinLockArray[lock].writeLock().lock();
+        try {
+            Integer index = VinDictMap.get(vin);
+            if (index == null) {
+                index = atomicIndex.getAndIncrement();
+                VinDictMap.put(vin, index);
+            }
+            SortedList<Value> valueSortedList = values[index];
+            valueSortedList.add(new Value(ts, row.getColumns()));
+            if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
+                final SortedList<Value> freeList = memoryBuffer.getFreeList(index);
+                // maybe used copy will be speed up
+                assert(freeList.isEmpty());
+                for (int i = 0; i < values[index].size(); i++) {
+                    freeList.add(values[index].get(i));
+                }
+                values[index] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
+                int finalIndex = index;
+                fixThreadPool.submit( () -> {
+                    tsFileService.write(vin, freeList, Constants.CACHE_VINS_LINE_NUMS, finalIndex);
+                    freeList.clear();
+                    memoryBuffer.freeBuffer(freeList, finalIndex);
                 });
             }
         } finally {
@@ -177,21 +211,29 @@ public class MemoryTable {
     }
 
     public Row getFromMemoryTable(Vin vin, Set<String> requestedColumns, int slot) {
+
         final int size = values[slot].size();
-        Value value;
+        Value value = null;
         if (size == 0) {
-            try {
-                bufferValuesLock.lock();
-                if (!vinToBufferIndex.containsKey(vin)) {
-                    return null;
+            long maxTs = Long.MIN_VALUE;
+            memoryBuffer.locks[slot].readLock().lock();
+            ArrayBlockingQueue<SortedList<Value>> list = memoryBuffer.getList(slot);
+            for (SortedList<Value> valueSortedList : list) {
+                if (valueSortedList.isEmpty()) {
+                    continue;
                 }
-                Queue<Integer> indexs = vinToBufferIndex.get(vin);
-                int bufferIndex = indexs.poll();
-                value = bufferValues[bufferIndex].get(0);
-            }finally {
-                bufferValuesLock.unlock();
+                final Value value1 = valueSortedList.get(0);
+                final long timestamp = value1.getTimestamp();
+                if (timestamp > maxTs) {
+                    maxTs = timestamp;
+                    value = value1;
+                }
             }
-        }else{
+            memoryBuffer.locks[slot].readLock().unlock();
+            if (value == null) {
+                return null;
+            }
+        } else {
             value = values[slot].get(0);
         }
         Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
@@ -303,17 +345,29 @@ public class MemoryTable {
 
     private ArrayList<Row> getTimeRangeRowFromMemoryTable(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int slot) {
         ArrayList<Row> result = new ArrayList<>();
+        List<Value> valuesList = new ArrayList<>();
         try {
-            final SortedList<Value> sortedList = values[slot];
-            this.bufferValuesLock.lock();
-            if(vinToBufferIndex.containsKey(vin)){
-                Queue<Integer> indexs = vinToBufferIndex.get(vin);
-                for (Integer index : indexs) {
-                    sortedList.addAll(bufferValues[index]);
+//            final SortedList<Value> sortedList = values[slot];
+//            this.bufferValuesLock.lock();
+//            if(vinToBufferIndex.containsKey(vin)){
+//                Queue<Integer> indexs = vinToBufferIndex.get(vin);
+//                for (Integer index : indexs) {
+//                    sortedList.addAll(bufferValues[index]);
+//                }
+//            }
+//            this.bufferValuesLock.unlock();
+            long maxTs = Long.MIN_VALUE;
+            memoryBuffer.locks[slot].readLock().lock();
+            ArrayBlockingQueue<SortedList<Value>> list = memoryBuffer.getList(slot);
+            for (SortedList<Value> valueSortedList : list) {
+                if (valueSortedList.isEmpty()) {
+                    continue;
                 }
+                valuesList.addAll(valueSortedList);
             }
-            this.bufferValuesLock.unlock();
-            for (Value value : sortedList) {
+            memoryBuffer.locks[slot].readLock().unlock();
+            valuesList.addAll(values[slot]);
+            for (Value value : valuesList) {
                 if (value.getTimestamp() >= timeLowerBound && value.getTimestamp() < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {
