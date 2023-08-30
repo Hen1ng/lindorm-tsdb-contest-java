@@ -60,7 +60,7 @@ public class MemoryTable {
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
-        this.fixThreadPool = Executors.newFixedThreadPool(16);
+        this.fixThreadPool = Executors.newFixedThreadPool(16 * 2);
         this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
@@ -303,17 +303,19 @@ public class MemoryTable {
 
     private ArrayList<Row> getTimeRangeRowFromMemoryTable(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int slot) {
         ArrayList<Row> result = new ArrayList<>();
+        List<Value> valueList = new ArrayList<>();
         try {
             final SortedList<Value> sortedList = values[slot];
+            valueList.addAll(sortedList);
             this.bufferValuesLock.lock();
             if(vinToBufferIndex.containsKey(vin)){
                 Queue<Integer> indexs = vinToBufferIndex.get(vin);
                 for (Integer index : indexs) {
-                    sortedList.addAll(bufferValues[index]);
+                    valueList.addAll(bufferValues[index]);
                 }
             }
             this.bufferValuesLock.unlock();
-            for (Value value : sortedList) {
+            for (Value value : valueList) {
                 if (value.getTimestamp() >= timeLowerBound && value.getTimestamp() < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {
