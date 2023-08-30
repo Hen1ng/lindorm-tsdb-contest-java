@@ -82,41 +82,41 @@ public class QueryTest {
                 }
             }
 
-//            Schema schema = new Schema(columnTypeMap);
-//            tsdbEngineSample.connect();
-//            tsdbEngineSample.createTable("haha", schema);
-//            String v1 =  BytesUtil.getRandomString(17);
-//            System.out.println("V1 " + v1);
-//            AtomicLong atomicLong = new AtomicLong(0);
-//            long start = System.currentTimeMillis();
-//            for (int i = 0; i < threadNum; i++) {
-//                new Thread(() -> {
-//                    for (int j = 0; j < 1000; j++) {
-//                        List<Row> rowList = new ArrayList<>();
-//                        for (int i1 = 0; i1 < 10; i1++) {
-//                            Vin vin = vins[random.nextInt(100)];
-//                            if (j == 100) {
-//                                vin = new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8));
-//                            }
-//                            rowList.add(new Row( vin, atomicLong.getAndIncrement() * 1000, columns));
-//                        }
-//                        try {
-//                            tsdbEngineSample.upsert(new WriteRequest("test", rowList));
-////
-//                        } catch (Exception e) {
-//
-//                        }
-//                    }
-//                    countDownLatch.countDown();
-//
-//                }).start();
-//            }
-//
-//            countDownLatch.await();
-//            System.out.println("cost:" +(System.currentTimeMillis() - start) + " ms");
-//
-//            tsdbEngineSample.shutdown();
+            Schema schema = new Schema(columnTypeMap);
             tsdbEngineSample.connect();
+            tsdbEngineSample.createTable("haha", schema);
+            String v1 =  BytesUtil.getRandomString(17);
+            System.out.println("V1 " + v1);
+            AtomicLong atomicLong = new AtomicLong(0);
+            long start = System.currentTimeMillis();
+            for (int i = 0; i < threadNum; i++) {
+                new Thread(() -> {
+                    for (int j = 0; j < 1000; j++) {
+                        List<Row> rowList = new ArrayList<>();
+                        for (int i1 = 0; i1 < 10; i1++) {
+                            Vin vin = vins[random.nextInt(100)];
+                            if (j == 100) {
+                                vin = new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8));
+                            }
+                            rowList.add(new Row( vin, atomicLong.getAndIncrement() * 1000, columns));
+                        }
+                        try {
+                            tsdbEngineSample.upsert(new WriteRequest("test", rowList));
+//
+                        } catch (Exception e) {
+
+                        }
+                    }
+                    countDownLatch.countDown();
+
+                }).start();
+            }
+
+            countDownLatch.await();
+            System.out.println("cost:" +(System.currentTimeMillis() - start) + " ms");
+
+            tsdbEngineSample.shutdown();
+//            tsdbEngineSample.connect();
 //            List<Vin> list = new ArrayList<>();
 //            list.add(new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8)));
 //            Set<String> requestedColumns = new HashSet<>();
