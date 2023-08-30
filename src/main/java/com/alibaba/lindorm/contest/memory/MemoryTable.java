@@ -60,7 +60,7 @@ public class MemoryTable {
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
-        this.fixThreadPool = Executors.newFixedThreadPool(16 * 2);
+        this.fixThreadPool = Executors.newFixedThreadPool(16 * 4);
         this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
