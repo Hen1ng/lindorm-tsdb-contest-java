@@ -40,7 +40,6 @@ public class FilePosition {
         for (TSFile tsFile : tsFiles) {
             final long l = tsFile.getPosition().get();
             mappedByteBuffer.putLong(l);
-            System.out.println("FILE NAME:" + tsFile.getFileName() + "position " + l);
         }
     }
 
