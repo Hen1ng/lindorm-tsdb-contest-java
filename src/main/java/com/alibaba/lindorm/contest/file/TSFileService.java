@@ -3,6 +3,7 @@ package com.alibaba.lindorm.contest.file;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;
+import com.alibaba.lindorm.contest.compress.ZstdCompress;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -10,6 +11,7 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
+import com.github.luben.zstd.Zstd;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -156,7 +158,7 @@ public class TSFileService {
                                                 + 4);
                                         final byte[] array = byteBuffer.array();
                                         final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-                                        final byte[] bytes = gzipCompress.deCompress(array);
+                                        final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
                                         final ByteBuffer wrap = ByteBuffer.wrap(bytes);
                                         doubles = new double[bytes.length / 8];
                                         for (int i1 = 0; i1 < doubles.length; i1++) {
@@ -348,7 +350,7 @@ public class TSFileService {
                                             + 4);
                                     final byte[] array = byteBuffer.array();
                                     final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-                                    final byte[] bytes = gzipCompress.deCompress(array);
+                                    final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
                                     final ByteBuffer wrap = ByteBuffer.wrap(bytes);
                                     doubles = new double[bytes.length / 8];
                                     for (int i1 = 0; i1 < doubles.length; i1++) {
@@ -567,7 +569,7 @@ public class TSFileService {
                 allocate.putDouble(value);
             }
             final byte[] array = allocate.array();
-            final byte[] compressDouble = gzipCompress.compress(array);
+            final byte[] compressDouble = Zstd.compress(array, 15);
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];

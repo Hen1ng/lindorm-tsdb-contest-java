@@ -2,15 +2,7 @@ package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
-import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.differential.IntegratedBinaryPacking;
-import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.differential.IntegratedComposition;
-import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.differential.IntegratedIntegerCODEC;
-import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.differential.IntegratedVariableByte;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.structs.Constant;
-import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.ZigZagUtil;
-
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -115,6 +107,7 @@ public class IntCompress {
 //        }
 //        data = combineArray(splitArray);
         final byte[] compress = compress(data);
+        final byte[] compress4 = compress4(data);
         System.out.println("cost:" + (System.currentTimeMillis() - start) + " ms");
         final int[] decompress = decompress(compress);
         boolean b = Arrays.equals(testNum3, decompress);
@@ -138,6 +131,11 @@ public class IntCompress {
         final byte[] compress1 = gzipCompress.compress(allocate.array());
         final byte[] bytes1 = gzipCompress.deCompress(compress1);
 
+
+        final byte[] compress2 = ZstdCompress.compress(allocate.array(), 12);
+        final byte[] decompress2 = ZstdCompress.decompress(compress2);
+        final byte[] compress3 = gzipCompress.compress(compress2);
+        final boolean equals = Arrays.equals(decompress2, allocate.array());
         System.out.println(b);
         System.out.println("compress rate : " +1.0d*compress.length/(data.length*4));
     }
@@ -176,22 +174,6 @@ public class IntCompress {
 
     public static byte[]  compress(int[] ints) {
         ints = Simple9Codes.innerEncode(ints);
-
-//        int [] compressed = new int[ints.length+1024];
-//        IntWrapper aOffset = new IntWrapper(0);
-//        IntWrapper bOffset = new IntWrapper(0);
-//        codec.compress(ints,aOffset,ints.length,compressed,bOffset);
-//        ints = Arrays.copyOf(compressed,bOffset.intValue());
-
-//        int[] gapArray = toGapArray(ints);
-//        for (int i = 0; i < gapArray.length; i++) {
-//            gapArray[i] = ZigZagUtil.intToZigZag(gapArray[i]);
-//        }
-        if (Constants.USE_ZIGZAG) {
-            for (int i = 0; i < ints.length; i++) {
-                ints[i] = ZigZagUtil.intToZigZag(ints[i]);
-            }
-        }
         ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
         for (int i : ints) {
             allocate.putInt(i);
@@ -199,15 +181,20 @@ public class IntCompress {
         final byte[] array = allocate.array();
         GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
         return gzipCompress.compress(array);
-//        originLength = compress.length;
-//        return lz4Factory.fastCompressor().compress(compress);
+    }
+
+    public static byte[]  compress4(int[] ints) {
+        ints = Simple9Codes.innerEncode(ints);
+        ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
+        for (int i : ints) {
+            allocate.putInt(i);
+        }
+        final byte[] array = allocate.array();
+        return ZstdCompress.compress(array, 12);
     }
 
 
     public static int[] decompress(byte[] bytes) {
-//        byte[] decompress = new byte[originLength];
-//        int length = lz4Factory.fastDecompressor().decompress(bytes,decompress);
-//        bytes = decompress;
         GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
         final byte[] bytes1 = gzipCompress.deCompress(bytes);
         final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
@@ -215,28 +202,9 @@ public class IntCompress {
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
         }
-//        if (Constants.USE_ZIGZAG) {
-//            for (int j = 0; j < ints.length; j++) {
-//                ints[j] = ZigZagUtil.zigzagToInt(ints[j]);
-//            }
-//        }
-//        IntWrapper aOffset = new IntWrapper(0);
-//        IntWrapper bOffset = new IntWrapper(0);
-//        int[] output = new int[ints.length+1024];
-//        codec.uncompress(ints,aOffset,ints.length,output,bOffset);
-//        ints = Arrays.copyOf(output,bOffset.intValue());
-//        System.out.println(bOffset.intValue());
-
-
-        //        for (int i = 0; i < decode.length; i++) {
-//            decode[i] = ZigZagUtil.zigzagToInt(decode[i]);
-//        }
-//        for (int i = 1; i < decode.length; i++) {
-//            decode[i] = decode[i - 1] + decode[i];
-//        }
         return Simple9Codes.decode(ints);
-//        return ints;
     }
+
     protected static int[] toGapArray(int[] numbers) {
         int prev = numbers[0];
         for (int i = 1; i < numbers.length; i++) {

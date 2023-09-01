@@ -9,5 +9,15 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="Maven: com.github.luben:zstd-jni:1.5.5-2">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/thirdlibs/zstd-jni-1.5.5-2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-compress:1.23.0" level="project" />
   </component>
 </module>

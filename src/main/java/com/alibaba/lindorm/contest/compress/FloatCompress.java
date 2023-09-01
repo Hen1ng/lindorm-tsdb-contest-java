@@ -1,8 +1,10 @@
 package com.alibaba.lindorm.contest.compress;
 
+import com.alibaba.lindorm.contest.util.ArrayUtils;
 import com.alibaba.lindorm.contest.util.AssertUtil;
 import com.alibaba.lindorm.contest.util.Pair;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
@@ -157,10 +159,22 @@ public class FloatCompress {
     }
 
     public static void main(String[] args) {
-        double[] values = new double[]{0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1,0.2,0.2,0.2};
+        double[] values = new double[]{122.19,69.19,65.19,80.19,8.19,114.19,57.19,72.19,68.19,91.19,106.19,102.19,49.19,45.19,60.19,151.19,79.19,94.19,109.19,37.19,52.19,48.19,71.19,86.19,82.19,97.19,44.19,40.19,131.19,78.19,74.19,89.19,85.19,32.19,123.19,119.19,66.19,81.19,77.19,24.19,20.19,111.19,126.19,54.19,12.19};
         Pair<Long, Pair<Integer, byte[]>> data = encode(values);
         System.out.println(data.getRight().getLeft()); // 编码后的数据长度，单位 bits
         List<Double> a = decode(data.getLeft(), data.getRight().getLeft(), data.getRight().getRight()); // 解码后的数据
+        final GzipCompress gzipCompress = new GzipCompress();
+        final ByteBuffer allocate = ByteBuffer.allocate(values.length * 8);
+        for (double value : values) {
+            allocate.putDouble(value);
+        }
+        final byte[] compress = gzipCompress.compress(allocate.array());
+        final byte[] bytes = gzipCompress.deCompress(compress);
+        final boolean equals = ArrayUtils.equals(bytes, 0, bytes.length, allocate.array());
+
+        final byte[] compress1 = ZstdCompress.compress(allocate.array(), 15);
+        final byte[] decompress = ZstdCompress.decompress(compress1);
+        final boolean equals1 = ArrayUtils.equals(decompress, 0, decompress.length, allocate.array());
         System.out.println(1);
     }
 }

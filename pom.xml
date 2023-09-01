@@ -36,13 +36,20 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
-<!--            <dependency>-->
-<!--                <groupId>me.lemire.integercompression</groupId>-->
-<!--                <artifactId>JavaFastPFOR</artifactId>-->
-<!--                <version>0.1.12</version>-->
-<!--                <scope>system</scope>-->
-<!--                <systemPath>${project.basedir}/thirdlibs/snappy-1.1.7.jar</systemPath>-->
-<!--            </dependency>-->
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
+            <version>1.5.5-2</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/zstd-jni-1.5.5-2.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.23.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
+        </dependency>
     </dependencies>
 
 
