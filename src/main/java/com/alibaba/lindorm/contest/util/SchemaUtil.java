@@ -62,7 +62,7 @@ public class SchemaUtil {
             i++;
         }
         for (String key : FLOAT_MAP.keySet()) {
-            if (Constants.doubleColumnHashMapCompress.Exist(key)) {
+            if (Constants.doubleColumnHashMapCompress.exist(key)) {
                 continue;
             }
             INDEX_ARRAY[i] = key;
@@ -70,10 +70,10 @@ public class SchemaUtil {
             System.out.println("key: " + key + " index : " + i);
             i++;
         }
-        for (Map.Entry<String, Integer> sparseColumn : Constants.doubleColumnHashMapCompress.GetcolumnNameToIndexMap().entrySet()) {
+        for (Map.Entry<String, Integer> sparseColumn : Constants.doubleColumnHashMapCompress.getColumnNameToIndexMap().entrySet()) {
             INDEX_ARRAY[i] = sparseColumn.getKey();
             COLUMNS_INDEX.put(sparseColumn.getKey(), i);
-            System.out.println("key: " + sparseColumn + " index : " + i);
+            System.out.println("key: " + sparseColumn.getKey() + " index : " + i);
             i++;
         }
         for (String key : STRING_MAP.keySet()) {
@@ -88,7 +88,7 @@ public class SchemaUtil {
         for (Map.Entry<String, Integer> sparseColumn : Constants.stringColumnHashMapCompress.GetcolumnNameToIndexMap().entrySet()) {
             INDEX_ARRAY[i] = sparseColumn.getKey();
             COLUMNS_INDEX.put(sparseColumn.getKey(), i);
-            System.out.println("key: " + sparseColumn + " index : " + i);
+            System.out.println("key: " + sparseColumn.getKey() + " index : " + i);
             i++;
         }
         for (String s : INDEX_ARRAY) {

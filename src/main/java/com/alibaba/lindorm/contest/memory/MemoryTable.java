@@ -61,7 +61,7 @@ public class MemoryTable {
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
-        this.fixThreadPool = Executors.newFixedThreadPool(16 * 3);
+        this.fixThreadPool = Executors.newFixedThreadPool(16 * 4);
         this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
@@ -77,7 +77,7 @@ public class MemoryTable {
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();
         final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % Constants.TOTAL_VIN_NUMS;
+        int lock = hash % spinLockArray.length;
         spinLockArray[lock].writeLock().lock();
         try {
             Integer index = VinDictMap.get(vin);
@@ -218,7 +218,7 @@ public class MemoryTable {
             }
             return new Row(vin, value.getTimestamp(), columns);
         } finally {
-            if (queryLastTimes.get() % 2000000 == 0) {
+            if (queryLastTimes.get() % 2500000 == 0) {
                 System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
             }
         }
@@ -244,7 +244,7 @@ public class MemoryTable {
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
             return timeRangeRowFromMemoryTable;
         } finally {
-            if (queryTimeRangeTimes.get() % 2000000 == 0) {
+            if (queryTimeRangeTimes.get() % 500000 == 0) {
                 System.out.println("getTimeRangeRow cost: " + (System.currentTimeMillis() - start) + " ms");
             }
 //            spinLockArray[lock].readLock().unlock();

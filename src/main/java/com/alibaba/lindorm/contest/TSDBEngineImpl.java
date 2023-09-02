@@ -117,9 +117,18 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.intColumnHashMapCompress.addColumns("ZDDYDCZXTDH", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("QQZGNDCGQDH", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("QQZGYL", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
+            //double
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJKZWD", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJWD", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJXH", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJZJ", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJZS", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJGS", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("JYDZ", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDY", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDL", 3600 * 30000);
             Constants.intColumnHashMapCompress.prepare();
-            Constants.doubleColumnHashMapCompress.Prepare();
+            Constants.doubleColumnHashMapCompress.prepare();
             Constants.stringColumnHashMapCompress.Prepare();
         }else  {
             Constants.intColumnHashMapCompress = IntColumnHashMapCompress.loadFromFile(dataPath.getPath());
@@ -225,7 +234,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
             }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 400000 == 0) {
+            if (executeLatestQueryTimes.get() % 200000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());
             }
@@ -242,7 +251,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
 //        executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
-        if (executeTimeRangeQueryTimes.get() % 400000 == 0) {
+        if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedFields().size());
         }

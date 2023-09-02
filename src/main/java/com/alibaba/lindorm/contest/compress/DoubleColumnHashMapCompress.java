@@ -1,117 +1,147 @@
 package com.alibaba.lindorm.contest.compress;
 
-import com.alibaba.lindorm.contest.util.Constants;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class DoubleColumnHashMapCompress implements  Serializable {
+public class DoubleColumnHashMapCompress implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // compress column numbers
-    private Integer compressColumnNum = 0;
+    private int compressColumnNum = 0;
 
     // columnName -> Index
-    private HashMap<String,Integer> columnNameToIndexMap;
+    private final HashMap<String, Integer> columnNameToIndexMap;
     // Index -> need bytes
-    private HashMap<Integer,Integer> columnNameToBytesMap;
+    private final HashMap<Integer, Integer> columnNameToBytesMap;
 
     private AtomicInteger[] autoIncrementArray;
 
-    // compress column names
-    private String[] columnNames;
+    private ConcurrentHashMap<Double, Integer>[] hashMaps;
 
-    private ConcurrentHashMap<Double,Integer>[] hashMaps;
+    private List<double[]> hashMapReverses;
 
-    private ArrayList<ArrayList<Double>> hashMapReverses;
-
-    private AtomicInteger[] positionAtomic;
-
+    private Lock[] locks;
 
     private byte[][] data;
 
-    public int[][] GetTempArray(int lineNum){
+    private AtomicInteger positionAtomic;
+
+    public HashMap<String, Integer> getColumnNameToIndexMap() {
+        return columnNameToIndexMap;
+    }
+
+    public int[][] getTempArray(int lineNum) {
         int[][] res = new int[compressColumnNum][];
-        for(int i=0;i<compressColumnNum;i++){
+        for (int i = 0; i < compressColumnNum; i++) {
             res[i] = new int[lineNum];
         }
         return res;
     }
-    public void CompressAndadd(int[][] ints){
-        for (int i=0;i<ints.length;i++) {
-            int offSet = positionAtomic[i].getAndAdd(ints[i].length);
-            for (int j = 0; j < ints[i].length; j++) {
-                if (ints[i][j] > 255) {
-                    throw new IllegalArgumentException("Int value at index " + i + " value :" + ints[i] + "cannot be safely converted to byte");
-                }
-                data[i][offSet+j] = (byte) (ints[i][j] & 0xFF);
-            }
-        }
-    }
+
 
     public DoubleColumnHashMapCompress() {
         columnNameToIndexMap = new HashMap<>();
         columnNameToBytesMap = new HashMap<>();
     }
 
-    public void addColumns(String key,int columnBytes){
-        columnNameToIndexMap.put(key,compressColumnNum);
-        columnNameToBytesMap.put(compressColumnNum,columnBytes);
+    public void addColumns(String key, int columnBytes) {
+        columnNameToIndexMap.put(key, compressColumnNum);
+        columnNameToBytesMap.put(compressColumnNum, columnBytes);
         compressColumnNum++;
     }
-    public boolean Exist(String columnName){
+
+    public boolean exist(String columnName) {
         return columnNameToIndexMap.containsKey(columnName);
     }
 
-    public void Prepare(){
+    public void prepare() {
         hashMaps = new ConcurrentHashMap[compressColumnNum];
-        hashMapReverses = new ArrayList<>();
-        for(int i=0;i<compressColumnNum;i++){
-            hashMapReverses.add(new ArrayList<>());
+        positionAtomic = new AtomicInteger();
+        hashMapReverses = new ArrayList<>(compressColumnNum);
+        locks = new ReentrantLock[compressColumnNum];
+        for (int i = 0; i < compressColumnNum; i++) {
+            locks[i] = new ReentrantLock();
             hashMaps[i] = new ConcurrentHashMap<>();
+            hashMapReverses.add(new double[200]);
         }
         data = new byte[compressColumnNum][];
-        for(int i=0;i<data.length;i++){
-            data[i]= new byte[columnNameToBytesMap.get(i)];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = new byte[columnNameToBytesMap.get(i)];
         }
         autoIncrementArray = new AtomicInteger[compressColumnNum];
-        positionAtomic = new AtomicInteger[compressColumnNum];
-        for(int i=0;i<compressColumnNum;i++){
+        for (int i = 0; i < compressColumnNum; i++) {
             autoIncrementArray[i] = new AtomicInteger(0);
-            positionAtomic[i] = new AtomicInteger(0);
         }
     }
-    public int GetColumnIndex(String key){
+
+    public int addElement(String column, double element) {
+        try {
+            int i = columnNameToIndexMap.get(column);
+            int andAdd;
+            try {
+                locks[i].lock();
+                if (!hashMaps[i].containsKey(element)) {
+                    andAdd = autoIncrementArray[i].getAndAdd(1);
+                    hashMapReverses.get(i)[andAdd] = element;
+                    hashMaps[i].put(element, andAdd);
+                } else {
+                    andAdd = hashMaps[i].get(element);
+                }
+            } finally {
+                locks[i].unlock();
+            }
+            return andAdd;
+        } catch (Exception e) {
+            System.out.println("IntColumnHashMapCompress error, e" + e);
+        }
+        return -1;
+    }
+
+    public int getColumnIndex(String key) {
         return columnNameToIndexMap.get(key);
     }
 
-    public int GetColumnSize(){
+    public int getColumnSize() {
         return columnNameToIndexMap.size();
     }
 
-    public int addElement(String column,Double element){
-        Integer i = columnNameToIndexMap.get(column);
-        int andAdd;
-        if(!hashMaps[i].containsKey(element)) {
-            andAdd = autoIncrementArray[i].getAndAdd(1);
-            hashMapReverses.get(i).add(element);
-            hashMaps[i].put(element,andAdd);
-        }else{
-            andAdd =  hashMaps[i].get(element);
+    public int compressAndAdd(int[][] ints) {
+        try {
+            int offSet = positionAtomic.getAndAdd(ints[0].length);
+            for (int i = 0; i < ints.length; i++) {
+                assert (ints[i].length == ints[0].length);
+                for (int j = 0; j < ints[i].length; j++) {
+                    if (ints[i][j] > 255) {
+                        throw new IllegalArgumentException("Int value at index " + i + " value :" + ints[i] + "cannot be safely converted to byte");
+                    }
+                    data[i][offSet + j] = (byte) (ints[i][j] & 0xFF);
+                }
+            }
+            return offSet;
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("CompressAndadd error, e" + e);
+            System.exit(1);
         }
-        return andAdd;
+        return -1;
     }
 
-
-    public Double getElement(String column,int index){
-        Integer i = columnNameToIndexMap.get(column);
-        int b = data[i][index] & 0XFF;
-        return hashMapReverses.get(i).get(b);
+    public double getElement(String column, int index) {
+        try {
+            Integer i = columnNameToIndexMap.get(column);
+            int b = data[i][index] & 0xFF;
+            return hashMapReverses.get(i)[b];
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println(column + " IntHashMapCompress.getElement outofIndex " + index);
+        }
+        return -1;
     }
-
     public void saveToFile(String dir) {
         String filePath = dir + "/DoubleHashMapCompress.dict";
         try (FileOutputStream fileOut = new FileOutputStream(filePath);
@@ -121,9 +151,7 @@ public class DoubleColumnHashMapCompress implements  Serializable {
             i.printStackTrace();
         }
     }
-    public HashMap<String,Integer> GetcolumnNameToIndexMap(){
-        return columnNameToIndexMap;
-    }
+
     public static DoubleColumnHashMapCompress loadFromFile(String dir) {
         DoubleColumnHashMapCompress obj = null;
         String filePath = dir + "/DoubleHashMapCompress.dict";

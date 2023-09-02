@@ -28,7 +28,6 @@ public class FilePosition {
                 FILE_POSITION_ARRAY = new long[Constants.TS_FILE_NUMS];
                 for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
                     FILE_POSITION_ARRAY[i] = mappedByteBuffer.getLong();
-                    System.out.println("FILE NAME:" + i + "position " + FILE_POSITION_ARRAY[i]);
                 }
             }
         } catch (Exception e) {
