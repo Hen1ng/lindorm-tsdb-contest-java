@@ -120,7 +120,7 @@ public class TSFileService {
                                 } else {
                                     if (Constants.intColumnHashMapCompress.exist(requestedColumn)) {
                                         try {
-                                            Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
+                                            Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
                                             columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
                                         } catch (Exception e) {
                                             System.out.println("intColumnHashMapCompress COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
@@ -145,7 +145,7 @@ public class TSFileService {
                             try {
                                 if (Constants.doubleColumnHashMapCompress.exist(requestedColumn)) {
                                     try {
-                                        double element = Constants.doubleColumnHashMapCompress.getElement(requestedColumn, (index.getDoubleLine() + i));
+                                        double element = Constants.doubleColumnHashMapCompress.getElement2(requestedColumn, (index.getDoubleLine() + i));
                                         columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(element));
                                     }catch (Exception e){
                                         System.out.println("doubleColumnHashMapCompress COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
@@ -304,7 +304,7 @@ public class TSFileService {
                             } else {
                                 if (Constants.intColumnHashMapCompress.exist(requestedColumn)) {
                                     try {
-                                        Integer element = Constants.intColumnHashMapCompress.getElement(requestedColumn, (index.getOffsetLine() + i));
+                                        Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
                                         columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
                                     } catch (Exception e) {
                                         System.out.println("getBigInt COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
@@ -332,7 +332,7 @@ public class TSFileService {
                     } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                         try {
                             if(Constants.doubleColumnHashMapCompress.exist(requestedColumn)){
-                                double element = Constants.doubleColumnHashMapCompress.getElement(requestedColumn,  (index.getDoubleLine() + i));
+                                double element = Constants.doubleColumnHashMapCompress.getElement2(requestedColumn,  (index.getDoubleLine() + i));
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(element));
                             }
                             else {
@@ -581,9 +581,9 @@ public class TSFileService {
                 System.out.println("compress int error" + e);
             }
             // 存储bigInt
-            int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd(bigInts);
+            int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd2(bigInts);
             // 存储DoubleHashMapCompress
-            final int doubleOfferLine = Constants.doubleColumnHashMapCompress.compressAndAdd(doubleInts);
+            final int doubleOfferLine = Constants.doubleColumnHashMapCompress.compressAndAdd2(doubleInts);
 //            // 存储StringHashMapCompress
 //            Constants.stringColumnHashMapCompress.CompressAndadd(stringInts);
             int total = 8 + 4 + compress1.length //timestamp

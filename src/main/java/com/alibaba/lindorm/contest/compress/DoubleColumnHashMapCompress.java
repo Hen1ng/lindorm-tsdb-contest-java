@@ -1,6 +1,10 @@
 package com.alibaba.lindorm.contest.compress;
 
+import com.alibaba.lindorm.contest.util.RestartUtil;
+
 import java.io.*;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +36,10 @@ public class DoubleColumnHashMapCompress implements Serializable {
 
     private AtomicInteger positionAtomic;
 
+    private transient MappedByteBuffer[] mappedByteBuffers;
+
+    private File dataPath;
+
     public HashMap<String, Integer> getColumnNameToIndexMap() {
         return columnNameToIndexMap;
     }
@@ -45,9 +53,10 @@ public class DoubleColumnHashMapCompress implements Serializable {
     }
 
 
-    public DoubleColumnHashMapCompress() {
+    public DoubleColumnHashMapCompress(File dataPath) {
         columnNameToIndexMap = new HashMap<>();
         columnNameToBytesMap = new HashMap<>();
+        this.dataPath = dataPath;
     }
 
     public void addColumns(String key, int columnBytes) {
@@ -61,22 +70,32 @@ public class DoubleColumnHashMapCompress implements Serializable {
     }
 
     public void prepare() {
-        hashMaps = new ConcurrentHashMap[compressColumnNum];
-        positionAtomic = new AtomicInteger();
-        hashMapReverses = new ArrayList<>(compressColumnNum);
-        locks = new ReentrantLock[compressColumnNum];
-        for (int i = 0; i < compressColumnNum; i++) {
-            locks[i] = new ReentrantLock();
-            hashMaps[i] = new ConcurrentHashMap<>();
-            hashMapReverses.add(new double[200]);
-        }
-        data = new byte[compressColumnNum][];
-        for (int i = 0; i < data.length; i++) {
-            data[i] = new byte[columnNameToBytesMap.get(i)];
-        }
-        autoIncrementArray = new AtomicInteger[compressColumnNum];
-        for (int i = 0; i < compressColumnNum; i++) {
-            autoIncrementArray[i] = new AtomicInteger(0);
+        try {
+            hashMaps = new ConcurrentHashMap[compressColumnNum];
+            positionAtomic = new AtomicInteger();
+            this.mappedByteBuffers = new MappedByteBuffer[compressColumnNum];
+            for (int i = 0; i < compressColumnNum; i++) {
+                final File file = new File(dataPath.getPath() + "/double_column_" + i);
+                final FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
+                mappedByteBuffers[i] = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, columnNameToBytesMap.get(i));
+            }
+            hashMapReverses = new ArrayList<>(compressColumnNum);
+            locks = new ReentrantLock[compressColumnNum];
+            for (int i = 0; i < compressColumnNum; i++) {
+                locks[i] = new ReentrantLock();
+                hashMaps[i] = new ConcurrentHashMap<>();
+                hashMapReverses.add(new double[200]);
+            }
+//            data = new byte[compressColumnNum][];
+//            for (int i = 0; i < data.length; i++) {
+//                data[i] = new byte[columnNameToBytesMap.get(i)];
+//            }
+            autoIncrementArray = new AtomicInteger[compressColumnNum];
+            for (int i = 0; i < compressColumnNum; i++) {
+                autoIncrementArray[i] = new AtomicInteger(0);
+            }
+        } catch (Exception e) {
+
         }
     }
 
@@ -132,6 +151,27 @@ public class DoubleColumnHashMapCompress implements Serializable {
         return -1;
     }
 
+    public int compressAndAdd2(int[][] ints) {
+        try {
+            int offSet = positionAtomic.getAndAdd(ints[0].length);
+            for (int i = 0; i < ints.length; i++) {
+                assert (ints[i].length == ints[0].length);
+                for (int j = 0; j < ints[i].length; j++) {
+                    if (ints[i][j] > 255) {
+                        throw new IllegalArgumentException("Int value at index " + i + " value :" + ints[i] + "cannot be safely converted to byte");
+                    }
+                    mappedByteBuffers[i].put(offSet + j, (byte) (ints[i][j] & 0xFF));
+                }
+            }
+            return offSet;
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("CompressAndadd error, e" + e);
+            System.exit(1);
+        }
+        return -1;
+    }
+
     public double getElement(String column, int index) {
         try {
             Integer i = columnNameToIndexMap.get(column);
@@ -142,6 +182,23 @@ public class DoubleColumnHashMapCompress implements Serializable {
         }
         return -1;
     }
+
+    public double getElement2(String column, int index) {
+        try {
+            Integer i = columnNameToIndexMap.get(column);
+            int b;
+            if (RestartUtil.IS_FIRST_START) {
+                b = mappedByteBuffers[i].get(index) & 0xFF;
+            } else {
+                b = data[i][index] & 0xFF;
+            }
+            return hashMapReverses.get(i)[b];
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println(column + " IntHashMapCompress.getElement outofIndex " + index);
+        }
+        return -1;
+    }
+
     public void saveToFile(String dir) {
         String filePath = dir + "/DoubleHashMapCompress.dict";
         try (FileOutputStream fileOut = new FileOutputStream(filePath);
@@ -161,12 +218,33 @@ public class DoubleColumnHashMapCompress implements Serializable {
         } catch (IOException i) {
             i.printStackTrace();
         } catch (ClassNotFoundException c) {
-            System.out.println("ColumnHashMapCompress class not found");
+            System.out.println("DoubleColumnHashMapCompress class not found");
             c.printStackTrace();
         }
-        File file = new File(filePath);
-        final boolean delete = file.delete();
-        System.out.println("delete file "+ filePath + " result :" + delete);
+        byte[][] data = new byte[obj.compressColumnNum][];
+        obj.mappedByteBuffers = new MappedByteBuffer[obj.compressColumnNum];
+        try {
+            for (int i = 0; i < data.length; i++) {
+                data[i] = new byte[obj.columnNameToBytesMap.get(i)];
+                final File file = new File(obj.dataPath.getPath() + "/double_column_" + i);
+                final FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
+                obj.mappedByteBuffers[i] = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, obj.columnNameToBytesMap.get(i));
+                final MappedByteBuffer mappedByteBuffer = obj.mappedByteBuffers[i];
+                for (int integer = 0; integer < obj.columnNameToBytesMap.get(i); integer++) {
+                    data[i][integer] = mappedByteBuffer.get();
+                }
+                file.delete();
+            }
+            obj.data = data;
+            File file = new File(filePath);
+            final boolean delete = file.delete();
+            System.out.println("delete file " + filePath + " result :" + delete);
+            System.out.println("DoubleColumnHashMapCompress data.length" + obj.data.length + "data[0].length" + obj.data[0].length);
+            return obj;
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("DoubleColumnHashMapCompress error, e" + e.getLocalizedMessage());
+        }
         return obj;
     }
 

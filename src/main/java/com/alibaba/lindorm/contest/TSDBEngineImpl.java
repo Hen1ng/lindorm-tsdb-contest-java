@@ -33,9 +33,6 @@ public class TSDBEngineImpl extends TSDBEngine {
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
     private final AtomicLong executeTimeRangeQueryTimes;
-//    private final Set<String> writeThreadSet = new HashSet<>();
-//    private final Set<String> executeLatestQueryThreadSet = new HashSet<>();
-//    private final Set<String> executeTimeRangeQueryThreadSet = new HashSet<>();
     private TSFileService fileService = null;
     private final MemoryTable memoryTable;
     private Unsafe unsafe = UnsafeUtil.getUnsafe();
@@ -98,8 +95,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
         if(RestartUtil.IS_FIRST_START){
-            Constants.intColumnHashMapCompress = new IntColumnHashMapCompress();
-            Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress();
+            Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
+            Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress(this.dataPath);
             Constants.stringColumnHashMapCompress = new StringColumnHashMapCompress();
             Constants.intColumnHashMapCompress.addColumns("LATITUDE", 3600 * 30000);
             Constants.intColumnHashMapCompress.addColumns("LONGITUDE", 3600 * 30000);
@@ -123,10 +120,10 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.doubleColumnHashMapCompress.addColumns("QDDJXH", 3600 * 30000);
             Constants.doubleColumnHashMapCompress.addColumns("QDDJZJ", 3600 * 30000);
             Constants.doubleColumnHashMapCompress.addColumns("QDDJZS", 3600 * 30000);
-            Constants.doubleColumnHashMapCompress.addColumns("QDDJGS", 3600 * 30000);
-            Constants.doubleColumnHashMapCompress.addColumns("JYDZ", 3600 * 30000);
-            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDY", 3600 * 30000);
-            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDL", 3600 * 30000);
+//            Constants.doubleColumnHashMapCompress.addColumns("QDDJGS", 3600 * 30000);
+//            Constants.doubleColumnHashMapCompress.addColumns("JYDZ", 3600 * 30000);
+//            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDY", 3600 * 30000);
+//            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDL", 3600 * 30000);
             Constants.intColumnHashMapCompress.prepare();
             Constants.doubleColumnHashMapCompress.prepare();
             Constants.stringColumnHashMapCompress.Prepare();
@@ -155,15 +152,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             e.printStackTrace();
         }
         System.out.println("fixThreadPool completed shutdown");
-        System.out.println("YXMSSet size : " + Constants.YXMSset.size());
-//        System.out.println("execute shut down... ts: " + System.currentTimeMillis());
         System.out.println("upsertTimes:" + upsertTimes.get());
-//        System.out.println("executeTimeRangeQueryTimes: " + executeTimeRangeQueryTimes.get());
-//        System.out.println("executeLatestQueryTimes: " + executeLatestQueryTimes.get());
-//        System.out.println("writeThreadSet size: " + writeThreadSet.size());
-//        System.out.println("executeLatestQueryThreadSet size: " + executeLatestQueryThreadSet.size());
-//        System.out.println("executeLatestQueryVinsSize query vins size: " + executeLatestQueryVinsSize.get());
-//        System.out.println("executeTimeRangeQueryThreadSet size: " + executeTimeRangeQueryThreadSet.size());
         System.out.println("total string length:" + StaticsUtil.STRING_TOTAL_LENGTH.get());
         System.out.println("compress string length:" + StaticsUtil.STRING_COMPRESS_LENGTH.get());
         if (StaticsUtil.STRING_TOTAL_LENGTH.get() != 0) {
