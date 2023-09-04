@@ -380,11 +380,6 @@ public class MemoryTable {
         try {
             for (int i = 0; i < values.length; i++) {
                 SortedList<Value> valueList = values[i];
-                int j = 1000000;
-                while (j >= 0) {
-                    System.currentTimeMillis();
-                    j--;
-                }
                 if (valueList.root != null && valueList.size() >= 1) {
                     final Vin vin = new Vin(VinDictMap.get(i));
                     tsFileService.write(vin, valueList, valueList.size(), i);

@@ -120,9 +120,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.doubleColumnHashMapCompress.addColumns("QDDJXH", 3600 * 30000);
             Constants.doubleColumnHashMapCompress.addColumns("QDDJZJ", 3600 * 30000);
             Constants.doubleColumnHashMapCompress.addColumns("QDDJZS", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJGS", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("JYDZ", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDY", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("QDDJGS", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("JYDZ", 3600 * 30000);
+            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDY", 3600 * 30000);
 //            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDL", 3600 * 30000);
             Constants.intColumnHashMapCompress.prepare();
             Constants.doubleColumnHashMapCompress.prepare();
