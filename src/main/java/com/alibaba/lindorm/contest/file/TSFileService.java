@@ -118,7 +118,7 @@ public class TSFileService {
                                 if (Constants.ZEROSET.contains(requestedColumn)) {
                                     columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
                                 } else {
-                                    if (Constants.intColumnHashMapCompress.exist(requestedColumn)) {
+                                    if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(requestedColumn)) {
                                         try {
                                             Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
                                             columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
@@ -143,7 +143,7 @@ public class TSFileService {
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
-                                if (Constants.doubleColumnHashMapCompress.exist(requestedColumn)) {
+                                if (Constants.doubleColumnHashMapCompress != null && Constants.doubleColumnHashMapCompress.exist(requestedColumn)) {
                                     try {
                                         double element = Constants.doubleColumnHashMapCompress.getElement2(requestedColumn, (index.getDoubleLine() + i));
                                         columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(element));
@@ -219,7 +219,7 @@ public class TSFileService {
                                     stringBytes = gzipCompress.deCompress(stringBuffer.array());
                                 }
                                 try {
-                                    int stringNum = columnIndex - 54;
+                                    int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
                                     int stringPosition = (stringNum * valueSize + i) * 4;
                                     int anInt = 0;
                                     try {
@@ -302,7 +302,7 @@ public class TSFileService {
                             if (Constants.ZEROSET.contains(requestedColumn)) {
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
                             } else {
-                                if (Constants.intColumnHashMapCompress.exist(requestedColumn)) {
+                                if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(requestedColumn)) {
                                     try {
                                         Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
                                         columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
@@ -331,7 +331,7 @@ public class TSFileService {
                         }
                     } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                         try {
-                            if(Constants.doubleColumnHashMapCompress.exist(requestedColumn)){
+                            if(Constants.doubleColumnHashMapCompress != null && Constants.doubleColumnHashMapCompress.exist(requestedColumn)){
                                 double element = Constants.doubleColumnHashMapCompress.getElement2(requestedColumn,  (index.getDoubleLine() + i));
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(element));
                             }
@@ -399,7 +399,7 @@ public class TSFileService {
                                     GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
                                     stringBytes = gzipCompress.deCompress(stringBuffer.array());
                                 }
-                                int stringNum = columnIndex - 54;
+                                int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
                                 int stringPosition = (stringNum * valueSize + i) * 4;
                                 int anInt = 0;
                                 try {
@@ -507,21 +507,20 @@ public class TSFileService {
 //                        longBuffer.putLong(value.getTimestamp());
                     }
                     Map<String, ColumnValue> columns = value.getColumns();
-                    if (i < 45) {
+                    if (i < Constants.INT_NUMS) {
                         int integerValue = columns.get(key).getIntegerValue();
                         SchemaUtil.maps.get(key).add(integerValue);
                         if (Constants.ZEROSET.contains(key)) {
                             continue;
                         }
-                        if(Constants.intColumnHashMapCompress.exist(key)){
+                        if(Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(key)){
                             int i1 = Constants.intColumnHashMapCompress.getColumnIndex(key);
                             integerValue = Constants.intColumnHashMapCompress.addElement(key,integerValue);
                             bigInts[i1][bigIntPosition[i1].getAndAdd(1)] = integerValue;
                         } else {
-//                        intBuffer.putInt(integerValue);
                             ints[intPosition++] = integerValue;
                         }
-                    } else if (i < 54) {
+                    } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         if (doubles == null) {
                             doubles = new double[lineNum * Constants.FLOAT_NUMS];
                         }
@@ -636,6 +635,7 @@ public class TSFileService {
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("write to file error, e :" + e.getLocalizedMessage() + "value size:" + valueList.size()) ;
+            System.exit(-1);
         }
     }
 

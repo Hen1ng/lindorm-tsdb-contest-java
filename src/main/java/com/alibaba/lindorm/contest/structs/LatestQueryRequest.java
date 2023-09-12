@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * Request several target columns of several vins.
- * If requestedFields is empty, return all columns.
+ * If requestedColumns is empty, return all columns.
  * Return the rows with the newest timestamp for these vins.
  */
 public class LatestQueryRequest {

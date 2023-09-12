@@ -9,13 +9,10 @@
         <module name="lindorm-tsdb-contest-java" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="lindorm-tsdb-contest-java" target="11" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="lindorm-tsdb-contest-java" options="--add-exports java.base/sun.nio.ch=ALL-UNNAMED" />
+      <module name="lindorm-tsdb-contest-java" options="" />
     </option>
   </component>
 </project>

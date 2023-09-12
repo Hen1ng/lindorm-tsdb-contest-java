@@ -80,7 +80,7 @@ public class TSDBEngineSample extends TSDBEngine {
   }
 
   @Override
-  public void upsert(WriteRequest wReq) throws IOException {
+  public void write(WriteRequest wReq) throws IOException {
     synchronized (data) {
       if (data.containsKey(wReq.getTableName())) {
         ArrayList<Row> curRows = data.get(wReq.getTableName());
@@ -152,7 +152,7 @@ public class TSDBEngineSample extends TSDBEngine {
         if (trReadReq.getVin().equals(vin)) {
           if (row.getTimestamp() >= trReadReq.getTimeLowerBound() && row.getTimestamp() < trReadReq.getTimeUpperBound()) {
             Map<String, ColumnValue> filteredColumns = row.getColumns().entrySet().stream()
-                    .filter(entry -> trReadReq.getRequestedFields().contains(entry.getKey()))
+                    .filter(entry -> trReadReq.getRequestedColumns().contains(entry.getKey()))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
             ans.add(new Row(row.getVin(), row.getTimestamp(), filteredColumns));
           }
@@ -160,6 +160,16 @@ public class TSDBEngineSample extends TSDBEngine {
       }
       return ans;
     }
+  }
+
+  @Override
+  public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
+    return null;
+  }
+
+  @Override
+  public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
+    return null;
   }
 
   public static String rowToString(Row row) {

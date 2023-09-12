@@ -105,13 +105,13 @@ public class MemoryTable {
         }
     }
 
-    public void put(Row row) {
+    public synchronized void put(Row row) {
         Vin vin = row.getVin();
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();
         final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % spinLockArray.length;
-        spinLockArray[lock].writeLock().lock();
+//        int lock = hash % spinLockArray.length;
+//        spinLockArray[lock].writeLock().lock();
         try {
             Integer index = VinDictMap.get(vin);
             if (index == null) {
@@ -124,7 +124,7 @@ public class MemoryTable {
                 tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
             }
         } finally {
-            spinLockArray[lock].writeLock().unlock();
+//            spinLockArray[lock].writeLock().unlock();
         }
     }
 
@@ -182,23 +182,24 @@ public class MemoryTable {
         queryLastTimes.getAndIncrement();
         long totalStringLength = 0;
         try {
-            final int size = values[slot].size();
-            Value value;
-            if (size == 0) {
-                try {
-                    bufferValuesLock.lock();
-                    if (!vinToBufferIndex.containsKey(vin)) {
-                        return null;
-                    }
-                    Queue<Integer> indexs = vinToBufferIndex.get(vin);
-                    int bufferIndex = indexs.peek();
-                    value = bufferValues[bufferIndex].get(0);
-                } finally {
-                    bufferValuesLock.unlock();
-                }
-            } else {
-                value = values[slot].get(0);
-            }
+//            final int size = values[slot].size();
+//            Value value;
+//            if (size == 0) {
+//                try {
+//                    bufferValuesLock.lock();
+//                    if (!vinToBufferIndex.containsKey(vin)) {
+//                        return null;
+//                    }
+//                    Queue<Integer> indexs = vinToBufferIndex.get(vin);
+//                    int bufferIndex = indexs.peek();
+//                    value = bufferValues[bufferIndex].get(0);
+//                } finally {
+//                    bufferValuesLock.unlock();
+//                }
+//            } else {
+//                value = values[slot].get(0);
+//            }
+            Value value = values[slot].get(0);
             Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             for (String requestedColumn : requestedColumns) {
                 final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
@@ -322,15 +323,15 @@ public class MemoryTable {
         List<Value> valueList = new ArrayList<>();
         try {
             final SortedList<Value> sortedList = values[slot];
-            valueList.addAll(sortedList);
-            this.bufferValuesLock.lock();
-            if(vinToBufferIndex.containsKey(vin)){
-                Queue<Integer> indexs = vinToBufferIndex.get(vin);
-                for (Integer index : indexs) {
-                    valueList.addAll(bufferValues[index]);
-                }
-            }
-            this.bufferValuesLock.unlock();
+//            valueList.addAll(sortedList);
+//            this.bufferValuesLock.lock();
+//            if(vinToBufferIndex.containsKey(vin)){
+//                Queue<Integer> indexs = vinToBufferIndex.get(vin);
+//                for (Integer index : indexs) {
+//                    valueList.addAll(bufferValues[index]);
+//                }
+//            }
+//            this.bufferValuesLock.unlock();
             for (Value value : valueList) {
                 if (value.getTimestamp() >= timeLowerBound && value.getTimestamp() < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());

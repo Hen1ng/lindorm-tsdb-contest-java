@@ -118,7 +118,7 @@ public class QueryTest {
 //            tsdbEngineSample.shutdown();
             tsdbEngineSample.connect();
             List<Vin> list = new ArrayList<>();
-            list.add(new Vin("3jDH7Qzai2pmhTDbZ".getBytes(StandardCharsets.UTF_8)));
+            list.add(new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8)));
             Set<String> requestedColumns = new HashSet<>();
             requestedColumns.add("5String543210");
             requestedColumns.add("3String3210");
@@ -132,8 +132,12 @@ public class QueryTest {
 
             final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
             final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
-            final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("3jDH7Qzai2pmhTDbZ".getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
-            final ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
+            final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
+            ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
+            final TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8)), "7double", 0, Long.MAX_VALUE, Aggregator.MAX);
+            rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
+            final TimeRangeDownsampleRequest timeRangeDownsampleRequest = new TimeRangeDownsampleRequest("", new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8)), "7double", 9120000L, 10923000L, Aggregator.AVG, 1000L, new CompareExpression(new ColumnValue.DoubleFloatColumn(0.7d), CompareExpression.CompareOp.EQUAL));
+            rowArrayList = tsdbEngineSample.executeDownsampleQuery(timeRangeDownsampleRequest);
             System.out.println(1);
             tsdbEngineSample.shutdown();
         } catch (Exception e) {

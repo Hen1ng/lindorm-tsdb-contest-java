@@ -72,7 +72,7 @@ public class TestMyDb {
             Schema schema = new Schema(cols);
 
             tsdbEngineSample.createTable("test", schema);
-            tsdbEngineSample.upsert(new WriteRequest("test", rowList));
+            tsdbEngineSample.write(new WriteRequest("test", rowList));
 
             tsdbEngineSample.shutdown();
 

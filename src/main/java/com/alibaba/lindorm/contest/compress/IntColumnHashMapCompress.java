@@ -126,6 +126,9 @@ public class IntColumnHashMapCompress implements Serializable {
     }
 
     public int getColumnSize() {
+        if (compressColumnNum == 0) {
+            return 0;
+        }
         return columnNameToIndexMap.size();
     }
 
@@ -152,6 +155,9 @@ public class IntColumnHashMapCompress implements Serializable {
 
     public int compressAndAdd2(int[][] ints) {
         try {
+            if (compressColumnNum == 0) {
+                return -1;
+            }
             int offSet = positionAtomic.getAndAdd(ints[0].length);
             for (int i = 0; i < ints.length; i++) {
                 assert (ints[i].length == ints[0].length);
@@ -219,6 +225,9 @@ public class IntColumnHashMapCompress implements Serializable {
         } catch (ClassNotFoundException c) {
             System.out.println("ColumnHashMapCompress class not found");
             c.printStackTrace();
+        }
+        if (obj == null) {
+            return new IntColumnHashMapCompress(new File(dir));
         }
         byte[][] data = new byte[obj.compressColumnNum][];
         obj.mappedByteBuffers = new MappedByteBuffer[obj.compressColumnNum];

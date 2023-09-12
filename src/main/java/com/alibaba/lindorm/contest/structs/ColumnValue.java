@@ -96,9 +96,11 @@ public abstract class ColumnValue {
     sb.append("Type: [").append(getColumnType()).append("]. ");
     sb.append("Value: [");
     if (getColumnType() == ColumnType.COLUMN_TYPE_INTEGER) {
-      sb.append(getIntegerValue());
+      int i = getIntegerValue();
+      sb.append(i == Integer.MIN_VALUE ? "NaN[0x80000000]" : getIntegerValue());
     } else if (getColumnType() == ColumnType.COLUMN_TYPE_DOUBLE_FLOAT) {
-      sb.append(getDoubleFloatValue());
+      double d = getDoubleFloatValue();
+      sb.append(d == Double.NEGATIVE_INFINITY ? "NaN[0xfff0000000000000L]" : d);
     } else {
       int length = getStringValue().remaining();
       byte[] b = new byte[length];

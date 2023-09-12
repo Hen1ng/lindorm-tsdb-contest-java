@@ -173,7 +173,7 @@ public class IntCompress {
     }
 
     public static byte[]  compress(int[] ints) {
-        ints = Simple9Codes.innerEncode(ints);
+//        ints = Simple9Codes.innerEncode(ints);
         ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
         for (int i : ints) {
             allocate.putInt(i);
@@ -202,7 +202,8 @@ public class IntCompress {
         for (int j = 0; j < ints.length; j++) {
             ints[j] = wrap.getInt();
         }
-        return Simple9Codes.decode(ints);
+        return ints;
+//        return Simple9Codes.decode(ints);
     }
 
     protected static int[] toGapArray(int[] numbers) {

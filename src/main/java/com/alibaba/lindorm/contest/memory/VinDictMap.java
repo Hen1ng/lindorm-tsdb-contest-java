@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.alibaba.lindorm.contest.util.Constants.TOTAL_VIN_NUMS;
+
 public class VinDictMap {
 
     private static final byte[][] INDEX_VIN = new byte[30000][17];
@@ -17,7 +19,7 @@ public class VinDictMap {
         return VIN_DICT_MAP;
     }
 
-    private static Map<Vin, Integer> VIN_DICT_MAP = new ConcurrentHashMap<>(30000);
+    private static Map<Vin, Integer> VIN_DICT_MAP = new ConcurrentHashMap<>(TOTAL_VIN_NUMS);
 
     public static void put(Vin vin, Integer index) {
         VIN_DICT_MAP.put(vin, index);

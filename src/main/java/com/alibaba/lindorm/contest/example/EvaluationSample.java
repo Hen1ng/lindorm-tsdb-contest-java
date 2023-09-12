@@ -117,7 +117,7 @@ public class EvaluationSample {
                 executorService.submit(() -> {
                     try {
                         for (int m = 0; m < 30000; m++) {
-                            tsdbEngineSample.upsert(new WriteRequest("test", finalRowList));
+                            tsdbEngineSample.write(new WriteRequest("test", finalRowList));
                             atomicInteger.getAndIncrement();
                         }
                         countDownLatch.countDown();
