@@ -36,6 +36,9 @@ public class TSDBEngineImpl extends TSDBEngine {
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
     private final AtomicLong executeTimeRangeQueryTimes;
+    private final AtomicLong executeAggregateQueryTimes;
+
+    private final AtomicLong executeDownsampleQueryTimes;
     private TSFileService fileService = null;
     private final MemoryTable memoryTable;
     private Unsafe unsafe = UnsafeUtil.getUnsafe();
@@ -89,6 +92,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.executeLatestQueryTimes = new AtomicLong(0);
         this.executeTimeRangeQueryTimes = new AtomicLong(0);
         this.executeLatestQueryVinsSize = new AtomicLong(0);
+        this.executeAggregateQueryTimes = new AtomicLong(0);
+        this.executeDownsampleQueryTimes = new AtomicLong(0);
     }
 
     @Override
@@ -257,6 +262,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
+        System.out.println("executeAggregateQuery start");
         ArrayList<Row> rows = new ArrayList<>();
         final String columnName = aggregationReq.getColumnName();
         final Aggregator aggregator = aggregationReq.getAggregator();
@@ -291,7 +297,6 @@ public class TSDBEngineImpl extends TSDBEngine {
             case MAX:
                 int maxInt = Integer.MIN_VALUE;
                 double maxDouble = Double.MIN_VALUE;
-                long timestamp = -1L;
                 Map<String, ColumnValue> columns = null;
                 for (Row row : timeRangeRow) {
                     final ColumnValue columnValue = row.getColumns().get(columnName);
@@ -300,21 +305,19 @@ public class TSDBEngineImpl extends TSDBEngine {
                         if (integerValue > maxInt) {
                             columns = row.getColumns();
                             maxInt = integerValue;
-                            timestamp = row.getTimestamp();
                         }
                     } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
                         double doubleFloatValue = columnValue.getDoubleFloatValue();
                         if (doubleFloatValue > maxDouble) {
                             maxDouble = doubleFloatValue;
                             columns = row.getColumns();
-                            timestamp = row.getTimestamp();
                         }
                     } else {
                         System.out.println("executeAggregateQuery columnValue string type not support compare");
                     }
                 }
                 if (columns != null) {
-                    rows.add(new Row(aggregationReq.getVin(), timestamp, columns));
+                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
                 }
                 break;
             default:
@@ -326,6 +329,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
+        System.out.println("executeDownsampleQuery start");
         ArrayList<Row> rows = new ArrayList<>();
         final String columnName = downsampleReq.getColumnName();
         final Aggregator aggregator = downsampleReq.getAggregator();
@@ -346,52 +350,26 @@ public class TSDBEngineImpl extends TSDBEngine {
             final long timestamp = row.getTimestamp();
             if (columnType.equals(COLUMN_TYPE_INTEGER)) {
                 final int integerValue = columnValue.getIntegerValue();
-                if (CompareExpression.CompareOp.EQUAL.equals(columnFilter.getCompareOp())) {
-                    if (integerValue == value.getIntegerValue()) {
-                        final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
-                        if (intMaps.containsKey(startTime)) {
-                            intMaps.get(startTime).add(integerValue);
-                        } else {
-                            List<Integer> lists = new ArrayList<>();
-                            lists.add(integerValue);
-                            intMaps.put(startTime, lists);
-                        }
-                    }
-                } else {
-                    if (integerValue > value.getIntegerValue()) {
-                        final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
-                        if (intMaps.containsKey(startTime)) {
-                            intMaps.get(startTime).add(integerValue);
-                        } else {
-                            List<Integer> lists = new ArrayList<>();
-                            lists.add(integerValue);
-                            intMaps.put(startTime, lists);
-                        }
+                if (columnFilter.doCompare(columnValue)) {
+                    final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
+                    if (intMaps.containsKey(startTime)) {
+                        intMaps.get(startTime).add(integerValue);
+                    } else {
+                        List<Integer> lists = new ArrayList<>();
+                        lists.add(integerValue);
+                        intMaps.put(startTime, lists);
                     }
                 }
             } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                final double doubleFloatValue = columnValue.getDoubleFloatValue();
-                if (CompareExpression.CompareOp.EQUAL.equals(columnFilter.getCompareOp())) {
-                    if (doubleFloatValue == value.getDoubleFloatValue()) {
-                        final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
-                        if (doubleMaps.containsKey(startTime)) {
-                            doubleMaps.get(startTime).add(doubleFloatValue);
-                        } else {
-                            List<Double> lists = new ArrayList<>();
-                            lists.add(doubleFloatValue);
-                            doubleMaps.put(startTime, lists);
-                        }
-                    }
-                } else {
-                    if (doubleFloatValue > value.getDoubleFloatValue()) {
-                        final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
-                        if (doubleMaps.containsKey(startTime)) {
-                            doubleMaps.get(startTime).add(doubleFloatValue);
-                        } else {
-                            List<Double> lists = new ArrayList<>();
-                            lists.add(doubleFloatValue);
-                            doubleMaps.put(startTime, lists);
-                        }
+                if (columnFilter.doCompare(columnValue)) {
+                    final double doubleFloatValue = columnValue.getDoubleFloatValue();
+                    final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
+                    if (doubleMaps.containsKey(startTime)) {
+                        doubleMaps.get(startTime).add(doubleFloatValue);
+                    } else {
+                        List<Double> lists = new ArrayList<>();
+                        lists.add(doubleFloatValue);
+                        doubleMaps.put(startTime, lists);
                     }
                 }
             } else {
@@ -470,6 +448,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     }
 
     public long judgeTimeRange(long interval, long timestamp, long timeLowerBound, long timeUpperBound) {
+        System.out.println("judgeTimeRange interval: " + interval + " timestamp: " + timestamp + " timeLowerBound: " + timeLowerBound + " timeUpperBound: " + timeUpperBound);
         int i = 0;
         while (timeLowerBound + i * interval < timeUpperBound) {
             if (timeLowerBound + i * interval > timestamp) {
