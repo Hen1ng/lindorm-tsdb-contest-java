@@ -174,9 +174,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (30000 * 3600L * 45L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
-        for (String s : SchemaUtil.maps.keySet()) {
-            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
-        }
+//        for (String s : SchemaUtil.maps.keySet()) {
+//            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
+//        }
         try {
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);
@@ -270,6 +270,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
         final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound(), requestedColumns);
+        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
+            return rows;
+        }
         switch (aggregator) {
             case AVG:
                 double intSum = 0;
@@ -333,7 +336,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         ArrayList<Row> rows = new ArrayList<>();
         final String columnName = downsampleReq.getColumnName();
         final Aggregator aggregator = downsampleReq.getAggregator();
-        final ColumnValue value = downsampleReq.getColumnFilter().getValue();
         final long interval = downsampleReq.getInterval();
         final Vin vin = downsampleReq.getVin();
         final long timeLowerBound = downsampleReq.getTimeLowerBound();
@@ -342,35 +344,33 @@ public class TSDBEngineImpl extends TSDBEngine {
         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
-        Map<Long, List<Integer>> intMaps = new HashMap<>();
-        Map<Long, List<Double>> doubleMaps = new HashMap<>();
         final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(downsampleReq.getVin(), downsampleReq.getTimeLowerBound(), downsampleReq.getTimeUpperBound(), requestedColumns);
+        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
+            return rows;
+        }
+        System.out.println("executeDownsampleQuery timeRangeRow size:" + timeRangeRow.size());
+        Map<Long, List<ColumnValue>> intMaps = new HashMap<>(timeRangeRow.size());
+        Map<Long, List<ColumnValue>> doubleMaps = new HashMap<>(timeRangeRow.size());
         for (Row row : timeRangeRow) {
             final ColumnValue columnValue = row.getColumns().get(columnName);
             final long timestamp = row.getTimestamp();
             if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                final int integerValue = columnValue.getIntegerValue();
-                if (columnFilter.doCompare(columnValue)) {
-                    final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
-                    if (intMaps.containsKey(startTime)) {
-                        intMaps.get(startTime).add(integerValue);
-                    } else {
-                        List<Integer> lists = new ArrayList<>();
-                        lists.add(integerValue);
-                        intMaps.put(startTime, lists);
-                    }
+                long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
+                if (intMaps.containsKey(startTime)) {
+                    intMaps.get(startTime).add(columnValue);
+                } else {
+                    List<ColumnValue> lists = new ArrayList<>();
+                    lists.add(columnValue);
+                    intMaps.put(startTime, lists);
                 }
             } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                if (columnFilter.doCompare(columnValue)) {
-                    final double doubleFloatValue = columnValue.getDoubleFloatValue();
-                    final long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
-                    if (doubleMaps.containsKey(startTime)) {
-                        doubleMaps.get(startTime).add(doubleFloatValue);
-                    } else {
-                        List<Double> lists = new ArrayList<>();
-                        lists.add(doubleFloatValue);
-                        doubleMaps.put(startTime, lists);
-                    }
+                long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
+                if (doubleMaps.containsKey(startTime)) {
+                    doubleMaps.get(startTime).add(columnValue);
+                } else {
+                    List<ColumnValue> lists = new ArrayList<>();
+                    lists.add(columnValue);
+                    doubleMaps.put(startTime, lists);
                 }
             } else {
                 System.out.println("executeDownsampleQuery columnValue string type not support compare");
@@ -380,64 +380,74 @@ public class TSDBEngineImpl extends TSDBEngine {
         while (timeLowerBound + i * interval < timeUpperBound) {
             Map<String, ColumnValue> columns = new HashMap<>(1);
             if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                final List<Integer> integers = intMaps.get(timeLowerBound + i * interval);
                 if (intMaps.containsKey(timeLowerBound + i * interval)) {
-                    if (aggregator.equals(Aggregator.AVG)) {
-                        //integers求和
-                        if (!integers.isEmpty()) {
-                            int sum = 0;
-                            for (Integer integer : integers) {
-                                sum += integer;
-                            }
-                            columns.put(columnName, new ColumnValue.DoubleFloatColumn((double) sum / integers.size()));
-                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
-                        }
-                    } else {
-                        //integers求最大
-                        if (!integers.isEmpty()) {
-                            int max = Integer.MIN_VALUE;
-                            for (int integer : integers) {
-                                if (max < integer) {
-                                    max = integer;
-                                }
-                            }
-                            columns.put(columnName, new ColumnValue.IntegerColumn(max));
-                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    final List<ColumnValue> columnValues = intMaps.get(timeLowerBound + i * interval);
+                    List<Integer> integers = new ArrayList<>();
+                    for (ColumnValue columnValue : columnValues) {
+                        if (columnFilter.doCompare(columnValue)) {
+                            integers.add(columnValue.getIntegerValue());
                         }
                     }
-                } else {
-                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                    rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    //区间内有值，但是都被过滤了返回nan
+                    if (integers.isEmpty()) {
+                        columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                        continue;
+                    }
+                    if (aggregator.equals(Aggregator.AVG)) {
+                        //integers求和
+                        double sum = 0;
+                        for (Integer integer : integers) {
+                            sum += integer;
+                        }
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / integers.size()));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    } else {
+                        //integers求最大
+                        int max = Integer.MIN_VALUE;
+                        for (int integer : integers) {
+                            if (max < integer) {
+                                max = integer;
+                            }
+                        }
+                        columns.put(columnName, new ColumnValue.IntegerColumn(max));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    }
                 }
             } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
                 if (doubleMaps.containsKey(timeLowerBound + i * interval)) {
-                    final List<Double> doubles = doubleMaps.get(timeLowerBound + i * interval);
+                    final List<ColumnValue> columnValues = doubleMaps.get(timeLowerBound + i * interval);
+                    List<Double> doubles = new ArrayList<>();
+                    for (ColumnValue columnValue : columnValues) {
+                        if (columnFilter.doCompare(columnValue)) {
+                            doubles.add(columnValue.getDoubleFloatValue());
+                        }
+                    }
+                    //区间内有值，但是都被过滤了返回nan
+                    if (doubles.isEmpty()) {
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                        continue;
+                    }
                     if (aggregator.equals(Aggregator.AVG)) {
                         //integers求和
-                        if (!doubles.isEmpty()) {
-                            double sum = 0;
-                            for (double integer : doubles) {
-                                sum += integer;
-                            }
-                            columns.put(columnName, new ColumnValue.DoubleFloatColumn((double) sum / doubles.size()));
-                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                        double sum = 0;
+                        for (double integer : doubles) {
+                            sum += integer;
                         }
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn((double) sum / doubles.size()));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
                     } else {
                         //doubles求最大值
-                        if (!doubles.isEmpty()) {
-                            double max = Double.MIN_VALUE;
-                            for (double d : doubles) {
-                                if (max < d) {
-                                    max = d;
-                                }
+                        double max = Double.MIN_VALUE;
+                        for (double d : doubles) {
+                            if (max < d) {
+                                max = d;
                             }
                             columns.put(columnName, new ColumnValue.DoubleFloatColumn(max));
                             rows.add(new Row(vin, timeLowerBound + i * interval, columns));
                         }
                     }
-                } else {
-                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                    rows.add(new Row(vin, timeLowerBound + i * interval, columns));
                 }
             } else {
                 System.out.println("executeDownsampleQuery columnValue string type not support compare");
@@ -448,11 +458,16 @@ public class TSDBEngineImpl extends TSDBEngine {
     }
 
     public long judgeTimeRange(long interval, long timestamp, long timeLowerBound, long timeUpperBound) {
-        System.out.println("judgeTimeRange interval: " + interval + " timestamp: " + timestamp + " timeLowerBound: " + timeLowerBound + " timeUpperBound: " + timeUpperBound);
+        if (timestamp < timeLowerBound || timestamp >= timeUpperBound) {
+            return -1;
+        }
         int i = 0;
-        while (timeLowerBound + i * interval < timeUpperBound) {
-            if (timeLowerBound + i * interval > timestamp) {
+        while (timeLowerBound + i * interval <= timeUpperBound) {
+            if (timeLowerBound + i * interval == timestamp) {
                 return timeLowerBound + i * interval;
+            }
+            if (timeLowerBound + i * interval > timestamp) {
+                return timeLowerBound + (i - 1) * interval;
             }
             i++;
         }

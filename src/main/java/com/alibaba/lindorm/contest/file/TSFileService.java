@@ -509,7 +509,7 @@ public class TSFileService {
                     Map<String, ColumnValue> columns = value.getColumns();
                     if (i < Constants.INT_NUMS) {
                         int integerValue = columns.get(key).getIntegerValue();
-                        SchemaUtil.maps.get(key).add(integerValue);
+//                        SchemaUtil.maps.get(key).add(integerValue);
                         if (Constants.ZEROSET.contains(key)) {
                             continue;
                         }
