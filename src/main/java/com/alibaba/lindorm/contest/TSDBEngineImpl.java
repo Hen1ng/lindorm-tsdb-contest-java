@@ -388,13 +388,13 @@ public class TSDBEngineImpl extends TSDBEngine {
                             integers.add(columnValue.getIntegerValue());
                         }
                     }
-                    //区间内有值，但是都被过滤了返回nan
-                    if (integers.isEmpty()) {
-                        columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
-                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
-                        continue;
-                    }
                     if (aggregator.equals(Aggregator.AVG)) {
+                        if (integers.isEmpty()) {
+                            columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                            i++;
+                            continue;
+                        }
                         //integers求和
                         double sum = 0;
                         for (Integer integer : integers) {
@@ -403,6 +403,12 @@ public class TSDBEngineImpl extends TSDBEngine {
                         columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / integers.size()));
                         rows.add(new Row(vin, timeLowerBound + i * interval, columns));
                     } else {
+                        if (integers.isEmpty()) {
+                            columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
+                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                            i++;
+                            continue;
+                        }
                         //integers求最大
                         int max = Integer.MIN_VALUE;
                         for (int integer : integers) {
@@ -427,6 +433,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     if (doubles.isEmpty()) {
                         columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
                         rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                        i++;
                         continue;
                     }
                     if (aggregator.equals(Aggregator.AVG)) {
@@ -435,7 +442,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                         for (double integer : doubles) {
                             sum += integer;
                         }
-                        columns.put(columnName, new ColumnValue.DoubleFloatColumn((double) sum / doubles.size()));
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / doubles.size()));
                         rows.add(new Row(vin, timeLowerBound + i * interval, columns));
                     } else {
                         //doubles求最大值
