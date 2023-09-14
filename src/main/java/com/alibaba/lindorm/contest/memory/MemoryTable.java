@@ -20,6 +20,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * key:Vin, value:timestamp
@@ -237,9 +238,9 @@ public class MemoryTable {
             if (i == null) {
                 return null;
             }
-//            if (!RestartUtil.IS_FIRST_START) {
-//                return getTimeRangeRowForQueryTest(vin, timeLowerBound, timeUpperBound, requestedColumns);
-//            }
+            if (!RestartUtil.IS_FIRST_START) {
+                return getTimeRangeRowFromTsFile(vin, timeLowerBound, timeUpperBound, requestedColumns);
+            }
             final ArrayList<Row> timeRangeRowFromMemoryTable = getTimeRangeRowFromMemoryTable(vin, timeLowerBound, timeUpperBound, requestedColumns, i);
             final ArrayList<Row> timeRangeRowFromTsFile = getTimeRangeRowFromTsFile(vin, timeLowerBound, timeUpperBound, requestedColumns);
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
