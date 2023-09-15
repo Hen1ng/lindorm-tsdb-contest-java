@@ -14,7 +14,9 @@ public class SchemaUtil {
     private static final TreeMap<String, ColumnValue.ColumnType> FLOAT_MAP = new TreeMap<>();
     private static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
     private static final String[] INDEX_ARRAY = new String[60];
-    public static final Map<String, Set<Integer>> maps = new ConcurrentHashMap();
+    public static final Map<String, Set<Integer>> intMap = new ConcurrentHashMap();
+    public static final Map<String, Set<Double>> doubleMap = new ConcurrentHashMap();
+    public static final Map<String, Set<String>> stringSetMap = new ConcurrentHashMap();
 
 
     public static Schema getSchema() {
@@ -27,10 +29,13 @@ public class SchemaUtil {
             final ColumnValue.ColumnType columnType = schema.getColumnTypeMap().get(key);
             if (ColumnValue.ColumnType.COLUMN_TYPE_INTEGER.equals(columnType)) {
                 INT_MAP.put(key, columnType);
+                intMap.put(key, new HashSet<>());
             } else if (ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT.equals(columnType)) {
                 FLOAT_MAP.put(key, columnType);
+                doubleMap.put(key, new HashSet<>());
             } else {
                 STRING_MAP.put(key, columnType);
+                stringSetMap.put(key, new HashSet<>());
             }
         }
         Constants.setFloatNums(FLOAT_MAP.size());
@@ -90,9 +95,6 @@ public class SchemaUtil {
             COLUMNS_INDEX.put(sparseColumn.getKey(), i);
             System.out.println("key: " + sparseColumn.getKey() + " index : " + i);
             i++;
-        }
-        for (String s : INDEX_ARRAY) {
-            maps.put(s, new HashSet<>());
         }
     }
 

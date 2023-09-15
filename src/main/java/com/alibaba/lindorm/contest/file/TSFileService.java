@@ -510,7 +510,7 @@ public class TSFileService {
                     Map<String, ColumnValue> columns = value.getColumns();
                     if (i < Constants.INT_NUMS) {
                         int integerValue = columns.get(key).getIntegerValue();
-//                        SchemaUtil.maps.get(key).add(integerValue);
+                        SchemaUtil.intMap.get(key).add(integerValue);
                         if (Constants.ZEROSET.contains(key)) {
                             continue;
                         }
@@ -526,6 +526,7 @@ public class TSFileService {
                             doubles = new double[lineNum * Constants.FLOAT_NUMS];
                         }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
+                        SchemaUtil.doubleMap.get(key).add(doubleFloatValue);
                         if(Constants.doubleColumnHashMapCompress.exist(key)){
                             int i1 = Constants.doubleColumnHashMapCompress.getColumnIndex(key);
                             int integerValue = Constants.doubleColumnHashMapCompress.addElement(key,doubleFloatValue);

@@ -89,19 +89,6 @@ public class TSFile {
         }
     }
 
-//    public long append(byte[] data) {
-//        long currentPos = this.position.get();
-//        if ((currentPos + data.length) <= this.fileSize) {
-//            try {
-//                this.mappedByteBuffer.position(currentPos);
-//                this.mappedByteBuffer.put(data);
-//            } catch (Throwable e) {
-//                System.out.println("Error occurred when append message" + e);
-//            }
-//            return initPosition + this.position.getAndAdd(data.length + 1);
-//        }
-//        return -1;
-//    }
 
     public void warmTsFile() {
         long start = System.currentTimeMillis();

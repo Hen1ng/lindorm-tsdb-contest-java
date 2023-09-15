@@ -170,16 +170,22 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("compress string rate:" + StaticsUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StaticsUtil.STRING_TOTAL_LENGTH.get());
         }
         System.out.println("compress double length: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get());
-        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (30000L * 3600L * 9L * 8L));
+        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (180000000L * 10L * 8L));
         System.out.println("compress long length: " + StaticsUtil.LONG_COMPRESS_LENGTH.get());
-        System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (30000L * 3600L * 8L));
+        System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 8L));
         System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
-        System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (30000 * 3600L * 45L * 4L));
+        System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 40L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
-//        for (String s : SchemaUtil.maps.keySet()) {
-//            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
-//        }
+        for (String s : SchemaUtil.intMap.keySet()) {
+            System.out.println("int key: " + s + "size " + SchemaUtil.intMap.get(s).size());
+        }
+        for (String s : SchemaUtil.doubleMap.keySet()) {
+            System.out.println("doubleMap key: " + s + "size " + SchemaUtil.doubleMap.get(s).size());
+        }
+        for (String s : SchemaUtil.stringSetMap.keySet()) {
+            System.out.println("stringSetMap key: " + s + "size " + SchemaUtil.stringSetMap.get(s).size());
+        }
         try {
             MapIndex.saveMapToFile(indexFile);
             VinDictMap.saveMapToFile(vinDictFile);

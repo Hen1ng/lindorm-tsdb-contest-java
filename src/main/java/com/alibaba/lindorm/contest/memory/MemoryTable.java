@@ -20,7 +20,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 
 /**
  * key:Vin, value:timestamp
@@ -31,7 +30,7 @@ import java.util.stream.Collectors;
 public class MemoryTable {
 
     public final ExecutorService fixThreadPool;
-    private final Lock  bufferValuesLock;
+    private final Lock bufferValuesLock;
 
     private final Condition hasFreeBuffer;
 
@@ -56,7 +55,7 @@ public class MemoryTable {
         this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
-        for(int i=0;i<60000;i++){
+        for (int i = 0; i < 60000; i++) {
             this.spinLockArray[i] = new ReentrantReadWriteLock();
         }
         this.bufferValuesLock = new ReentrantLock();
@@ -67,13 +66,13 @@ public class MemoryTable {
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
-        for(int i=0;i<Constants.TOTAL_BUFFER_NUMS;i++){
+        for (int i = 0; i < Constants.TOTAL_BUFFER_NUMS; i++) {
             bufferValues[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
             freeList.add(i);
         }
     }
 
-    public void asyncPut(Row row){
+    public void asyncPut(Row row) {
         Vin vin = row.getVin();
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();
@@ -91,14 +90,14 @@ public class MemoryTable {
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
                 int bufferIndex = getFreeBufferIndex(vin);
                 // maybe used copy will be speed up
-                assert(bufferValues[bufferIndex].isEmpty());
+                assert (bufferValues[bufferIndex].isEmpty());
                 values[index] = bufferValues[bufferIndex];
                 bufferValues[bufferIndex] = valueSortedList;
                 Integer finalIndex = index;
                 Integer finalBufferIndex = bufferIndex;
-                fixThreadPool.submit( () -> {
-                    tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex);
-                    freeBufferByIndex(vin,finalBufferIndex);
+                fixThreadPool.submit(() -> {
+                    tsFileService.write(vin, bufferValues[finalBufferIndex], Constants.CACHE_VINS_LINE_NUMS, finalIndex);
+                    freeBufferByIndex(vin, finalBufferIndex);
                 });
             }
         } finally {
@@ -220,7 +219,7 @@ public class MemoryTable {
             }
             return new Row(vin, value.getTimestamp(), columns);
         } finally {
-            if (queryLastTimes.get() % 2500000 == 0) {
+            if (queryLastTimes.get() % 4000000 == 0) {
                 System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
             }
         }
@@ -283,21 +282,21 @@ public class MemoryTable {
         }
     }
 
-    private int getFreeBufferIndex(Vin vin){
+    private int getFreeBufferIndex(Vin vin) {
         this.bufferValuesLock.lock();
-        try{
-            while (freeList.isEmpty()){
+        try {
+            while (freeList.isEmpty()) {
                 hasFreeBuffer.await();
             }
-            StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER,freeList.size());
+            StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER, freeList.size());
             int i = freeList.poll();
-            if(vinToBufferIndex.containsKey(vin)) {
+            if (vinToBufferIndex.containsKey(vin)) {
                 Queue<Integer> integers = vinToBufferIndex.get(vin);
                 integers.add(i);
-            }else{
+            } else {
                 LinkedList<Integer> integers = new LinkedList<>();
                 integers.add(i);
-                vinToBufferIndex.put(vin,integers);
+                vinToBufferIndex.put(vin, integers);
             }
             return i;
         } catch (InterruptedException e) {
@@ -306,14 +305,15 @@ public class MemoryTable {
             bufferValuesLock.unlock();
         }
     }
-    private void freeBufferByIndex(Vin vin,int index){
+
+    private void freeBufferByIndex(Vin vin, int index) {
         this.bufferValuesLock.lock();
-        try{
+        try {
             freeList.add(index);
             bufferValues[index].clear();
             vinToBufferIndex.remove(vin);
             hasFreeBuffer.signal();
-        }finally {
+        } finally {
             bufferValuesLock.unlock();
         }
     }
@@ -443,6 +443,6 @@ public class MemoryTable {
 
     public static void main(String[] args) {
         double maxDouble = -Double.MAX_VALUE;
-        System.out.println(maxDouble>0);
+        System.out.println(maxDouble > 0);
     }
 }
