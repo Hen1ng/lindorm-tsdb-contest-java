@@ -442,12 +442,7 @@ public class MemoryTable {
     }
 
     public static void main(String[] args) {
-        long start = System.currentTimeMillis();
-        int j = 1000000;
-        while (j >= 0) {
-            System.currentTimeMillis();
-            j--;
-        }
-        System.out.println(System.currentTimeMillis() - start);
+        double maxDouble = -Double.MAX_VALUE;
+        System.out.println(maxDouble>0);
     }
 }

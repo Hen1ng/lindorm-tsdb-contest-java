@@ -425,6 +425,7 @@ public class TSFileService {
                             }
                         } catch (Exception e) {
                             System.out.println("getByIndex String error, e:" + e + "index:" + index);
+                            e.printStackTrace();
                         }
                     }
                 }
