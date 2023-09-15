@@ -245,7 +245,7 @@ public class MemoryTable {
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
             return timeRangeRowFromMemoryTable;
         } finally {
-            if (queryTimeRangeTimes.get() % 500000 == 0) {
+            if (queryTimeRangeTimes.get() % 5000000 == 0) {
                 System.out.println("getTimeRangeRow cost: " + (System.currentTimeMillis() - start) + " ms");
             }
             spinLockArray[lock].readLock().unlock();
