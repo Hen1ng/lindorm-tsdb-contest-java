@@ -265,8 +265,6 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
-        try {
-            mutexLock.lock();
             ArrayList<Row> rows = new ArrayList<>();
             final String columnName = aggregationReq.getColumnName();
             final Aggregator aggregator = aggregationReq.getAggregator();
@@ -344,9 +342,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                     System.exit(-1);
             }
             return rows;
-        }finally {
-            mutexLock.unlock();
-        }
     }
 
     @Override
