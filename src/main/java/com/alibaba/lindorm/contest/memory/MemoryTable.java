@@ -35,7 +35,7 @@ public class MemoryTable {
     private final Condition hasFreeBuffer;
 
 
-    private final ConcurrentHashMap<Vin, Queue<Integer>> vinToBufferIndex;
+    private final ConcurrentHashMap<Vin, List<Integer>> vinToBufferIndex;
 
     private final Queue<Integer> freeList;
     private final SortedList<Value>[] bufferValues;
@@ -182,24 +182,24 @@ public class MemoryTable {
         queryLastTimes.getAndIncrement();
         long totalStringLength = 0;
         try {
-//            final int size = values[slot].size();
-//            Value value;
-//            if (size == 0) {
-//                try {
-//                    bufferValuesLock.lock();
-//                    if (!vinToBufferIndex.containsKey(vin)) {
-//                        return null;
-//                    }
-//                    Queue<Integer> indexs = vinToBufferIndex.get(vin);
-//                    int bufferIndex = indexs.peek();
-//                    value = bufferValues[bufferIndex].get(0);
-//                } finally {
-//                    bufferValuesLock.unlock();
-//                }
-//            } else {
-//                value = values[slot].get(0);
-//            }
-            Value value = values[slot].get(0);
+            final int size = values[slot].size();
+            Value value;
+            if (size == 0) {
+                bufferValuesLock.lock();
+                try {
+                    if (!vinToBufferIndex.containsKey(vin)) {
+                        return null;
+                    }
+                    List<Integer> indexs = vinToBufferIndex.get(vin);
+                    int bufferIndex = indexs.get(indexs.size() - 1);
+                    value = bufferValues[bufferIndex].get(0);
+                } finally {
+                    bufferValuesLock.unlock();
+                }
+            } else {
+                value = values[slot].get(0);
+            }
+//            Value value = values[slot].get(0);
             Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             for (String requestedColumn : requestedColumns) {
                 final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
@@ -291,7 +291,7 @@ public class MemoryTable {
             StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER, freeList.size());
             int i = freeList.poll();
             if (vinToBufferIndex.containsKey(vin)) {
-                Queue<Integer> integers = vinToBufferIndex.get(vin);
+                List<Integer> integers = vinToBufferIndex.get(vin);
                 integers.add(i);
             } else {
                 LinkedList<Integer> integers = new LinkedList<>();
@@ -321,17 +321,18 @@ public class MemoryTable {
 
     private ArrayList<Row> getTimeRangeRowFromMemoryTable(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int slot) {
         ArrayList<Row> result = new ArrayList<>();
+        List<Value> valueList = new ArrayList<>();
         try {
             final SortedList<Value> sortedList = values[slot];
-//            valueList.addAll(sortedList);
-//            this.bufferValuesLock.lock();
-//            if(vinToBufferIndex.containsKey(vin)){
-//                Queue<Integer> indexs = vinToBufferIndex.get(vin);
-//                for (Integer index : indexs) {
-//                    valueList.addAll(bufferValues[index]);
-//                }
-//            }
-//            this.bufferValuesLock.unlock();
+            valueList.addAll(sortedList);
+            this.bufferValuesLock.lock();
+            if(vinToBufferIndex.containsKey(vin)){
+                List<Integer> indexs = vinToBufferIndex.get(vin);
+                for (Integer index : indexs) {
+                    valueList.addAll(bufferValues[index]);
+                }
+            }
+            this.bufferValuesLock.unlock();
             for (Value value : sortedList) {
                 if (value.getTimestamp() >= timeLowerBound && value.getTimestamp() < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
