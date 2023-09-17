@@ -369,17 +369,17 @@ public class TSDBEngineImpl extends TSDBEngine {
                     if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() <= aggregationReq.getTimeUpperBound()-1) {
                         if (columnType.equals(COLUMN_TYPE_INTEGER)) {
                             intSum += index.getAggBucket().getiSum(columnIndex);
-                            size += Constants.CACHE_VINS_LINE_NUMS;
+                            size += index.getValueSize();
                         } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
                             doubleSum += index.getAggBucket().getdSum(columnIndex);
-                            size += Constants.CACHE_VINS_LINE_NUMS;
+                            size += index.getValueSize();
                         } else {
                             System.out.println("executeAggregateQuery columnValue string type not support compare");
                         }
                     } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
-                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMinTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), index.getMaxTimestamp()+1, requestedColumns));
+                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), aggregationReq.getTimeUpperBound(), requestedColumns));
                     }
                 }
                 if (columnType.equals(COLUMN_TYPE_INTEGER)) {
@@ -417,9 +417,9 @@ public class TSDBEngineImpl extends TSDBEngine {
                             System.out.println("executeAggregateQuery columnValue string type not support compare");
                         }
                     } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
-                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMinTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), index.getMaxTimestamp()+1, requestedColumns));
+                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), aggregationReq.getTimeUpperBound(), requestedColumns));
                     }
                 }
                 if (columnType.equals(COLUMN_TYPE_INTEGER)) {
