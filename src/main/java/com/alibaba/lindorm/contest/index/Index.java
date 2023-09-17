@@ -10,6 +10,8 @@ public class Index {
     private long maxTimestamp;
     private long minTimestamp;
 
+    private AggBucket aggBucket;
+
     private int bigIntOffset;
 
     public void setTimestampList(List<Long> timestampList) {
@@ -28,7 +30,9 @@ public class Index {
 
     private int valueSize;
 
-
+    public AggBucket getAggBucket(){
+        return aggBucket;
+    }
     public long getOffset() {
         return offset;
     }
@@ -59,7 +63,7 @@ public class Index {
 
     private int doubleLine;
 
-    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize,int offsetLine, int doubleLine) {
+    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize,int offsetLine, int doubleLine,AggBucket aggBucket) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
         this.minTimestamp = minTimestamp;
@@ -67,23 +71,26 @@ public class Index {
         this.valueSize = valueSize;
         this.offsetLine = offsetLine;
         this.doubleLine = doubleLine;
+        this.aggBucket = aggBucket;
     }
 
     @Override
     public String toString() {
         return offset +
-                "," +
+                "@" +
                 maxTimestamp +
-                "," +
+                "@" +
                 minTimestamp +
-                "," +
+                "@" +
                 length +
-                "," +
+                "@" +
                 valueSize +
-                "," +
+                "@" +
                 offsetLine +
-                "," +
-                doubleLine
+                "@" +
+                doubleLine +
+                "@" +
+                aggBucket.toString()
                 ;
 
     }

@@ -4,6 +4,7 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -99,6 +100,7 @@ public class MapIndex {
                         writer.write(index.toString());
                         writer.write(" ");
                     }
+                    writer.write("]");
                     writer.newLine();
                 }
             }
@@ -118,7 +120,7 @@ public class MapIndex {
                     final String s = split1[1];
                     final String[] s1 = s.split(" ");
                     for (String s2 : s1) {
-                        final String[] split2 = s2.split(",");
+                        final String[] split2 = s2.split("@");
                         indices.add(new Index(
                                 Long.parseLong(split2[0])
                                 , Long.parseLong(split2[1])
@@ -127,6 +129,7 @@ public class MapIndex {
                                 , Integer.parseInt(split2[4])
                                 , Integer.parseInt(split2[5])
                                 , Integer.parseInt(split2[6])
+                                ,AggBucket.fromString(split2[7])
                         ));
                     }
                     INDEX_MAP.put(new Vin(split1[0].getBytes(StandardCharsets.UTF_8)), indices);

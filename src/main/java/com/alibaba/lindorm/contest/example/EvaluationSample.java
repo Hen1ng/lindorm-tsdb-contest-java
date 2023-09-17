@@ -81,7 +81,7 @@ public class EvaluationSample {
                 buffer.flip();
                 String vin = BytesUtil.getRandomString(17);
                 String[] bigIntKey = {"LATITUDE","LONGITUDE"};
-                for (int i = 0; i < 42; i++) {
+                for (int i = 0; i < 37; i++) {
                     String key = String.valueOf(i);
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
                     columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%10));
@@ -96,12 +96,12 @@ public class EvaluationSample {
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
                     columns.put(key, new ColumnValue.IntegerColumn(random.nextInt()%100));
                 }
-                for (int i = 0; i < 9; i++) {
+                for (int i = 0; i < 10; i++) {
                     String key = i + "haha";
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT);
                     columns.put(key, new ColumnValue.DoubleFloatColumn(random.nextDouble()));
                 }
-                for (int i = 0; i < 6; i++) {
+                for (int i = 0; i < 10; i++) {
                     String key = i + "heihei";
                     columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_STRING);
                     columns.put(key, new ColumnValue.StringColumn(buffer));
@@ -116,7 +116,7 @@ public class EvaluationSample {
                 ArrayList<Row> finalRowList = rowList;
                 executorService.submit(() -> {
                     try {
-                        for (int m = 0; m < 30000; m++) {
+                        for (int m = 0; m < 10; m++) {
                             tsdbEngineSample.write(new WriteRequest("test", finalRowList));
                             atomicInteger.getAndIncrement();
                         }

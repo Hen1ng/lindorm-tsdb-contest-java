@@ -12,7 +12,7 @@ public class SchemaUtil {
     private static final TreeMap<String, ColumnValue.ColumnType> INT_MAP = new TreeMap<>();
     private static final TreeMap<String, ColumnValue.ColumnType> STRING_MAP = new TreeMap<>();
     private static final TreeMap<String, ColumnValue.ColumnType> FLOAT_MAP = new TreeMap<>();
-    private static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
+    public static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
     private static final String[] INDEX_ARRAY = new String[60];
     public static final Map<String, Set<Integer>> maps = new ConcurrentHashMap();
 

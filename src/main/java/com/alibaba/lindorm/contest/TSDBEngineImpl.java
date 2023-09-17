@@ -13,6 +13,7 @@ import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
@@ -265,84 +266,204 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
-            ArrayList<Row> rows = new ArrayList<>();
-            final String columnName = aggregationReq.getColumnName();
-            final Aggregator aggregator = aggregationReq.getAggregator();
-            final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
-            Set<String> requestedColumns = new HashSet<>();
-            requestedColumns.add(columnName);
-            final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound(), requestedColumns);
-            if (timeRangeRow == null || timeRangeRow.isEmpty()) {
-                return rows;
-            }
-            switch (aggregator) {
-                case AVG:
-                    double intSum = 0;
-                    double doubleSum = 0;
-                    for (Row row : timeRangeRow) {
-                        final ColumnValue columnValue = row.getColumns().get(columnName);
-                        if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                            intSum += columnValue.getIntegerValue();
-                        } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                            doubleSum += columnValue.getDoubleFloatValue();
-                        } else {
-                            System.out.println("executeAggregateQuery columnValue string type not support compare");
-                        }
-                    }
-                    if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                        Map<String, ColumnValue> columns = new HashMap<>(1);
-                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(intSum / timeRangeRow.size()));
-                        rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
-                    } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                        Map<String, ColumnValue> columns = new HashMap<>(1);
-                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleSum / timeRangeRow.size()));
-                        rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
-                    }
-                    break;
-                case MAX:
-                    int maxInt = Integer.MIN_VALUE;
-                    double maxDouble = -Double.MAX_VALUE;
-                    final ColumnValue firstValue = timeRangeRow.get(0).getColumns().get(columnName);
-                    if(columnType.equals(COLUMN_TYPE_INTEGER)){
-                        maxInt = firstValue.getIntegerValue();
-                    }else if(columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)){
-                        maxDouble = firstValue.getDoubleFloatValue();
-                    }
-                    Map<String, ColumnValue> columns = timeRangeRow.get(0).getColumns();
-                    for (Row row : timeRangeRow) {
-                        final ColumnValue columnValue = row.getColumns().get(columnName);
-                        if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                            int integerValue = columnValue.getIntegerValue();
-                            if (integerValue >= maxInt) {
-                                columns = row.getColumns();
-                                maxInt = integerValue;
-                            }
-                        } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                            double doubleFloatValue = columnValue.getDoubleFloatValue();
-                            if (doubleFloatValue >= maxDouble) {
-                                maxDouble = doubleFloatValue;
-                                columns = row.getColumns();
-                            }
-                        } else {
-                            System.out.println("executeAggregateQuery columnValue string type not support compare");
-                        }
-                    }
-                    if(columns != null) {
-                        rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
-                    }else{
-                        System.out.println("columns is null");
-                        System.out.println("maxInt: " + maxInt + " maxDouble : "+ maxDouble + "timeRangeRow size : " + timeRangeRow.size());
-                        for (Row row : timeRangeRow){
-                            System.out.println(row.toString());
-                        }
-                    }
-                    break;
-                default:
-                    System.out.println("executeAggregateQuery aggregator error, not support");
-                    System.exit(-1);
-            }
-            return rows;
+        return executeAggregateQueryByBucket(aggregationReq);
+//        ArrayList<Row> rows = new ArrayList<>();
+//        final String columnName = aggregationReq.getColumnName();
+//        final Aggregator aggregator = aggregationReq.getAggregator();
+//        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
+//        Set<String> requestedColumns = new HashSet<>();
+//        requestedColumns.add(columnName);
+//        final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound(), requestedColumns);
+//        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
+//            return rows;
+//        }
+//        switch (aggregator) {
+//            case AVG:
+//                double intSum = 0;
+//                double doubleSum = 0;
+//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+//                    for (Row row : timeRangeRow) {
+//                        intSum += row.getColumns().get(columnName).getIntegerValue();
+//                    }
+//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+//                    for (Row row : timeRangeRow) {
+//                        doubleSum += row.getColumns().get(columnName).getDoubleFloatValue();
+//                    }
+//                } else {
+//                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+//                }
+//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+//                    Map<String, ColumnValue> columns = new HashMap<>(1);
+//                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(intSum / timeRangeRow.size()));
+//                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
+//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+//                    Map<String, ColumnValue> columns = new HashMap<>(1);
+//                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleSum / timeRangeRow.size()));
+//                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
+//                }
+//                break;
+//            case MAX:
+//                int maxInt = Integer.MIN_VALUE;
+//                double maxDouble = -Double.MAX_VALUE;
+//                final ColumnValue firstValue = timeRangeRow.get(0).getColumns().get(columnName);
+//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+//                    maxInt = firstValue.getIntegerValue();
+//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+//                    maxDouble = firstValue.getDoubleFloatValue();
+//                }
+//                Map<String, ColumnValue> columns = timeRangeRow.get(0).getColumns();
+//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+//                    for (Row row : timeRangeRow) {
+//                        final ColumnValue columnValue = row.getColumns().get(columnName);
+//                        int integerValue = columnValue.getIntegerValue();
+//                        if (integerValue >= maxInt) {
+//                            columns = row.getColumns();
+//                            maxInt = integerValue;
+//                        }
+//                    }
+//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+//                    for (Row row : timeRangeRow) {
+//                        final ColumnValue columnValue = row.getColumns().get(columnName);
+//                        double doubleFloatValue = columnValue.getDoubleFloatValue();
+//                        if (doubleFloatValue >= maxDouble) {
+//                            maxDouble = doubleFloatValue;
+//                            columns = row.getColumns();
+//                        }
+//                    }
+//                } else {
+//                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+//                }
+//                if (columns != null) {
+//                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
+//                } else {
+//                    System.out.println("columns is null");
+//                    System.out.println("maxInt: " + maxInt + " maxDouble : " + maxDouble + "timeRangeRow size : " + timeRangeRow.size());
+//                    for (Row row : timeRangeRow) {
+//                        System.out.println(row.toString());
+//                    }
+//                }
+//                break;
+//            default:
+//                System.out.println("executeAggregateQuery aggregator error, not support");
+//                System.exit(-1);
+//        }
+//        return rows;
     }
+
+    public ArrayList<Row> executeAggregateQueryByBucket(TimeRangeAggregationRequest aggregationReq) throws IOException {
+        ArrayList<Row> rows = new ArrayList<>();
+        final String columnName = aggregationReq.getColumnName();
+        final Aggregator aggregator = aggregationReq.getAggregator();
+        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
+        Integer columnIndex = SchemaUtil.COLUMNS_INDEX.get(columnName);
+        Set<String> requestedColumns = new HashSet<>();
+        requestedColumns.add(columnName);
+        List<Index> indices = MapIndex.get(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound());
+        ArrayList<Row> timeRangeRow = new ArrayList<>();
+        switch (aggregator) {
+            case AVG:
+                int size = 0;
+                double intSum = 0;
+                double doubleSum = 0;
+                for (Index index : indices) {
+                    if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() <= aggregationReq.getTimeUpperBound()-1) {
+                        if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                            intSum += index.getAggBucket().getiSum(columnIndex);
+                            size += Constants.CACHE_VINS_LINE_NUMS;
+                        } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                            doubleSum += index.getAggBucket().getdSum(columnIndex);
+                            size += Constants.CACHE_VINS_LINE_NUMS;
+                        } else {
+                            System.out.println("executeAggregateQuery columnValue string type not support compare");
+                        }
+                    } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
+                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMinTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
+                    }
+                }
+                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                    for (Row row : timeRangeRow) {
+                        intSum += row.getColumns().get(columnName).getIntegerValue();
+                    }
+                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    for (Row row : timeRangeRow) {
+                        doubleSum += row.getColumns().get(columnName).getDoubleFloatValue();
+                    }
+                } else {
+                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+                }
+                size += timeRangeRow.size();
+                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                    Map<String, ColumnValue> columns = new HashMap<>(1);
+                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(intSum / size));
+                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
+                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    Map<String, ColumnValue> columns = new HashMap<>(1);
+                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleSum / size));
+                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
+                }
+                break;
+            case MAX:
+                int maxInt = Integer.MIN_VALUE;
+                double maxDouble = -Double.MAX_VALUE;
+                for (Index index : indices) {
+                    if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() < aggregationReq.getTimeUpperBound()-1) {
+                        if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                            maxInt = Math.max(index.getAggBucket().getiMax(columnIndex), maxInt);
+                        } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                            maxDouble = Math.max(index.getAggBucket().getdMax(columnIndex), maxDouble);
+                        } else {
+                            System.out.println("executeAggregateQuery columnValue string type not support compare");
+                        }
+                    } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
+                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMinTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
+                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns));
+                    }
+                }
+                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                    for (Row row : timeRangeRow) {
+                        final ColumnValue columnValue = row.getColumns().get(columnName);
+                        int integerValue = columnValue.getIntegerValue();
+                        if (integerValue >= maxInt) {
+                            maxInt = integerValue;
+                        }
+                    }
+                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    for (Row row : timeRangeRow) {
+                        final ColumnValue columnValue = row.getColumns().get(columnName);
+                        double doubleFloatValue = columnValue.getDoubleFloatValue();
+                        if (doubleFloatValue >= maxDouble) {
+                            maxDouble = doubleFloatValue;
+                        }
+                    }
+                } else {
+                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+                }
+                Map<String, ColumnValue> columns = new HashMap<>();
+                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                    columns.put(columnName, new ColumnValue.IntegerColumn(maxInt));
+                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(maxDouble));
+                }
+                if (columns != null) {
+                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
+                } else {
+                    System.out.println("columns is null");
+                    System.out.println("maxInt: " + maxInt + " maxDouble : " + maxDouble + "timeRangeRow size : " + timeRangeRow.size());
+                    for (Row row : timeRangeRow) {
+                        System.out.println(row.toString());
+                    }
+                }
+                break;
+            default:
+                System.out.println("executeAggregateQuery aggregator error, not support");
+                System.exit(-1);
+        }
+        return rows;
+    }
+
 
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {

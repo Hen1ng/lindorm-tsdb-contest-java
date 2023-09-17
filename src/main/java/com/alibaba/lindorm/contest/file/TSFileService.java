@@ -3,6 +3,7 @@ package com.alibaba.lindorm.contest.file;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;
+import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -444,6 +445,7 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
+            AggBucket aggBucket = new AggBucket();
             long start = System.currentTimeMillis();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
@@ -510,6 +512,7 @@ public class TSFileService {
                     Map<String, ColumnValue> columns = value.getColumns();
                     if (i < Constants.INT_NUMS) {
                         int integerValue = columns.get(key).getIntegerValue();
+                        aggBucket.updateInt(integerValue,i);
 //                        SchemaUtil.maps.get(key).add(integerValue);
                         if (Constants.ZEROSET.contains(key)) {
                             continue;
@@ -526,6 +529,7 @@ public class TSFileService {
                             doubles = new double[lineNum * Constants.FLOAT_NUMS];
                         }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
+                        aggBucket.updateDouble(doubleFloatValue,i);
                         if(Constants.doubleColumnHashMapCompress.exist(key)){
                             int i1 = Constants.doubleColumnHashMapCompress.getColumnIndex(key);
                             int integerValue = Constants.doubleColumnHashMapCompress.addElement(key,doubleFloatValue);
@@ -624,7 +628,8 @@ public class TSFileService {
                         , total
                         , lineNum
                         , offsetLine
-                        , doubleOfferLine);
+                        , doubleOfferLine
+                        , aggBucket);
                 MapIndex.put(vin, index);
                 valueList.clear();
             } catch (Exception e) {
