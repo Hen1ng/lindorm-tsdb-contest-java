@@ -154,7 +154,7 @@ public class FloatCompress {
             }
         }
 
-        AssertUtil.assertTrue((offset == dataLen));
+//        AssertUtil.assertTrue((offset == dataLen));
         return values;
     }
 

@@ -205,6 +205,9 @@ public class IntColumnHashMapCompress implements Serializable {
     }
 
     public void saveToFile(String dir) {
+        if (compressColumnNum == 0) {
+            return;
+        }
         String filePath = dir + "/IntHashMapCompress.txt";
         try (FileOutputStream fileOut = new FileOutputStream(filePath);
              ObjectOutputStream out = new ObjectOutputStream(fileOut)) {

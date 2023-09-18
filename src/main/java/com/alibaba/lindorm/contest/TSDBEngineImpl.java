@@ -103,6 +103,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public void connect() throws IOException {
         System.out.println("connect start...");
+        long start = System.currentTimeMillis();
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
@@ -147,6 +148,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         System.gc();
         MemoryUtil.printMemory();
+        System.out.println("connect finish, cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
     @Override
@@ -157,6 +159,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void shutdown() {
+        long start = System.currentTimeMillis();
         try {
             memoryTable.fixThreadPool.shutdown();
             memoryTable.fixThreadPool.awaitTermination(60, TimeUnit.SECONDS);
@@ -182,18 +185,41 @@ public class TSDBEngineImpl extends TSDBEngine {
 //            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
 //        }
         try {
-            MapIndex.saveMapToFile(indexFile);
-            VinDictMap.saveMapToFile(vinDictFile);
-            SchemaUtil.saveMapToFile(schemaFile);
-            Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
-            Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
-            Constants.stringColumnHashMapCompress.saveToFile(dataPath.getPath());
+            if (RestartUtil.IS_FIRST_START) {
+                final ExecutorService executorService1 = Executors.newFixedThreadPool(8);
+                final Future<Void> submit = executorService1.submit(() -> {
+                    SchemaUtil.saveMapToFile(schemaFile);
+                    return null;
+                });
+                memoryTable.writeToFileBeforeShutdownMultiThread();
+
+                final Future<Void> submit1 = executorService1.submit(() -> {
+                    Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
+                    Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
+                    Constants.stringColumnHashMapCompress.saveToFile(dataPath.getPath());
+                    return null;
+                });
+                final Future<Void> submit2 = executorService1.submit(() -> {
+                    MapIndex.saveMapToFile(indexFile);
+                    return null;
+                });
+                final Future<Void> submit3 = executorService1.submit(() -> {
+                    VinDictMap.saveMapToFile(vinDictFile);
+                    return null;
+                });
+                final Future<Void> submit4 = executorService1.submit(() -> {
+                    filePosition.save(fileService.getTsFiles());
+                    return null;
+                });
+                submit1.get();
+                submit2.get();
+                submit3.get();
+                submit4.get();
+                submit.get();
+
+            }
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
-            }
-            if (RestartUtil.IS_FIRST_START) {
-                memoryTable.writeToFileBeforeShutdown();
-                filePosition.save(fileService.getTsFiles());
             }
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);
@@ -201,6 +227,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 
         GCUtil.printGCInfo();
         MemoryUtil.printMemory();
+        System.out.println("shutdown finish, cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
     @Override

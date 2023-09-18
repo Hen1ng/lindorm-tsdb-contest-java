@@ -206,6 +206,9 @@ public class DoubleColumnHashMapCompress implements Serializable {
     }
 
     public void saveToFile(String dir) {
+        if (compressColumnNum == 0) {
+            return;
+        }
         String filePath = dir + "/DoubleHashMapCompress.dict";
         try (FileOutputStream fileOut = new FileOutputStream(filePath);
              ObjectOutputStream out = new ObjectOutputStream(fileOut)) {

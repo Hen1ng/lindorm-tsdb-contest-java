@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
@@ -138,10 +139,10 @@ public class MemoryTable {
     }
 
     public Row getLastRow(Vin vin, Set<String> requestedColumns) {
-        final byte[] vin1 = vin.getVin();
-        final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int lock = keyHash % spinLockArray.length;
-        spinLockArray[lock].readLock().lock();
+//        final byte[] vin1 = vin.getVin();
+//        final int keyHash = getStringHash(vin1, 0, vin1.length);
+//        int lock = keyHash % spinLockArray.length;
+//        spinLockArray[lock].readLock().lock();
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -173,7 +174,7 @@ public class MemoryTable {
         } catch (Exception e) {
             System.out.println("getLastRowFromMemoryTable e" + e);
         } finally {
-            spinLockArray[lock].readLock().unlock();
+//            spinLockArray[lock].readLock().unlock();
         }
         return null;
     }
@@ -229,10 +230,10 @@ public class MemoryTable {
     public ArrayList<Row> getTimeRangeRow(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns) {
         long start = System.currentTimeMillis();
         queryTimeRangeTimes.getAndIncrement();
-        final byte[] vin1 = vin.getVin();
-        final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int lock = keyHash % spinLockArray.length;
-        spinLockArray[lock].readLock().lock();
+//        final byte[] vin1 = vin.getVin();
+//        final int keyHash = getStringHash(vin1, 0, vin1.length);
+//        int lock = keyHash % spinLockArray.length;
+//        spinLockArray[lock].readLock().lock();
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -249,7 +250,7 @@ public class MemoryTable {
             if (queryTimeRangeTimes.get() % 500000 == 0) {
                 System.out.println("getTimeRangeRow cost: " + (System.currentTimeMillis() - start) + " ms");
             }
-            spinLockArray[lock].readLock().unlock();
+//            spinLockArray[lock].readLock().unlock();
         }
     }
 
@@ -385,6 +386,41 @@ public class MemoryTable {
                     final Vin vin = new Vin(VinDictMap.get(i));
                     tsFileService.write(vin, valueList, valueList.size(), i);
                 }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public void writeToFileBeforeShutdownMultiThread() {
+        try {
+            int threadNum = 10;
+            final ExecutorService executorService = Executors.newFixedThreadPool(threadNum);
+            List<List<SortedList<Value>>> listList = new ArrayList<>();
+            for (int i = 0; i < threadNum; i++) {
+                listList.add(new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS));
+            }
+            int i = 0;
+            for (int i1 = 0; i1 < values.length; i1++) {
+                int mod = i1 % threadNum;
+                listList.get(mod).add(values[i1]);
+            }
+            List<Future<Void>> futures = new ArrayList<>(threadNum);
+            for (List<SortedList<Value>> sortedLists : listList) {
+                final Future<Void> submit = executorService.submit(() -> {
+                    for (SortedList<Value> valueList : sortedLists) {
+                        if (valueList.root != null && valueList.size() >= 1) {
+                            final Vin vin = new Vin(VinDictMap.get(i));
+                            tsFileService.write(vin, valueList, valueList.size(), i);
+                        }
+                    }
+                    return null;
+                });
+                futures.add(submit);
+            }
+            for (Future<Void> future : futures) {
+                future.get();
             }
         } catch (Exception e) {
             e.printStackTrace();
