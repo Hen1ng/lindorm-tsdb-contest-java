@@ -13,6 +13,7 @@ import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
@@ -463,8 +464,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         return rows;
     }
-
-
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
         ArrayList<Row> rows = new ArrayList<>();
@@ -476,14 +475,219 @@ public class TSDBEngineImpl extends TSDBEngine {
         final long timeUpperBound = downsampleReq.getTimeUpperBound();
         final CompareExpression columnFilter = downsampleReq.getColumnFilter();
         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
+        int columnIndex = SchemaUtil.getIndexByColumn(columnName);
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
-        final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(downsampleReq.getVin(), downsampleReq.getTimeLowerBound(), downsampleReq.getTimeUpperBound(), requestedColumns);
-        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
-            return rows;
+//        final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(downsampleReq.getVin(), downsampleReq.getTimeLowerBound(), downsampleReq.getTimeUpperBound(), requestedColumns);
+//        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
+//            return rows;
+//        }
+        int i = 0;
+        while(timeLowerBound+i*interval < timeUpperBound){
+            ArrayList<Row> timeRangeRow = new ArrayList<>();
+            long startTime = (timeLowerBound + i * interval);
+            long endTime = Math.min(timeLowerBound+(i+1)*interval,timeUpperBound);
+            List<Index> indices = MapIndex.get(vin, startTime, endTime);
+            if(columnType.equals(COLUMN_TYPE_INTEGER)){
+                if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)){
+                    // first remove useless index
+                    for (Index index : indices) {
+                        AggBucket aggBucket = index.getAggBucket();
+                        int integerValue = columnFilter.getValue().getIntegerValue();
+                        if(aggBucket.getiMin(columnIndex)>integerValue||aggBucket.getiMax(columnIndex)<integerValue){
+                            indices.remove(index);
+                        }
+                    }
+                    // second
+                    switch (aggregator){
+                        case AVG:
+                            double sum = 0;
+                            int size = 0;
+                            for (Index index : indices) {
+                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
+                                    if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                                        sum += index.getAggBucket().getiSum(columnIndex);
+                                        size += index.getValueSize();
+                                    } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                                        sum += index.getAggBucket().getdSum(columnIndex);
+                                        size += index.getValueSize();
+                                    } else {
+                                        System.out.println("executeAggregateQuery columnValue string type not support compare");
+                                    }
+                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
+                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
+                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
+                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                }
+                            }
+                            for (Row row : timeRangeRow) {
+                                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                                    int integerValue = row.getColumns().get(columnName).getIntegerValue();
+                                    if(integerValue!=columnFilter.getValue().getIntegerValue())continue;
+                                    sum += row.getColumns().get(columnName).getIntegerValue();
+                                    size++;
+                                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                                    double doubleFloatValue = row.getColumns().get(columnName).getDoubleFloatValue();
+                                    if(doubleFloatValue!=columnFilter.getValue().getDoubleFloatValue())continue;
+                                    sum += row.getColumns().get(columnName).getDoubleFloatValue();
+                                    size++;
+                                } else {
+                                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+                                }
+                            }
+                            break;
+                        case MAX:
+                            break;
+                        default:
+                            System.out.println("error aggregator type");
+                    }
+                }else if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)){
+                    for (Index index : indices) {
+                        AggBucket aggBucket = index.getAggBucket();
+                        int integerValue = columnFilter.getValue().getIntegerValue();
+                        if(aggBucket.getiMin(columnIndex)>integerValue||aggBucket.getiMax(columnIndex)<integerValue){
+                            indices.remove(index);
+                        }
+                    }
+                }
+            }else if(columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)){
+
+            }else{
+                System.out.println("Unexpected columnType: " + columnType);
+            }
+            i++;
         }
         Map<Long, List<ColumnValue>> intMaps = new HashMap<>(timeRangeRow.size());
         Map<Long, List<ColumnValue>> doubleMaps = new HashMap<>(timeRangeRow.size());
+        for (Row row : timeRangeRow) {
+            final ColumnValue columnValue = row.getColumns().get(columnName);
+            final long timestamp = row.getTimestamp();
+            if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
+                if (intMaps.containsKey(startTime)) {
+                    intMaps.get(startTime).add(columnValue);
+                } else {
+                    List<ColumnValue> lists = new ArrayList<>();
+                    lists.add(columnValue);
+                    intMaps.put(startTime, lists);
+                }
+            } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                long startTime = judgeTimeRange(interval, timestamp, timeLowerBound, timeUpperBound);
+                if (doubleMaps.containsKey(startTime)) {
+                    doubleMaps.get(startTime).add(columnValue);
+                } else {
+                    List<ColumnValue> lists = new ArrayList<>();
+                    lists.add(columnValue);
+                    doubleMaps.put(startTime, lists);
+                }
+            } else {
+                System.out.println("executeDownsampleQuery columnValue string type not support compare");
+            }
+        }
+        int i = 0;
+        while (timeLowerBound + i * interval < timeUpperBound) {
+            Map<String, ColumnValue> columns = new HashMap<>(1);
+            if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                if (intMaps.containsKey(timeLowerBound + i * interval)) {
+                    final List<ColumnValue> columnValues = intMaps.get(timeLowerBound + i * interval);
+                    List<Integer> integers = new ArrayList<>();
+                    for (ColumnValue columnValue : columnValues) {
+                        if (columnFilter.doCompare(columnValue)) {
+                            integers.add(columnValue.getIntegerValue());
+                        }
+                    }
+                    if (aggregator.equals(Aggregator.AVG)) {
+                        if (integers.isEmpty()) {
+                            columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                            i++;
+                            continue;
+                        }
+                        //integers求和
+                        double sum = 0;
+                        for (Integer integer : integers) {
+                            sum += integer;
+                        }
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / integers.size()));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    } else {
+                        if (integers.isEmpty()) {
+                            columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
+                            rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                            i++;
+                            continue;
+                        }
+                        //integers求最大
+                        int max = Integer.MIN_VALUE;
+                        for (int integer : integers) {
+                            if (max < integer) {
+                                max = integer;
+                            }
+                        }
+                        columns.put(columnName, new ColumnValue.IntegerColumn(max));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    }
+                }
+            } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                if (doubleMaps.containsKey(timeLowerBound + i * interval)) {
+                    final List<ColumnValue> columnValues = doubleMaps.get(timeLowerBound + i * interval);
+                    List<Double> doubles = new ArrayList<>();
+                    for (ColumnValue columnValue : columnValues) {
+                        if (columnFilter.doCompare(columnValue)) {
+                            doubles.add(columnValue.getDoubleFloatValue());
+                        }
+                    }
+                    //区间内有值，但是都被过滤了返回nan
+                    if (doubles.isEmpty()) {
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                        i++;
+                        continue;
+                    }
+                    if (aggregator.equals(Aggregator.AVG)) {
+                        //integers求和
+                        double sum = 0;
+                        for (double integer : doubles) {
+                            sum += integer;
+                        }
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / doubles.size()));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    } else {
+                        //doubles求最大值
+                        double max = doubles.get(0);
+                        for (double d : doubles) {
+                            if (max < d) {
+                                max = d;
+                            }
+                        }
+                        columns.put(columnName, new ColumnValue.DoubleFloatColumn(max));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                    }
+                }
+            } else {
+                System.out.println("executeDownsampleQuery columnValue string type not support compare");
+            }
+            i++;
+        }
+        return rows;
+    }
+
+
+    public ArrayList<Row> executeDownsampleQueryByBucket(TimeRangeDownsampleRequest downsampleReq) throws IOException {
+        ArrayList<Row> rows = new ArrayList<>();
+        final String columnName = downsampleReq.getColumnName();
+        final Aggregator aggregator = downsampleReq.getAggregator();
+        final long interval = downsampleReq.getInterval();
+        final Vin vin = downsampleReq.getVin();
+        final long timeLowerBound = downsampleReq.getTimeLowerBound();
+        final long timeUpperBound = downsampleReq.getTimeUpperBound();
+        final CompareExpression columnFilter = downsampleReq.getColumnFilter();
+        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
+        Set<String> requestedColumns = new HashSet<>();
+        requestedColumns.add(columnName);
+        ArrayList<Row> timeRangeRow = new ArrayList<>();
+        Map<Long, List<ColumnValue>> intMaps = new HashMap<>();
+        Map<Long, List<ColumnValue>> doubleMaps = new HashMap<>();
         for (Row row : timeRangeRow) {
             final ColumnValue columnValue = row.getColumns().get(columnName);
             final long timestamp = row.getTimestamp();
