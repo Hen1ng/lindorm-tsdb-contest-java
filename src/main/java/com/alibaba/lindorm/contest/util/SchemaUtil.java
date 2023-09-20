@@ -1,5 +1,6 @@
 package com.alibaba.lindorm.contest.util;
 
+import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Schema;
 
@@ -21,7 +22,7 @@ public class SchemaUtil {
         return schema1;
     }
 
-    public static void setSchema(Schema schema) {
+    public static void setSchema(Schema schema, DoubleFileService doubleFileService) {
         schema1 = schema;
         for (String key : schema.getColumnTypeMap().keySet()) {
             final ColumnValue.ColumnType columnType = schema.getColumnTypeMap().get(key);
@@ -65,6 +66,9 @@ public class SchemaUtil {
             if (Constants.doubleColumnHashMapCompress.exist(key)) {
                 continue;
             }
+            if (doubleFileService.getMap().containsKey(key)) {
+                continue;
+            }
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
             System.out.println("key: " + key + " index : " + i);
@@ -74,6 +78,12 @@ public class SchemaUtil {
             INDEX_ARRAY[i] = sparseColumn.getKey();
             COLUMNS_INDEX.put(sparseColumn.getKey(), i);
             System.out.println("key: " + sparseColumn.getKey() + " index : " + i);
+            i++;
+        }
+        for (String s : doubleFileService.getMap().keySet()) {
+            INDEX_ARRAY[i] = s;
+            COLUMNS_INDEX.put(s, i);
+            System.out.println("key: " + s + " index : " + i);
             i++;
         }
         for (String key : STRING_MAP.keySet()) {

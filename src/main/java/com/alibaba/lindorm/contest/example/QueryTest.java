@@ -118,9 +118,10 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
+                String v = "hu2tiaeG77Ddfiipo";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
-                list.add(new Vin("oZBdTwBJyMF50ClSg".getBytes(StandardCharsets.UTF_8)));
+                list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
                 Set<String> requestedColumns = new HashSet<>();
                 requestedColumns.add("5String543210");
                 requestedColumns.add("3String3210");
@@ -134,11 +135,11 @@ public class QueryTest {
 
                 final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
                 final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
-                final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin("oZBdTwBJyMF50ClSg".getBytes(StandardCharsets.UTF_8)), requestedColumns, 11000, 21000);
+                final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), requestedColumns, 11000, 21000);
                 ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
-                final TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin("oZBdTwBJyMF50ClSg".getBytes(StandardCharsets.UTF_8)), "7double", 11000, 21000, Aggregator.MAX);
+                final TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "7double", 11000, 21000, Aggregator.MAX);
                 rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
-                final TimeRangeDownsampleRequest timeRangeDownsampleRequest = new TimeRangeDownsampleRequest("", new Vin("oZBdTwBJyMF50ClSg".getBytes(StandardCharsets.UTF_8)), "7double", 9120000L, 10923000L, Aggregator.AVG, 1000L, new CompareExpression(new ColumnValue.DoubleFloatColumn(0.7d), CompareExpression.CompareOp.EQUAL));
+                final TimeRangeDownsampleRequest timeRangeDownsampleRequest = new TimeRangeDownsampleRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "7double", 9120000L, 10923000L, Aggregator.AVG, 1000L, new CompareExpression(new ColumnValue.DoubleFloatColumn(0.7d), CompareExpression.CompareOp.EQUAL));
                 rowArrayList = tsdbEngineSample.executeDownsampleQuery(timeRangeDownsampleRequest);
                 System.out.println(1);
                 tsdbEngineSample.shutdown();

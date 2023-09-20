@@ -16,4 +16,13 @@ public class ArrayUtils {
     public static void copy(byte[] source, int srcPos, byte[] des, int desPos, int length) {
         UnsafeUtil.getUnsafe().copyMemory(source, 16 + srcPos, des, 16 + desPos, length);
     }
+
+    public static synchronized void printDouble(double[] doubles) {
+        System.out.println("----------------------------------------------------------------");
+        for (double aDouble : doubles) {
+            System.out.print(aDouble);
+            System.out.print(",");
+
+        }
+    }
 }

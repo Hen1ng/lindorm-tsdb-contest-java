@@ -10,6 +10,7 @@ package com.alibaba.lindorm.contest;
 import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
 import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
 import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
+import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
@@ -26,7 +27,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT;
 import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_TYPE_INTEGER;
@@ -34,7 +34,6 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 public class TSDBEngineImpl extends TSDBEngine {
 
     private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    private ReentrantLock mutexLock;
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
@@ -52,6 +51,8 @@ public class TSDBEngineImpl extends TSDBEngine {
     private File bigIntMapFile;
     private FilePosition filePosition;
 
+    private DoubleFileService doubleFileService;
+
 
     /**
      * This constructor's function signature should not be modified.
@@ -65,14 +66,14 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
         this.bigIntFile = new File(dataPath.getPath() + "/bigInt.txt");
         this.bigIntMapFile = new File(dataPath.getPath() + "/bigIntMap.txt");
-        mutexLock = new ReentrantLock();
+        this.doubleFileService = new DoubleFileService();
         try {
             RestartUtil.setFirstStart(indexFile);
             this.filePosition = new FilePosition(dataPath.getPath() + "/file_position.txt");
             if (!dataPath.exists()) {
                 dataPath.createNewFile();
             }
-            this.fileService = new TSFileService(dataPath.getPath(), indexFile);
+            this.fileService = new TSFileService(dataPath.getPath(), doubleFileService);
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
             }
@@ -107,36 +108,11 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
+//        this.doubleFileService.add("LMLK", dataPath.getPath());
         if (RestartUtil.IS_FIRST_START) {
             Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
             Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress(this.dataPath);
             Constants.stringColumnHashMapCompress = new StringColumnHashMapCompress();
-//            Constants.intColumnHashMapCompress.addColumns("LATITUDE", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("LONGITUDE", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("YXMS", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("LJLC", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("DCDC", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("RLDCDY", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("DCDTDYZGZ", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("RLDCRLXHL", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("QQZGYLCGQDH", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("RLDCDL", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("QQZGND", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("CDZT", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("QDDJGZZS", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("ZDDYDCZXTDH", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("QQZGNDCGQDH", 3600 * 30000);
-//            Constants.intColumnHashMapCompress.addColumns("QQZGYL", 3600 * 30000);
-            //double
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJKZWD", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJWD", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJXH", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJZJ", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJZS", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("QDDJGS", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("JYDZ", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDY", 3600 * 30000);
-//            Constants.doubleColumnHashMapCompress.addColumns("DJKZQDL", 3600 * 30000);
             Constants.intColumnHashMapCompress.prepare();
             Constants.doubleColumnHashMapCompress.prepare();
             Constants.stringColumnHashMapCompress.Prepare();
@@ -154,7 +130,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public void createTable(String tableName, Schema schema) throws IOException {
         System.out.println("createTable tableName:" + tableName);
-        SchemaUtil.setSchema(schema);
+        SchemaUtil.setSchema(schema, this.doubleFileService);
     }
 
     @Override
@@ -181,9 +157,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 40L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
-//        for (String s : SchemaUtil.maps.keySet()) {
-//            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
-//        }
         try {
             if (RestartUtil.IS_FIRST_START) {
                 final ExecutorService executorService1 = Executors.newFixedThreadPool(8);
@@ -221,6 +194,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
+            for (String s : this.doubleFileService.getMap().keySet()) {
+                System.out.println("doubleFile: " + s + "position: " + this.doubleFileService.getMap().get(s).getPosition().get());
+            }
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);
         }
@@ -235,7 +211,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (upsertTimes.incrementAndGet() == 1) {
             System.out.println("start upsert, ts:" + System.currentTimeMillis());
         }
-//        writeThreadSet.add(Thread.currentThread().getName());
         try {
             final Collection<Row> rows = wReq.getRows();
             for (Row row : rows) {
@@ -252,7 +227,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeLatestQueryTimes.incrementAndGet() == 1) {
             System.out.println("executeLatestQuery start, ts:" + System.currentTimeMillis());
         }
-//        executeLatestQueryThreadSet.add(Thread.currentThread().getName());
         try {
             ArrayList<Row> rows = new ArrayList<>();
             for (Vin vin : pReadReq.getVins()) {
@@ -278,7 +252,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeTimeRangeQueryTimes.getAndIncrement() == 1) {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
-//        executeTimeRangeQueryThreadSet.add(Thread.currentThread().getName());
         if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
