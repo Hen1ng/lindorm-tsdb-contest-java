@@ -351,6 +351,10 @@ public class TSDBEngineImpl extends TSDBEngine {
 //        return rows;
     }
 
+    public ArrayList<Row> getRowsFromIndex(Vin vin,Index index,Set<String> requestColumns){
+        Integer i = VinDictMap.get(vin);
+        return fileService.getByIndex(vin,index.getMinTimestamp(),index.getMaxTimestamp(),index,requestColumns,i);
+    }
     public ArrayList<Row> executeAggregateQueryByBucket(TimeRangeAggregationRequest aggregationReq) throws IOException {
         ArrayList<Row> rows = new ArrayList<>();
         final String columnName = aggregationReq.getColumnName();
@@ -464,6 +468,14 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         return rows;
     }
+
+    public ArrayList<Row> getCrossRows(Vin vin,Index index,long startTime,long endTime,Set<String> requestedColumns){
+        long sTime = Math.max(startTime,index.getMinTimestamp());
+        long eTime = Math.min(endTime,index.getMaxTimestamp());
+        Integer i = VinDictMap.get(vin);
+        ArrayList<Row> timeRangeRow = new ArrayList<>(fileService.getByIndex(vin, sTime, eTime, index,requestedColumns,i));
+        return timeRangeRow;
+    }
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
         ArrayList<Row> rows = new ArrayList<>();
@@ -479,6 +491,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
         int i = 0;
+        boolean justInt = true;
         while(timeLowerBound+i*interval < timeUpperBound){
             Map<String, ColumnValue> columns = new HashMap<>(1);
             ArrayList<Row> timeRangeRow = new ArrayList<>();
@@ -488,6 +501,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             List<Index> indices = MapIndex.get(vin, startTime, endTime);
             if(columnType.equals(COLUMN_TYPE_INTEGER)){
                 if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)){
+                    if(justInt){
+                        return executeDownsampleQueryByBucket(downsampleReq);
+                    }
                     // first remove useless index
                     Iterator<Index> iterator = indices.iterator();
                     while (iterator.hasNext()) {
@@ -504,46 +520,41 @@ public class TSDBEngineImpl extends TSDBEngine {
                             double sum = 0;
                             int size = 0;
                             for (Index index : indices) {
-                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
-                                    sum += index.getAggBucket().getiSum(columnIndex);
-                                    size += index.getValueSize();
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
-                                }
+                                Integer i1 = VinDictMap.get(vin);
+                                timeRangeRow.addAll(fileService.getByIndex(vin,startTime,endTime,index,requestedColumns,i1));
                             }
                             for (Row row : timeRangeRow) {
-                                int integerValue = row.getColumns().get(columnName).getIntegerValue();
-                                if(integerValue!=columnFilter.getValue().getIntegerValue())continue;
-                                sum += row.getColumns().get(columnName).getIntegerValue();
-                                size++;
+                                if(columnFilter.doCompare(row.getColumns().get(columnName))) {
+                                    sum += row.getColumns().get(columnName).getIntegerValue();
+                                    size++;
+                                }
                             }
-                            columns.put(columnName,new ColumnValue.DoubleFloatColumn(sum/size));
-                            rows.add(new Row(vin,startTime,columns));
+                            if(size == 0){
+                                columns.put(columnName,new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                            }else {
+                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
+                            }
                             break;
                         case MAX:
                             // equal and max
                             boolean isExist = false;
                             for (Index index : indices) {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
-                                    ArrayList<Row> rowsInIndex = memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns);
+                                    ArrayList<Row> rowsInIndex = getRowsFromIndex(vin,index,requestedColumns);
                                     for (Row row : rowsInIndex) {
-                                        if(row.getColumns().get(columnName).getIntegerValue() == columnFilter.getValue().getIntegerValue()){
+                                        if(columnFilter.doCompare(row.getColumns().get(columnName))){
                                             isExist = true;
                                             break;
                                         }
                                     }
                                     if(isExist)break;
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                } else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             if(!isExist) {
                                 for (Row row : timeRangeRow) {
-                                    if(row.getColumns().get(columnName).getIntegerValue() == columnFilter.getValue().getIntegerValue()){
+                                    if(columnFilter.doCompare(row.getColumns().get(columnName))){
                                         isExist = true;
                                         break;
                                     }
@@ -551,21 +562,23 @@ public class TSDBEngineImpl extends TSDBEngine {
                             }
                             if(isExist){
                                 columns.put(columnName,new ColumnValue.IntegerColumn(columnFilter.getValue().getIntegerValue()));
-                                rows.add(new Row(vin,startTime,columns));
                             }else{
                                 columns.put(columnName,new ColumnValue.IntegerColumn(0x80000000));
-                                rows.add(new Row(vin,startTime,columns));
                             }
                             break;
                         default:
                             System.out.println("error aggregator type");
                     }
-                }else if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)){
+                }
+                else if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)){
+//                    if(justInt){
+//                        return executeDownsampleQueryByBucket(downsampleReq);
+//                    }
                     Iterator<Index> iterator = indices.iterator();
+                    int integerValue = columnFilter.getValue().getIntegerValue();
                     while (iterator.hasNext()) {
                         Index index = iterator.next();
                         AggBucket aggBucket = index.getAggBucket();
-                        int integerValue = columnFilter.getValue().getIntegerValue();
                         if (aggBucket.getiMax(columnIndex) < integerValue) {
                             iterator.remove();
                         }
@@ -576,22 +589,27 @@ public class TSDBEngineImpl extends TSDBEngine {
                             int size = 0;
                             for (Index index : indices) {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
-                                    sum += index.getAggBucket().getiSum(columnIndex);
-                                    size += index.getValueSize();
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                    if(index.getAggBucket().getiMin(columnIndex) > integerValue){
+                                        sum += index.getAggBucket().getiSum(columnIndex);
+                                        size += index.getValueSize();
+                                    }else{
+                                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin,index.getMinTimestamp(),index.getMaxTimestamp()+1,requestedColumns));
+                                    }
+                                }  else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                int integerValue = row.getColumns().get(columnName).getIntegerValue();
-                                if(integerValue<=columnFilter.getValue().getIntegerValue())continue;
-                                sum += row.getColumns().get(columnName).getIntegerValue();
-                                size++;
+                                if(columnFilter.doCompare(row.getColumns().get(columnName))) {
+                                    sum += row.getColumns().get(columnName).getIntegerValue();
+                                    size++;
+                                }
                             }
-                            columns.put(columnName,new ColumnValue.DoubleFloatColumn(sum/size));
-                            rows.add(new Row(vin,startTime,columns));
+                            if(size == 0){
+                                columns.put(columnName,new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                            }else {
+                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
+                            }
                             break;
                         case MAX:
                             // greater and max
@@ -599,17 +617,20 @@ public class TSDBEngineImpl extends TSDBEngine {
                             for (Index index : indices) {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     maxInt = Math.max(maxInt,index.getAggBucket().getiMax(columnIndex));
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                }  else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                maxInt = Math.max(maxInt,row.getColumns().get(columnName).getIntegerValue());
+                                if(columnFilter.doCompare(row.getColumns().get(columnName))){
+                                    maxInt = Math.max(maxInt,row.getColumns().get(columnName).getIntegerValue());
+                                }
                             }
-                            columns.put(columnName,new ColumnValue.IntegerColumn(maxInt));
-                            rows.add(new Row(vin,startTime,columns));
+                            if(maxInt == Integer.MIN_VALUE){
+                                columns.put(columnName,new ColumnValue.IntegerColumn(0x80000000));
+                            }else {
+                                columns.put(columnName, new ColumnValue.IntegerColumn(maxInt));
+                            }
                             break;
                         default:
                             System.out.println("error aggregator type");
@@ -619,6 +640,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             else if(columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)){
                 if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)){
                     // first remove useless index
+                    if(justInt){
+                        return executeDownsampleQueryByBucket(downsampleReq);
+                    }
                     Iterator<Index> iterator = indices.iterator();
                     while (iterator.hasNext()) {
                         Index index = iterator.next();
@@ -637,24 +661,21 @@ public class TSDBEngineImpl extends TSDBEngine {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     sum += index.getAggBucket().getdSum(columnIndex);
                                     size += index.getValueSize();
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                } else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                double integerValue = row.getColumns().get(columnName).getDoubleFloatValue();
-                                if(integerValue!=columnFilter.getValue().getDoubleFloatValue())continue;
-                                sum += row.getColumns().get(columnName).getIntegerValue();
-                                size++;
+                                if(columnFilter.doCompare(row.getColumns().get(columnName))) {
+                                    sum += row.getColumns().get(columnName).getDoubleFloatValue();
+                                    size++;
+                                }
                             }
                             if(size == 0){
                                 columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
                             }else {
                                 columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
                             }
-                            rows.add(new Row(vin,startTime,columns));
                             break;
                         case MAX:
                             // equal and max
@@ -663,21 +684,19 @@ public class TSDBEngineImpl extends TSDBEngine {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     ArrayList<Row> rowsInIndex = memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), index.getMaxTimestamp(), requestedColumns);
                                     for (Row row : rowsInIndex) {
-                                        if(row.getColumns().get(columnName).getIntegerValue() == columnFilter.getValue().getDoubleFloatValue()){
+                                        if(columnFilter.doCompare(row.getColumns().get(columnName))){
                                             isExist = true;
                                             break;
                                         }
                                     }
                                     if(isExist)break;
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                }  else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             if(!isExist) {
                                 for (Row row : timeRangeRow) {
-                                    if(row.getColumns().get(columnName).getDoubleFloatValue() == columnFilter.getValue().getDoubleFloatValue()){
+                                    if(columnFilter.doCompare(row.getColumns().get(columnName))){
                                         isExist = true;
                                         break;
                                     }
@@ -685,10 +704,8 @@ public class TSDBEngineImpl extends TSDBEngine {
                             }
                             if(isExist){
                                 columns.put(columnName,new ColumnValue.DoubleFloatColumn(columnFilter.getValue().getDoubleFloatValue()));
-                                rows.add(new Row(vin,startTime,columns));
                             }else{
                                 columns.put(columnName,new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                                rows.add(new Row(vin,startTime,columns));
                             }
                             break;
                         default:
@@ -697,10 +714,10 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
                 else if(columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)){
                     Iterator<Index> iterator = indices.iterator();
+                    double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
                     while (iterator.hasNext()) {
                         Index index = iterator.next();
                         AggBucket aggBucket = index.getAggBucket();
-                        double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
                         if (aggBucket.getdMax(columnIndex) < doubleFloatValue) {
                             iterator.remove();
                         }
@@ -711,26 +728,27 @@ public class TSDBEngineImpl extends TSDBEngine {
                             int size = 0;
                             for (Index index : indices) {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
-                                    sum += index.getAggBucket().getdSum(columnIndex);
-                                    size += index.getValueSize();
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                    if(index.getAggBucket().getdMin(columnIndex) > doubleFloatValue){
+                                        sum += index.getAggBucket().getdSum(columnIndex);
+                                        size += index.getValueSize();
+                                    }else{
+                                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin,index.getMinTimestamp(),index.getMaxTimestamp()+1,requestedColumns));
+                                    }
+                                }  else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                double doubleFloatValue = row.getColumns().get(columnName).getDoubleFloatValue();
-                                if(doubleFloatValue<=columnFilter.getValue().getIntegerValue())continue;
-                                sum += row.getColumns().get(columnName).getIntegerValue();
-                                size++;
+                                if(columnFilter.doCompare(row.getColumns().get(columnName))) {
+                                    sum += row.getColumns().get(columnName).getDoubleFloatValue();
+                                    size++;
+                                }
                             }
                             if(size == 0){
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                                columns.put(columnName,new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
                             }else {
                                 columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
                             }
-                            rows.add(new Row(vin,startTime,columns));
                             break;
                         case MAX:
                             // greater and max
@@ -738,20 +756,20 @@ public class TSDBEngineImpl extends TSDBEngine {
                             for (Index index : indices) {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     maxDouble = Math.max(maxDouble,index.getAggBucket().getdMax(columnIndex));
-                                } else if (index.getMaxTimestamp() >= startTime && index.getMinTimestamp() <= startTime) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, startTime, endTime+1, requestedColumns));
-                                } else if (index.getMinTimestamp() <= endTime - 1 && index.getMaxTimestamp() >= endTime - 1) {
-                                    timeRangeRow.addAll(memoryTable.getTimeRangeRow(vin, index.getMinTimestamp(), endTime, requestedColumns));
+                                }  else{
+                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                maxDouble = Math.max(maxDouble,row.getColumns().get(columnName).getDoubleFloatValue());
+                                if(columnFilter.doCompare(row.getColumns().get(columnName))){
+                                    maxDouble = Math.max(maxDouble,row.getColumns().get(columnName).getDoubleFloatValue());
+                                }
                             }
                             if(maxDouble == -Double.MAX_VALUE){
-                                maxDouble = Double.NEGATIVE_INFINITY;
+                                columns.put(columnName,new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                            }else {
+                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(maxDouble));
                             }
-                            columns.put(columnName,new ColumnValue.DoubleFloatColumn(maxDouble));
-                            rows.add(new Row(vin,startTime,columns));
                             break;
                         default:
                             System.out.println("error aggregator type");
@@ -761,6 +779,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.out.println("Unexpected columnType: " + columnType);
             }
             i++;
+            rows.add(new Row(vin,startTime,columns));
         }
         return rows;
     }
@@ -778,9 +797,12 @@ public class TSDBEngineImpl extends TSDBEngine {
         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
-        ArrayList<Row> timeRangeRow = new ArrayList<>();
-        Map<Long, List<ColumnValue>> intMaps = new HashMap<>();
-        Map<Long, List<ColumnValue>> doubleMaps = new HashMap<>();
+        final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(downsampleReq.getVin(), downsampleReq.getTimeLowerBound(), downsampleReq.getTimeUpperBound(), requestedColumns);
+        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
+            return rows;
+        }
+        Map<Long, List<ColumnValue>> intMaps = new HashMap<>(timeRangeRow.size());
+        Map<Long, List<ColumnValue>> doubleMaps = new HashMap<>(timeRangeRow.size());
         for (Row row : timeRangeRow) {
             final ColumnValue columnValue = row.getColumns().get(columnName);
             final long timestamp = row.getTimestamp();
