@@ -30,14 +30,15 @@ public class Index {
 
     private int valueSize;
 
-    public AggBucket getAggBucket(){
+    public AggBucket getAggBucket() {
         return aggBucket;
     }
+
     public long getOffset() {
         return offset;
     }
 
-    public int getOffsetLine(){
+    public int getOffsetLine() {
         return offsetLine;
     }
 
@@ -63,7 +64,18 @@ public class Index {
 
     private int doubleLine;
 
-    public Index(long offset, long maxTimestamp, long minTimestamp, int length, int valueSize,int offsetLine, int doubleLine,AggBucket aggBucket) {
+    private DoubleIndexMap doubleIndexMap;
+
+    public Index(long offset
+            , long maxTimestamp
+            , long minTimestamp
+            , int length
+            , int valueSize
+            , int offsetLine
+            , int doubleLine
+            , AggBucket aggBucket
+//            , DoubleIndexMap doubleIndexMap
+    ) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
         this.minTimestamp = minTimestamp;
@@ -72,6 +84,7 @@ public class Index {
         this.offsetLine = offsetLine;
         this.doubleLine = doubleLine;
         this.aggBucket = aggBucket;
+//        this.doubleIndexMap = doubleIndexMap;
     }
 
     @Override
@@ -112,7 +125,7 @@ public class Index {
         return bigIntOffset;
     }
 
-    public void setBigIntOffset(int offset){
+    public void setBigIntOffset(int offset) {
         this.bigIntOffset = offset;
     }
 

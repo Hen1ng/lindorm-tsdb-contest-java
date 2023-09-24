@@ -108,7 +108,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
-//        this.doubleFileService.add("LMLK", dataPath.getPath());
+        if (SchemaUtil.getIndexArray() != null && SchemaUtil.getIndexArray()[49] != null) {
+            doubleFileService.add(SchemaUtil.getIndexArray()[49], dataPath.getPath());
+        }
         if (RestartUtil.IS_FIRST_START) {
             Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
             Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress(this.dataPath);
@@ -131,6 +133,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     public void createTable(String tableName, Schema schema) throws IOException {
         System.out.println("createTable tableName:" + tableName);
         SchemaUtil.setSchema(schema, this.doubleFileService);
+        doubleFileService.add(SchemaUtil.getIndexArray()[49], dataPath.getPath());
     }
 
     @Override
@@ -195,7 +198,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
             for (String s : this.doubleFileService.getMap().keySet()) {
-                System.out.println("doubleFile: " + s + "position: " + this.doubleFileService.getMap().get(s).getPosition().get());
+                System.out.println("doubleFile: " + s + ", position: " + this.doubleFileService.getMap().get(s).getPosition().get());
             }
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);

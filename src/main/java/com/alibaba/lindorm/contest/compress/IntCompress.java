@@ -3,6 +3,7 @@ package com.alibaba.lindorm.contest.compress;
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -182,6 +183,14 @@ public class IntCompress {
         GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
         return gzipCompress.compress(array);
     }
+    public static byte[]  compressZstd(int[] ints) {
+        ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
+        for (int i : ints) {
+            allocate.putInt(i);
+        }
+        final byte[] array = allocate.array();
+        return Zstd.compress(array, 22);
+    }
 
     public static byte[]  compress4(int[] ints) {
         ints = Simple9Codes.innerEncode(ints);
@@ -204,6 +213,16 @@ public class IntCompress {
         }
         return ints;
 //        return Simple9Codes.decode(ints);
+    }
+
+    public static int[] decompressZstd(byte[] bytes, int num) {
+        final byte[] bytes1 = Zstd.decompress(bytes, num);
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
+        int[] ints = new int[bytes1.length / 4];
+        for (int j = 0; j < ints.length; j++) {
+            ints[j] = wrap.getInt();
+        }
+        return ints;
     }
 
     protected static int[] toGapArray(int[] numbers) {

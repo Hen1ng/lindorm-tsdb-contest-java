@@ -104,6 +104,7 @@ public class SchemaUtil {
         for (String s : INDEX_ARRAY) {
             maps.put(s, new HashSet<>());
         }
+
     }
 
 
@@ -138,6 +139,9 @@ public class SchemaUtil {
         int intNums = 0;
         int stringNums = 0;
         int doubleNums = 0;
+        if (!file.exists()) {
+            return;
+        }
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {

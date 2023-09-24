@@ -22,6 +22,14 @@ public class DoubleFileService {
         return doubleFile.write(doubles);
     }
 
+    public int write(double d, String key, int lineNum) {
+        final DoubleFile doubleFile = get(key);
+        if (doubleFile == null) {
+            return -1;
+        }
+        return doubleFile.write(d, lineNum);
+    }
+
     public int size() {
         return map.keySet().size();
     }

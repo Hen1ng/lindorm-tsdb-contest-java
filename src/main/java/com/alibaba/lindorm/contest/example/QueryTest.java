@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class QueryTest {
-    static int threadNum = 1;
+    static int threadNum = 16;
     static ExecutorService executorService = Executors.newFixedThreadPool(15);
     static AtomicLong writeTimes = new AtomicLong(0);
     static CountDownLatch countDownLatch = new CountDownLatch(threadNum);
@@ -81,7 +81,7 @@ public class QueryTest {
                     columns.put(key, new ColumnValue.StringColumn(buffer));
                 }
             }
-          boolean write = false;
+          boolean write = true;
             if (write) {
                 Schema schema = new Schema(columnTypeMap);
                 tsdbEngineSample.connect();
@@ -92,14 +92,20 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 10; j++) {
+                        for (int j = 0; j < 100; j++) {
                             List<Row> rowList = new ArrayList<>();
                             for (int i1 = 0; i1 < 10; i1++) {
                                 Vin vin = vins[random.nextInt(100)];
                                 if (j == 100) {
                                     vin = new Vin("3TZgBg7DMD2awLDNC".getBytes(StandardCharsets.UTF_8));
                                 }
-                                rowList.add(new Row(vin, atomicLong.getAndIncrement() * 1000, columns));
+                                final long andIncrement = atomicLong.getAndIncrement();
+                                Map<String, ColumnValue> columns1 = new HashMap<>();
+                                for (String s : columns.keySet()) {
+                                    columns1.put(s, columns.get(s));
+                                }
+                                columns1.put("9double", new ColumnValue.DoubleFloatColumn(andIncrement));
+                                rowList.add(new Row(vin, andIncrement * 1000, columns1));
                             }
                             try {
                                 tsdbEngineSample.write(new WriteRequest("test", rowList));
@@ -118,7 +124,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "hu2tiaeG77Ddfiipo";
+                String v = "ME3wDeOVZbQEE1unq";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
@@ -132,6 +138,7 @@ public class QueryTest {
                 requestedColumns.add("LONGITUDE");
                 requestedColumns.add("LATITUDE");
                 requestedColumns.add("YXMS");
+                requestedColumns.add("9double");
 
                 final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
                 final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);

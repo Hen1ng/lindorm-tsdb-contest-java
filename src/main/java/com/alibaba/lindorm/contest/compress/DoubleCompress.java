@@ -26,6 +26,26 @@ public class DoubleCompress {
         return byteBuffer.slice();
     }
 
+    public static ByteBuffer encode(double[] values, int size) {
+        ByteBufferBitOutput byteBufferBitOutput = new ByteBufferBitOutput();
+        final ValueCompressor valueCompressor = new ValueCompressor(byteBufferBitOutput, new LastValuePredictor());
+        for (int i = 0; i < size; i++) {
+            final double value = values[i];
+            if (i == 0) {
+                valueCompressor.writeFirst(Double.doubleToRawLongBits(value));
+            } else {
+                valueCompressor.compressValue(Double.doubleToRawLongBits(value));
+            }
+        }
+        byteBufferBitOutput.writeBits(0x0F, 4);
+        byteBufferBitOutput.writeBits(0xFFFFFFFF, 32);
+        byteBufferBitOutput.skipBit();
+        byteBufferBitOutput.flush();
+        final ByteBuffer byteBuffer = byteBufferBitOutput.getByteBuffer();
+        byteBuffer.flip();
+        return byteBuffer.slice();
+    }
+
     public static double[] decode(ByteBuffer byteBuffer, int valueSize) {
         double[] doubles = new double[valueSize];
         final ByteBufferBitInput byteBufferBitInput = new ByteBufferBitInput(byteBuffer);
