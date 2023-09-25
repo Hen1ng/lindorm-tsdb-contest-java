@@ -99,7 +99,7 @@ public class TSFileService {
             ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
             tsFile.getFromOffsetByFileChannel(compressLong, offset + 12);
             final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
-            int[] ints = null;
+            long[] ints = null;
             final ByteBuffer allocate = ByteBuffer.allocate(4);
             tsFile.getFromOffsetByFileChannel(allocate, offset + 12 + compressLength);
             allocate.flip();
@@ -135,12 +135,12 @@ public class TSFileService {
                                             final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
                                             tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
                                             allocate1.flip();
-                                            ints = IntCompress.decompressZstd(allocate1.array(), index.getValueSize() * Constants.INT_NUMS * 4);
+                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
                                         }
                                         final ByteBuffer intBuffer = INT_BUFFER.get();
                                         intBuffer.clear();
                                         int off = columnIndex * valueSize + i;
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
+                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
                                     }
                                 }
                             } catch (Exception e) {
@@ -194,7 +194,7 @@ public class TSFileService {
                                         + doubleCompressInt + 4
                                         + 4);
                                 final byte[] array = byteBuffer.array();
-                                final int[] decompress1 = IntCompress.decompressZstd(array, index.getValueSize() * Constants.INT_NUMS * 4);
+                                final int[] decompress1 = IntCompress.decompress(array);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 4);
                                 for (int i1 : decompress1) {
                                     stringLengthBuffer.putInt(i1);
@@ -273,7 +273,7 @@ public class TSFileService {
         tsFile.getFromOffsetByFileChannel(compressLong, offset + 12);
         final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
         //解压int
-        int[] ints = null;
+        long[] ints = null;
         final ByteBuffer allocate = ByteBuffer.allocate(4);
         tsFile.getFromOffsetByFileChannel(allocate, offset + 12 + compressLength);
         allocate.flip();
@@ -312,12 +312,12 @@ public class TSFileService {
                                             final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
                                             tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
                                             allocate1.flip();
-                                            ints = IntCompress.decompressZstd(allocate1.array(), index.getValueSize() * Constants.INT_NUMS * 4);
+                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
                                         }
                                         final ByteBuffer intBuffer = INT_BUFFER.get();
                                         intBuffer.clear();
                                         int off = columnIndex * valueSize + i;
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
+                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int)ints[off]));
                                     } catch (Exception e) {
                                         System.out.println("getNormalIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                                     }
@@ -376,7 +376,7 @@ public class TSFileService {
                                         + doubleCompressInt + 4
                                         + 4);
                                 final byte[] array = byteBuffer.array();
-                                final int[] decompress1 = IntCompress.decompressZstd(array, index.getValueSize() * Constants.INT_NUMS * 4);
+                                final int[] decompress1 = IntCompress.decompress(array);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 4);
                                 for (int i1 : decompress1) {
                                     stringLengthBuffer.putInt(i1);
@@ -457,7 +457,7 @@ public class TSFileService {
             double[] doubles1 = new double[lineNum];
             int doubles1Position = 0;
             long[] longs = new long[lineNum];
-            int[] ints = new int[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
+            long[] ints = new long[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
             int[][] bigInts = Constants.intColumnHashMapCompress.getTempArray(lineNum);
             int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
@@ -570,7 +570,7 @@ public class TSFileService {
             byte[] compress2 = null;
             byte[] stringLengthArrayCompress = null;
             try {
-                compress2 = IntCompress.compressZstd(ints);
+                compress2 = IntCompress.compress2(ints);
                 stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
             } catch (Exception e) {
                 System.out.println("compress int error" + e);
