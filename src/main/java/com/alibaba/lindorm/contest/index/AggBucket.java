@@ -30,7 +30,7 @@ public class AggBucket {
     }
 
     public int getiMin(int index){return iMin[index];}
-    public double getdMin(int index){return dMin[index];}
+    public double getdMin(int index){return dMin[index-40];}
     public int getiMax(int index) {
         return iMax[index];
     }
