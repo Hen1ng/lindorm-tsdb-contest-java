@@ -168,14 +168,18 @@ public class IntCompress {
                 ArrayUtils.copy(bytes, 0, result, position, 8);
                 position += 8;
             }
-            return result;
+            GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+            return gzipCompress.compress(result);
+//            return result;
         } catch (Exception e) {
             System.out.println("compress2 error, e" + e);
         }
         return null;
     }
 
-    public static long[] decompress2(byte[] bytes, int valueSize) {
+    public static long[] decompress2(byte[] bytes1, int valueSize) {
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        byte[] bytes = gzipCompress.deCompress(bytes1);
         long[] output = new long[bytes.length / 8];
         int position = 0;
         for (int i = 0; i < bytes.length; i += 8) {
