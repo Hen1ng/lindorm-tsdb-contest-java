@@ -130,6 +130,7 @@ public class MapIndex {
                                 , Integer.parseInt(split2[5])
                                 , Integer.parseInt(split2[6])
                                 ,AggBucket.fromString(split2[7])
+//                                , DoubleIndexMap.fromString(split2[8])
                         ));
                     }
                     INDEX_MAP.put(new Vin(split1[0].getBytes(StandardCharsets.UTF_8)), indices);

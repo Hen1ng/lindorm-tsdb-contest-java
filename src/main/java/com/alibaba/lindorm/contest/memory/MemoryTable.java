@@ -21,7 +21,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 
 /**
  * key:Vin, value:timestamp
@@ -40,8 +39,8 @@ public class MemoryTable {
     private final ConcurrentHashMap<Vin, Queue<Integer>> vinToBufferIndex;
 
     private final Queue<Integer> freeList;
-    private final SortedList<Value>[] bufferValues;
-    private final SortedList<Value>[] values;
+    private final List<Value>[] bufferValues;
+    private final List<Value>[] values;
 
     private final int size;
     private final AtomicInteger atomicIndex = new AtomicInteger(0);
@@ -87,7 +86,7 @@ public class MemoryTable {
                 index = atomicIndex.getAndIncrement();
                 VinDictMap.put(vin, index);
             }
-            SortedList<Value> valueSortedList = values[index];
+            List<Value> valueSortedList = values[index];
             valueSortedList.add(new Value(ts, row.getColumns()));
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
                 int bufferIndex = getFreeBufferIndex(vin);
@@ -120,7 +119,7 @@ public class MemoryTable {
                 index = atomicIndex.getAndIncrement();
                 VinDictMap.put(vin, index);
             }
-            final SortedList<Value> valueSortedList = values[index];
+            final List<Value> valueSortedList = values[index];
             valueSortedList.add(new Value(ts, row.getColumns()));
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
                 tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
@@ -152,14 +151,12 @@ public class MemoryTable {
                 return getFromMemoryTable(vin, requestedColumns, i);
             }
             final Row fromMemoryTable = getFromMemoryTable(vin, requestedColumns, i);
-//            System.out.println("getLastRow query from memory row" + fromMemoryTable);
             Row row = null;
             final Pair<Index, Long> last = MapIndex.getLast(vin);
             if (last != null && last.getLeft() != null) {
                 final Index index = last.getLeft();
                 final Long timestamp = last.getRight();
                 row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns, i);
-//                System.out.println("getLastRow query from file row" + row);
             }
             if (row == null) {
                 return fromMemoryTable;
@@ -221,7 +218,7 @@ public class MemoryTable {
             }
             return new Row(vin, value.getTimestamp(), columns);
         } finally {
-            if (queryLastTimes.get() % 2500000 == 0) {
+            if (queryLastTimes.get() % 30000000 == 0) {
                 System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
             }
         }
@@ -270,7 +267,6 @@ public class MemoryTable {
                 return rowArrayList;
             }
             for (Index index : v2) {
-//                System.out.println("getTimeRangeRowForQueryTest vin :" + vin + "timeLowerBound " + timeLowerBound + "timeUpperBound " + timeUpperBound + "index " + index);
                 final Integer integer = VinDictMap.get(vin);
                 final ArrayList<Row> byIndex = tsFileService.getByIndex(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
                 if (!byIndex.isEmpty()) {
@@ -323,7 +319,7 @@ public class MemoryTable {
     private ArrayList<Row> getTimeRangeRowFromMemoryTable(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int slot) {
         ArrayList<Row> result = new ArrayList<>();
         try {
-            final SortedList<Value> sortedList = values[slot];
+            final List<Value> sortedList = values[slot];
 //            valueList.addAll(sortedList);
 //            this.bufferValuesLock.lock();
 //            if(vinToBufferIndex.containsKey(vin)){
@@ -381,8 +377,8 @@ public class MemoryTable {
     public void writeToFileBeforeShutdown() {
         try {
             for (int i = 0; i < values.length; i++) {
-                SortedList<Value> valueList = values[i];
-                if (valueList.root != null && valueList.size() >= 1) {
+                List<Value> valueList = values[i];
+                if (valueList.size() >= 1) {
                     final Vin vin = new Vin(VinDictMap.get(i));
                     tsFileService.write(vin, valueList, valueList.size(), i);
                 }
@@ -397,7 +393,7 @@ public class MemoryTable {
         try {
             int threadNum = 10;
             final ExecutorService executorService = Executors.newFixedThreadPool(threadNum);
-            List<List<SortedList<Value>>> listList = new ArrayList<>();
+            List<List<List<Value>>> listList = new ArrayList<>();
             for (int i = 0; i < threadNum; i++) {
                 listList.add(new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS));
             }
@@ -407,10 +403,10 @@ public class MemoryTable {
                 listList.get(mod).add(values[i1]);
             }
             List<Future<Void>> futures = new ArrayList<>(threadNum);
-            for (List<SortedList<Value>> sortedLists : listList) {
+            for (List<List<Value>> sortedLists : listList) {
                 final Future<Void> submit = executorService.submit(() -> {
-                    for (SortedList<Value> valueList : sortedLists) {
-                        if (valueList.root != null && valueList.size() >= 1) {
+                    for (List<Value> valueList : sortedLists) {
+                        if (!valueList.isEmpty()) {
                             final Vin vin = new Vin(VinDictMap.get(i));
                             tsFileService.write(vin, valueList, valueList.size(), i);
                         }
@@ -427,7 +423,7 @@ public class MemoryTable {
         }
     }
 
-    public SortedList<Value>[] getValues() {
+    public List<Value>[] getValues() {
         return values;
     }
 
@@ -446,7 +442,7 @@ public class MemoryTable {
                     throw new RuntimeException("loadLastTsToMemory error, row is null");
                 }
                 Integer i = VinDictMap.get(vin);
-                final SortedList<Value> valueSortedList = this.values[i];
+                final List<Value> valueSortedList = this.values[i];
                 final Value value = new Value(timestamp, row.getColumns());
                 valueSortedList.add(value);
             }

@@ -3,6 +3,7 @@ package com.alibaba.lindorm.contest.compress;
 import com.alibaba.lindorm.contest.util.ArrayUtils;
 import com.alibaba.lindorm.contest.util.AssertUtil;
 import com.alibaba.lindorm.contest.util.Pair;
+import com.alibaba.lindorm.contest.util.UnsafeUtil;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -72,6 +73,53 @@ public class FloatCompress {
         return block;
     }
 
+    public static byte[] encode2(double[] values) {
+        try {
+            int offset = 0;
+            BitSet buffer = new BitSet();
+
+            boolean ctrlBit;
+            double previous = values[0];
+            Block prevBlock = null;
+            for (int n = 1; n < values.length; n++) {
+                Block block = calcBlock(previous, values[n]);
+                if (block.getValue() == 0) {
+                    buffer.clear(offset++);
+                } else {
+                    buffer.set(offset++);
+                    buffer.set(offset++, ctrlBit = !block.fallInSameBlock(prevBlock));
+                    if (ctrlBit) {
+                        int leadingZero = block.getLeadingZero();
+                        int blockSize = block.getBlockSize();
+                        AssertUtil.assertTrue(leadingZero < (1 << 6));
+                        AssertUtil.assertTrue((blockSize < (1 << 7)));
+                        for (int i = 5; i > 0; i--) {
+                            buffer.set(offset++, ((leadingZero >> (i - 1)) & 0x1) > 0);
+                        }
+                        for (int i = 6; i > 0; i--) {
+                            buffer.set(offset++, ((blockSize >> (i - 1)) & 0x1) > 0);
+                        }
+                    }
+                    for (int i = 0; i < block.getBlockSize(); i++) {
+                        buffer.set(offset++, block.valueOf(i));
+                    }
+                }
+                previous = values[n];
+                prevBlock = block;
+            }
+            final byte[] byteArray = buffer.toByteArray();
+            final long l = Double.doubleToLongBits(values[0]);
+            final ByteBuffer allocate = ByteBuffer.allocate(8 + 4 + byteArray.length);
+            allocate.putLong(l);
+            allocate.putInt(offset);
+            allocate.put(byteArray);
+            return allocate.array();
+        } catch (Exception e) {
+            System.out.println("float encode error," + e);
+        }
+        return null;
+    }
+
     public static Pair encode(double[] values) {
         try {
             int offset = 0;
@@ -112,6 +160,20 @@ public class FloatCompress {
             System.out.println("float encode error," + e);
         }
         return null;
+    }
+
+    public static double[] decode2(byte[] data) {
+        final ByteBuffer wrap = ByteBuffer.wrap(data);
+        final long aLong = wrap.getLong();
+        final int anInt = wrap.getInt();
+        byte[] data1 = new byte[data.length - 12];
+        ArrayUtils.copy(data, 8 + 4, data1, 0, data1.length);
+        final List<Double> decode = decode(aLong, anInt, data1);
+        double[] doubles = new double[decode.size()];
+        for (int i = 0; i < decode.size(); i++) {
+            doubles[i] = decode.get(i);
+        }
+        return doubles;
     }
 
     public static List<Double> decode(long previous, int dataLen, byte[] data) {
@@ -159,7 +221,9 @@ public class FloatCompress {
     }
 
     public static void main(String[] args) {
-        double[] values = new double[]{122.19,69.19,65.19,80.19,8.19,114.19,57.19,72.19,68.19,91.19,106.19,102.19,49.19,45.19,60.19,151.19,79.19,94.19,109.19,37.19,52.19,48.19,71.19,86.19,82.19,97.19,44.19,40.19,131.19,78.19,74.19,89.19,85.19,32.19,123.19,119.19,66.19,81.19,77.19,24.19,20.19,111.19,126.19,54.19,12.19};
+        double[] values = new double[]{26965.26599263888,26965.25520601932,26965.26247191294,
+                26965.25361209828, 26965.258724932894, 26965.25695619905,
+                26965.260738665187, 26965.26014345266, 26965.266010121133, 26965.25522351106, 26965.26248999291, 26965.258741836402};
         Pair<Long, Pair<Integer, byte[]>> data = encode(values);
         System.out.println(data.getRight().getLeft()); // 编码后的数据长度，单位 bits
         List<Double> a = decode(data.getLeft(), data.getRight().getLeft(), data.getRight().getRight()); // 解码后的数据

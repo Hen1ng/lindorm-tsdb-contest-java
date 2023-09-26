@@ -45,6 +45,9 @@ public class DoubleColumnHashMapCompress implements Serializable {
     }
 
     public int[][] getTempArray(int lineNum) {
+        if (compressColumnNum == 0) {
+            return null;
+        }
         int[][] res = new int[compressColumnNum][];
         for (int i = 0; i < compressColumnNum; i++) {
             res[i] = new int[lineNum];

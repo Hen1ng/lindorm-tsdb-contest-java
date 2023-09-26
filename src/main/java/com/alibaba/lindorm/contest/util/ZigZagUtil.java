@@ -32,6 +32,17 @@ public class ZigZagUtil {
         return (n >>> 1) ^ -(n & 1);
     }
 
+    public static long encodeLong(long l) {
+        return (l << 1) ^ (l >> 63);
+    }
+
+    public static long decodeLong(long l) {
+        return (l >>> 1) ^ ((l << 63) >> 63);
+    }
+
+
+
+
     public static void main(String[] args) {
 //        byte[] temp = new byte[1024];
 //        final int i = intToZigZag(247167);
