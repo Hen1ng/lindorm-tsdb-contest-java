@@ -497,6 +497,7 @@ public class TSFileService {
                     if (i < Constants.INT_NUMS) {
                         int integerValue = columns.get(key).getIntegerValue();
                         aggBucket.updateInt(integerValue, i);
+                        StaticsUtil.columnInfos.get(i).update(integerValue);
 //                        SchemaUtil.maps.get(key).add(integerValue);
                         if (Constants.ZEROSET.contains(key)) {
                             continue;
