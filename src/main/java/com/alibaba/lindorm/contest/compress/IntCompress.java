@@ -5,10 +5,12 @@ import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.util.ArrayUtils;
 import com.alibaba.lindorm.contest.util.BytesUtil;
+import com.alibaba.lindorm.contest.util.SchemaUtil;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
 import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -126,9 +128,12 @@ public class IntCompress {
 //        }
         long[] data = testNum3.clone();
         int[] data1 = testNum5.clone();
-        final byte[] bytes = compress2(data);
-//        final int[] output = new int[data.length];
-        final long[] longs = decompress2(bytes, 1575);
+
+//        final int[] output = new int[data.lengthlength];
+        final byte[] bytes = compress3(data,45);
+        final long[] longs = decompress3(bytes);
+//        final byte[] bytes = compress2(data);
+//        final long[] longs = decompress2(bytes,1575);
 //        final byte[] bytes1 = compressZstd(data1);
         boolean a = Arrays.equals(testNum3, longs);
 //
@@ -149,7 +154,7 @@ public class IntCompress {
 //        final byte[] compress3 = gzipCompress.compress(compress2);
 //        final boolean equals = Arrays.equals(testNum3, longs);
         System.out.println(a);
-//        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
+        System.out.println("compress rate : " + 1.0d * bytes.length / (data.length * 4));
     }
 
     private static final byte UNCOMPRESS = 0;
@@ -168,32 +173,77 @@ public class IntCompress {
         int byteIndex = offset/8;
         int byteOffset = offset%8;
         byte value = (byte) (compressType[byteIndex]>>byteOffset);
-        return (byte) (value&3);
+        return (byte) (value&0b11);
     }
     public static byte[] compressSingleColumn(long ints[],int start,int end,int index,byte[] compressTypes){
-        long[] values = new long[end-start+1];
-        System.arraycopy(ints,start,values,0,end-start+1);
+        long[] values = new long[end-start];
+        System.arraycopy(ints,start,values,0,end-start);
         setCompressType(SIMPLE8,index,compressTypes);
         byte[] compress = compress2(values);
         ByteBuffer byteBuffer = ByteBuffer.allocate(compress.length+4);
-        byteBuffer.put(compress);
         byteBuffer.putInt(compress.length);
+        byteBuffer.put(compress);
         return byteBuffer.array();
     }
-    public static long[] unCompressSingleColumn(byte[] bytes,int start,int end){
-
+    public static long[] unCompressSingleColumn(byte[] bytes,int start,int end,byte compressType){
+        byte[] values = new byte[end-start];
+        System.arraycopy(bytes,start,values,0,end-start);
+        long[] res = new long[0];
+        if(compressType == SIMPLE8){
+            res = decompress2(values, 45);
+        }
+        return res;
     }
     public static byte[] compress3(long[] ints,int lineNum){
         int index = 0;
-        ByteBuffer intsBuffer = ByteBuffer.allocate(ints.length*8);
+        ArrayList<byte[]> arrayList = new ArrayList<>();
+        int totalLength = 0;
         byte[] compressTypes = new byte[10];
         while (index*lineNum<ints.length){
             int start = index*lineNum;
             int end = start + lineNum;
-            compressSingleColumn(ints,start,end,index,compressTypes);
+            byte[] bytes = compressSingleColumn(ints, start, end, index, compressTypes);
+            arrayList.add(bytes);
+            totalLength+=bytes.length;
             index++;
         }
-        return null;
+        ByteBuffer allocate = ByteBuffer.allocate(1+10+totalLength);
+        allocate.put((byte) (ints.length/lineNum));
+        allocate.put(compressTypes);
+        for (byte[] bytes : arrayList) {
+            allocate.put(bytes);
+        }
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        return gzipCompress.compress(allocate.array());
+    }
+    public static long[] decompress3(byte[] bytes){
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        bytes = gzipCompress.deCompress(bytes);
+        int columnNum = bytes[0];
+        byte[] compressTypes = new byte[10];
+        System.arraycopy(bytes, 1, compressTypes, 0, 10);
+        int start = 11;
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        wrap.position(start);
+        ArrayList<long[]> arrayList = new ArrayList<>();
+        int totalLength = 0;
+        for(int i=0;i<columnNum;i++){
+            byte compressType = getCompressType(i, compressTypes);
+            int length = wrap.getInt();
+            start+=4;
+            long[] longs = unCompressSingleColumn(bytes, start, start + length, compressType);
+            arrayList.add(longs);
+            totalLength += longs.length;
+            wrap.position(start+length);
+            start+=length;
+        }
+        long[] result = new long[totalLength];
+        int copyIndex = 0;
+        for (long[] longs : arrayList) {
+            System.arraycopy(longs,0,result,copyIndex,longs.length);
+            copyIndex+=longs.length;
+        }
+        return result;
     }
 
     public static byte[] compress2(long[] ints) {
