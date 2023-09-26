@@ -108,9 +108,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
-        if (SchemaUtil.getIndexArray() != null && SchemaUtil.getIndexArray()[49] != null) {
-            doubleFileService.add(SchemaUtil.getIndexArray()[49], dataPath.getPath());
-        }
+//        if (SchemaUtil.getIndexArray() != null && SchemaUtil.getIndexArray()[49] != null) {
+//            doubleFileService.add(SchemaUtil.getIndexArray()[49], dataPath.getPath());
+//        }
         if (RestartUtil.IS_FIRST_START) {
             Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
             Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress(this.dataPath);
@@ -239,7 +239,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
             }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 200000 == 0) {
+            if (executeLatestQueryTimes.get() % 2000000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());
             }
@@ -255,7 +255,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeTimeRangeQueryTimes.getAndIncrement() == 1) {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
-        if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
+        if (executeTimeRangeQueryTimes.get() % 2000000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
         }

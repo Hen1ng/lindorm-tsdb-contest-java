@@ -148,33 +148,35 @@ public class TSFileService {
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
-                                final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-                                if (doubleFile != null) {
-                                    ByteBuffer allocate1 = ByteBuffer.allocate(4);
-                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-                                    allocate1.flip();
-                                    final int anInt = allocate1.getInt();
-                                    allocate1 = ByteBuffer.allocate(anInt);
-                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-                                    final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-                                } else {
+//                                final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
+//                                if (doubleFile != null) {
+//                                    ByteBuffer allocate1 = ByteBuffer.allocate(4);
+//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
+//                                    allocate1.flip();
+//                                    final int anInt = allocate1.getInt();
+//                                    allocate1 = ByteBuffer.allocate(anInt);
+//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
+//                                    final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
+//                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
+//                                } else {
                                     if (doubles == null) {
                                         final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
                                         tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
                                                 + intCompressLength + 4
                                                 + 4);
-                                        final byte[] array = byteBuffer.array();
-                                        final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
-                                        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                        doubles = new double[bytes.length / 8];
-                                        for (int i1 = 0; i1 < doubles.length; i1++) {
-                                            doubles[i1] = wrap.getDouble();
-                                        }
+                                        byteBuffer.flip();
+//                                        final byte[] array = byteBuffer.array();
+//                                        final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
+//                                        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+//                                        doubles = new double[bytes.length / 8];
+//                                        for (int i1 = 0; i1 < doubles.length; i1++) {
+//                                            doubles[i1] = wrap.getDouble();
+//                                        }
+                                        doubles = DoubleCompress.decode2(byteBuffer, valueSize * Constants.FLOAT_NUMS);
                                     }
                                     int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                     columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
-                                }
+//                                }
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
@@ -328,34 +330,36 @@ public class TSFileService {
                         }
                     } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                         try {
-                            final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-                            if (doubleFile != null) {
-                                ByteBuffer allocate1 = ByteBuffer.allocate(4);
-                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-                                allocate1.flip();
-                                final int anInt = allocate1.getInt();
-                                allocate1 = ByteBuffer.allocate(anInt);
-                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-                                final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-                            } else {
+//                            final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
+//                            if (doubleFile != null) {
+//                                ByteBuffer allocate1 = ByteBuffer.allocate(4);
+//                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
+//                                allocate1.flip();
+//                                final int anInt = allocate1.getInt();
+//                                allocate1 = ByteBuffer.allocate(anInt);
+//                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
+//                                final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
+//                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
+//                            } else {
                                 if (doubles == null) {
                                     final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
                                     tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
                                             + intCompressLength + 4
                                             + 4);
-                                    final byte[] array = byteBuffer.array();
-                                    final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
-                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                    doubles = new double[bytes.length / 8];
-                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-                                        doubles[i1] = wrap.getDouble();
-                                    }
+                                    byteBuffer.flip();
+//                                        final byte[] array = byteBuffer.array();
+//                                        final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
+//                                        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+//                                        doubles = new double[bytes.length / 8];
+//                                        for (int i1 = 0; i1 < doubles.length; i1++) {
+//                                            doubles[i1] = wrap.getDouble();
+//                                        }
+                                    doubles = DoubleCompress.decode2(byteBuffer, valueSize * Constants.FLOAT_NUMS);
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
 
-                            }
+//                            }
                         } catch (Exception e) {
                             System.out.println("getByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
@@ -443,7 +447,7 @@ public class TSFileService {
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
             AggBucket aggBucket = new AggBucket();
-            DoubleIndexMap doubleIndexMap = new DoubleIndexMap();
+//            DoubleIndexMap doubleIndexMap = new DoubleIndexMap();
             long start = System.currentTimeMillis();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
@@ -454,7 +458,7 @@ public class TSFileService {
             ByteBuffer stringLengthBuffer;
             List<ByteBuffer> stringList;
             double[] doubles = null;
-            double[] doubles1 = new double[lineNum];
+//            double[] doubles1 = new double[lineNum];
             int doubles1Position = 0;
             long[] longs = new long[lineNum];
             long[] ints = new long[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
@@ -524,17 +528,17 @@ public class TSFileService {
                         }
                     } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         if (doubles == null) {
-                            doubles = new double[lineNum * (Constants.FLOAT_NUMS - 1)];
+                            doubles = new double[lineNum * Constants.FLOAT_NUMS ];
                         }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
                         aggBucket.updateDouble(doubleFloatValue, i);
-                        final DoubleFile doubleFile = this.doubleFileService.get(key);
-                        if (doubleFile != null) {
-                            doubles1[doubles1Position++] = doubleFloatValue;
-                        } else {
+//                        final DoubleFile doubleFile = this.doubleFileService.get(key);
+//                        if (doubleFile != null) {
+//                            doubles1[doubles1Position++] = doubleFloatValue;
+//                        } else {
                         doubles[doublePosition] = doubleFloatValue;
                         doublePosition++;
-                        }
+//                        }
                     } else {
                         final ByteBuffer stringValue = columns.get(key).getStringValue();
                         totalStringLength += stringValue.remaining();
@@ -556,12 +560,14 @@ public class TSFileService {
 
             //压缩double
 //            ArrayUtils.printDouble(doubles);
-            final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
-            for (double value : doubles) {
-                allocate.putDouble(value);
-            }
-            final byte[] array = allocate.array();
-            final byte[] compressDouble = Zstd.compress(array, 25);
+//            final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
+//            for (double value : doubles) {
+//                allocate.putDouble(value);
+//            }
+//            final byte[] array = allocate.array();
+//            final byte[] compressDouble = Zstd.compress(array, 25);
+
+            byte[] compressDouble = DoubleCompress.encode2(doubles, lineNum);
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
@@ -578,7 +584,7 @@ public class TSFileService {
             // 存储bigInt
             int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd2(bigInts);
             // 存储DoubleHashMapCompress
-            doubleOfferLine = doubleFileService.write(doubles1, SchemaUtil.getIndexArray()[49]);
+//            doubleOfferLine = doubleFileService.write(doubles1, SchemaUtil.getIndexArray()[49]);
 //            doubleIndexMap.put(SchemaUtil.getIndexArray()[39], doubleOfferLine);
             int total = 8 + 4 + compress1.length //timestamp
                     + compress2.length + 4 //int
