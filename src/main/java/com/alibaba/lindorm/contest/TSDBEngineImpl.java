@@ -362,7 +362,10 @@ public class TSDBEngineImpl extends TSDBEngine {
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
         List<Index> indices = MapIndex.get(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound());
+        long timeLowerBound = aggregationReq.getTimeLowerBound();
+        long timeUpperBound = aggregationReq.getTimeUpperBound();
         ArrayList<Row> timeRangeRow = new ArrayList<>();
+        final Integer vinIndex = VinDictMap.get(aggregationReq.getVin());
         switch (aggregator) {
             case AVG:
                 int size = 0;
@@ -380,9 +383,9 @@ public class TSDBEngineImpl extends TSDBEngine {
                             System.out.println("executeAggregateQuery columnValue string type not support compare");
                         }
                     } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), index.getMaxTimestamp()+1, requestedColumns));
+                        timeRangeRow.addAll(fileService.getByIndex(aggregationReq.getVin(),timeLowerBound,timeUpperBound,index,requestedColumns,vinIndex));
                     } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), aggregationReq.getTimeUpperBound(), requestedColumns));
+                        timeRangeRow.addAll(fileService.getByIndex(aggregationReq.getVin(),timeLowerBound,timeUpperBound,index,requestedColumns,vinIndex));
                     }
                 }
                 if (columnType.equals(COLUMN_TYPE_INTEGER)) {
@@ -420,9 +423,9 @@ public class TSDBEngineImpl extends TSDBEngine {
                             System.out.println("executeAggregateQuery columnValue string type not support compare");
                         }
                     } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), index.getMaxTimestamp()+1, requestedColumns));
+                        timeRangeRow.addAll(fileService.getByIndex(aggregationReq.getVin(),timeLowerBound,timeUpperBound,index,requestedColumns,vinIndex));
                     } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-                        timeRangeRow.addAll(memoryTable.getTimeRangeRow(aggregationReq.getVin(), index.getMinTimestamp(), aggregationReq.getTimeUpperBound(), requestedColumns));
+                        timeRangeRow.addAll(fileService.getByIndex(aggregationReq.getVin(),timeLowerBound,timeUpperBound,index,requestedColumns,vinIndex));
                     }
                 }
                 if (columnType.equals(COLUMN_TYPE_INTEGER)) {
