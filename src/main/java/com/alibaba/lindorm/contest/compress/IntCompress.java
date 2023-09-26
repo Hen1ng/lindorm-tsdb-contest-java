@@ -152,6 +152,50 @@ public class IntCompress {
 //        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
     }
 
+    private static final byte UNCOMPRESS = 0;
+
+    private static final byte SIMPLE8 = 1;
+    private static final byte RLE = 2;
+
+    public static void setCompressType(byte type,int index,byte[] compressTypes){
+        int offset = index*2;
+        int byteIndex = offset/8;
+        int byteOffset = offset%8;
+        compressTypes[byteIndex] |= (byte) (type<<byteOffset);
+    }
+    public static byte getCompressType(int index,byte[] compressType){
+        int offset = index*2;
+        int byteIndex = offset/8;
+        int byteOffset = offset%8;
+        byte value = (byte) (compressType[byteIndex]>>byteOffset);
+        return (byte) (value&3);
+    }
+    public static byte[] compressSingleColumn(long ints[],int start,int end,int index,byte[] compressTypes){
+        long[] values = new long[end-start+1];
+        System.arraycopy(ints,start,values,0,end-start+1);
+        setCompressType(SIMPLE8,index,compressTypes);
+        byte[] compress = compress2(values);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(compress.length+4);
+        byteBuffer.put(compress);
+        byteBuffer.putInt(compress.length);
+        return byteBuffer.array();
+    }
+    public static long[] unCompressSingleColumn(byte[] bytes,int start,int end){
+
+    }
+    public static byte[] compress3(long[] ints,int lineNum){
+        int index = 0;
+        ByteBuffer intsBuffer = ByteBuffer.allocate(ints.length*8);
+        byte[] compressTypes = new byte[10];
+        while (index*lineNum<ints.length){
+            int start = index*lineNum;
+            int end = start + lineNum;
+            compressSingleColumn(ints,start,end,index,compressTypes);
+            index++;
+        }
+        return null;
+    }
+
     public static byte[] compress2(long[] ints) {
         try {
             final long[] gapArray = toGapArray(ints);
