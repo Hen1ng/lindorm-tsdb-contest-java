@@ -52,7 +52,7 @@ public class AggBucket {
     public void updateDouble(double value,int index){
         dSum[index-40] += value;
         dMax[index-40] = Math.max(dMax[index-40],value);
-        dMin[index-40] = Math.min(dMax[index-40],value);
+        dMin[index-40] = Math.min(dMin[index-40],value);
     }
     // 转换为 ByteBuffer
     @Override

@@ -27,7 +27,7 @@ public class IntegerDecoder {
         if(decompressBytes.length==0){
             return null;
         }
-
+        return null;
     }
     private int[] decodeUncompressed(byte[] decompressBytes){
         int i = 1;

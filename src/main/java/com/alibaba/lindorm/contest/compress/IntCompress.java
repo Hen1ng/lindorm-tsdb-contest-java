@@ -3,10 +3,11 @@ package com.alibaba.lindorm.contest.compress;
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.Index;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 public class IntCompress {
     static Composition codec = new Composition(new NewPFDS9(),new VariableByte());
