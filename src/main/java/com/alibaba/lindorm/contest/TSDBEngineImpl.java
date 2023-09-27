@@ -490,6 +490,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         int columnIndex = SchemaUtil.getIndexByColumn(columnName);
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
+        int i1 =  VinDictMap.get(vin);
         int i = 0;
         boolean justInt = true;
         while(timeLowerBound+i*interval < timeUpperBound){
@@ -497,7 +498,6 @@ public class TSDBEngineImpl extends TSDBEngine {
             ArrayList<Row> timeRangeRow = new ArrayList<>();
             long startTime = (timeLowerBound + i * interval);
             long endTime = Math.min(timeLowerBound+(i+1)*interval,timeUpperBound);
-            if(endTime != timeUpperBound)endTime++;
             // [start,end)
             List<Index> indices = MapIndex.get(vin, startTime, endTime);
             if(columnType.equals(COLUMN_TYPE_INTEGER)){
@@ -521,7 +521,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                             double sum = 0;
                             int size = 0;
                             for (Index index : indices) {
-                                Integer i1 = VinDictMap.get(vin);
                                 timeRangeRow.addAll(fileService.getByIndex(vin,startTime,endTime,index,requestedColumns,i1));
                             }
                             for (Row row : timeRangeRow) {
@@ -589,7 +588,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                             double sum = 0;
                             int size = 0;
                             for (Index index : indices) {
-                                int i1 =  VinDictMap.get(vin);
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     if(index.getAggBucket().getiMin(columnIndex) > integerValue){
                                         // interval
@@ -625,7 +623,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     maxInt = Math.max(maxInt,index.getAggBucket().getiMax(columnIndex));
                                 }  else{
-                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
+                                    timeRangeRow.addAll(fileService.getByIndex(vin,startTime,endTime,index,requestedColumns,i1));
                                 }
                             }
                             for (Row row : timeRangeRow) {
@@ -738,7 +736,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                             double sum = 0;
                             int size = 0;
                             for (Index index : indices) {
-                                int i1 =  VinDictMap.get(vin);
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     if(index.getAggBucket().getdMin(columnIndex) > doubleFloatValue){
                                         sum += index.getAggBucket().getdSum(columnIndex);
@@ -773,7 +770,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                                     maxDouble = Math.max(maxDouble,index.getAggBucket().getdMax(columnIndex));
                                 }  else{
-                                    timeRangeRow.addAll(getCrossRows(vin,index,startTime,endTime,requestedColumns));
+                                    timeRangeRow.addAll(fileService.getByIndex(vin,startTime,endTime,index,requestedColumns,i1));
                                 }
                             }
                             for (Row row : timeRangeRow) {
