@@ -163,6 +163,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 40L * 4L));
         System.out.println("indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
+        System.out.println("int_compress_16 times : " + StaticsUtil.INT_COMPRESS_TIMES_16.get());
+        System.out.println("int_compress_4 times : " + StaticsUtil.INT_COMPRESS_TIMES_4.get());
         for(int i=0;i<40;i++){
             ColumnInfo columnInfo = StaticsUtil.columnInfos.get(i);
             System.out.println("index: "+i + " max : "+columnInfo.maxInt+" min: "+columnInfo.minInt+" num :"+columnInfo.sets.size());

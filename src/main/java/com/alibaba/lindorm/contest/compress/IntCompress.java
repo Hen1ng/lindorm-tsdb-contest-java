@@ -3,10 +3,7 @@ package com.alibaba.lindorm.contest.compress;
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.util.ArrayUtils;
-import com.alibaba.lindorm.contest.util.BytesUtil;
-import com.alibaba.lindorm.contest.util.SchemaUtil;
-import com.alibaba.lindorm.contest.util.ZigZagUtil;
+import com.alibaba.lindorm.contest.util.*;
 import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
@@ -230,6 +227,7 @@ public class IntCompress {
         }
         byte[] compress = new byte[0];
         if (numOfInt <= 16) { // 2 4 16
+            StaticsUtil.INT_COMPRESS_TIMES_4.addAndGet(1);
             // 一个int 4B : bytes长度
             // 16个int : 字典 -> 优化成可变长压缩length + dict
             // 160*4bit = 80B 160*0.25
@@ -269,6 +267,7 @@ public class IntCompress {
                 return byteBuffer.array();
             }
             else {
+                StaticsUtil.INT_COMPRESS_TIMES_16.addAndGet(1);
                 int length = 4 + 1 + 4 * 16 + (end - start + 1) / 2;
                 ByteBuffer byteBuffer = ByteBuffer.allocate(length);
                 byteBuffer.putInt(length - 4);
