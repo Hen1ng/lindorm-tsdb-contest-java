@@ -579,7 +579,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     while (iterator.hasNext()) {
                         Index index = iterator.next();
                         AggBucket aggBucket = index.getAggBucket();
-                        if (aggBucket.getiMax(columnIndex) <= integerValue) {
+                        if (aggBucket.getiMax(columnIndex) <= integerValue&&index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                             iterator.remove();
                         }
                     }
@@ -729,7 +729,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     while (iterator.hasNext()) {
                         Index index = iterator.next();
                         AggBucket aggBucket = index.getAggBucket();
-                        if (aggBucket.getdMax(columnIndex) <= doubleFloatValue) {
+                        if (aggBucket.getdMax(columnIndex) <= doubleFloatValue&&index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <=endTime-1) {
                             iterator.remove();
                         }
                     }
