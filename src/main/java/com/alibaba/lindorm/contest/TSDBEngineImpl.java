@@ -594,9 +594,11 @@ public class TSDBEngineImpl extends TSDBEngine {
                                         sum += index.getAggBucket().getiSum(columnIndex);
                                         size += index.getValueSize();
                                     }else{
+                                        // 从index取到[startTime,endTime) 之间的rows
                                         timeRangeRow.addAll(fileService.getByIndex(vin,startTime,endTime,index,requestedColumns,i1));
                                     }
                                 }  else{
+                                    //[start,end) Row
                                     timeRangeRow.addAll(fileService.getByIndex(vin,startTime,endTime,index,requestedColumns,i1));
                                 }
                             }
