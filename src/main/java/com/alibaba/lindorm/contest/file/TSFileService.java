@@ -135,7 +135,8 @@ public class TSFileService {
                                             final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
                                             tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
                                             allocate1.flip();
-                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
+//                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
+                                            ints = IntCompress.decompress3(allocate1.array(), index.getValueSize());
                                         }
                                         final ByteBuffer intBuffer = INT_BUFFER.get();
                                         intBuffer.clear();
@@ -312,7 +313,8 @@ public class TSFileService {
                                             final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
                                             tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
                                             allocate1.flip();
-                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
+//                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
+                                            ints = IntCompress.decompress3(allocate1.array(), index.getValueSize());
                                         }
                                         final ByteBuffer intBuffer = INT_BUFFER.get();
                                         intBuffer.clear();
@@ -571,7 +573,8 @@ public class TSFileService {
             byte[] compress2 = null;
             byte[] stringLengthArrayCompress = null;
             try {
-                compress2 = IntCompress.compress2(ints);
+//                compress2 = IntCompress.compress2(ints);
+                compress2 = IntCompress.compress3(ints,lineNum);
                 stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
             } catch (Exception e) {
                 System.out.println("compress int error" + e);
