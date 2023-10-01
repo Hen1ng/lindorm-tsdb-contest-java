@@ -51,15 +51,12 @@ public class TSFileService {
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
 
-    private DoubleFileService doubleFileService;
-
-    public TSFileService(String file, DoubleFileService doubleFileService) {
+    public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
         }
-        this.doubleFileService = doubleFileService;
     }
 
     public TSFile getTsFileByVin(Vin vin) {
@@ -111,6 +108,7 @@ public class TSFileService {
             final int doubleCompressInt = byteBuffer1.getInt();
             double[] doubles = null;
             Integer everyStringLength = null;
+            int totalStringLength = 0;
             int i = 0;//多少行
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
@@ -148,33 +146,33 @@ public class TSFileService {
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
-                                final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-                                if (doubleFile != null) {
-                                    ByteBuffer allocate1 = ByteBuffer.allocate(4);
-                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-                                    allocate1.flip();
-                                    final int anInt = allocate1.getInt();
-                                    allocate1 = ByteBuffer.allocate(anInt);
-                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-                                    final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-                                } else {
-                                    if (doubles == null) {
-                                        final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
-                                        tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
-                                                + intCompressLength + 4
-                                                + 4);
-                                        final byte[] array = byteBuffer.array();
-                                        final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
-                                        final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                        doubles = new double[bytes.length / 8];
-                                        for (int i1 = 0; i1 < doubles.length; i1++) {
-                                            doubles[i1] = wrap.getDouble();
-                                        }
+//                                final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
+//                                if (doubleFile != null) {
+//                                    ByteBuffer allocate1 = ByteBuffer.allocate(4);
+//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
+//                                    allocate1.flip();
+//                                    final int anInt = allocate1.getInt();
+//                                    allocate1 = ByteBuffer.allocate(anInt);
+//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
+//                                    final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
+//                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
+//                                } else {
+                                if (doubles == null) {
+                                    final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
+                                    tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
+                                            + intCompressLength + 4
+                                            + 4);
+                                    final byte[] array = byteBuffer.array();
+                                    final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
+                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+                                    doubles = new double[bytes.length / 8];
+                                    for (int i1 = 0; i1 < doubles.length; i1++) {
+                                        doubles[i1] = wrap.getDouble();
                                     }
-                                    int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
-                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
                                 }
+                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
+                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
+//                                }
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
@@ -197,6 +195,7 @@ public class TSFileService {
                                 final int[] decompress1 = IntCompress.decompress(array);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 4);
                                 for (int i1 : decompress1) {
+                                    totalStringLength += i1;
                                     stringLengthBuffer.putInt(i1);
                                 }
                             }
@@ -214,7 +213,7 @@ public class TSFileService {
                                         + everyStringLength + 4);
                                 stringBuffer.flip();
                                 GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-                                stringBytes = gzipCompress.deCompress(stringBuffer.array());
+                                stringBytes = Zstd.decompress(stringBuffer.array(), totalStringLength);
                             }
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -287,6 +286,7 @@ public class TSFileService {
         //string
         byte[] stringBytes = null;
         Integer everyStringLength = null;
+        int totalStringLength = 0;
         int i = 0;//多少行
         for (long aLong : decompress) {
             if (aLong == timestamp) {
@@ -317,7 +317,7 @@ public class TSFileService {
                                         final ByteBuffer intBuffer = INT_BUFFER.get();
                                         intBuffer.clear();
                                         int off = columnIndex * valueSize + i;
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int)ints[off]));
+                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
                                     } catch (Exception e) {
                                         System.out.println("getNormalIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                                     }
@@ -328,34 +328,34 @@ public class TSFileService {
                         }
                     } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                         try {
-                            final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-                            if (doubleFile != null) {
-                                ByteBuffer allocate1 = ByteBuffer.allocate(4);
-                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-                                allocate1.flip();
-                                final int anInt = allocate1.getInt();
-                                allocate1 = ByteBuffer.allocate(anInt);
-                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-                                final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-                            } else {
-                                if (doubles == null) {
-                                    final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
-                                    tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
-                                            + intCompressLength + 4
-                                            + 4);
-                                    final byte[] array = byteBuffer.array();
-                                    final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
-                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                    doubles = new double[bytes.length / 8];
-                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-                                        doubles[i1] = wrap.getDouble();
-                                    }
+//                            final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
+//                            if (doubleFile != null) {
+//                                ByteBuffer allocate1 = ByteBuffer.allocate(4);
+//                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
+//                                allocate1.flip();
+//                                final int anInt = allocate1.getInt();
+//                                allocate1 = ByteBuffer.allocate(anInt);
+//                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
+//                                final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
+//                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
+//                            } else {
+                            if (doubles == null) {
+                                final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
+                                tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
+                                        + intCompressLength + 4
+                                        + 4);
+                                final byte[] array = byteBuffer.array();
+                                final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
+                                final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+                                doubles = new double[bytes.length / 8];
+                                for (int i1 = 0; i1 < doubles.length; i1++) {
+                                    doubles[i1] = wrap.getDouble();
                                 }
-                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
-                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
-
                             }
+                            int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
+                            columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
+
+//                            }
                         } catch (Exception e) {
                             System.out.println("getByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
@@ -379,6 +379,7 @@ public class TSFileService {
                                 final int[] decompress1 = IntCompress.decompress(array);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 4);
                                 for (int i1 : decompress1) {
+                                    totalStringLength += i1;
                                     stringLengthBuffer.putInt(i1);
                                 }
                             }
@@ -396,7 +397,7 @@ public class TSFileService {
                                         + everyStringLength + 4);
                                 stringBuffer.flip();
                                 GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-                                stringBytes = gzipCompress.deCompress(stringBuffer.array());
+                                stringBytes = Zstd.decompress(stringBuffer.array(), totalStringLength);
                             }
                             int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
                             int stringPosition = (stringNum * valueSize + i) * 4;
@@ -443,7 +444,6 @@ public class TSFileService {
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
             AggBucket aggBucket = new AggBucket();
-            DoubleIndexMap doubleIndexMap = new DoubleIndexMap();
             long start = System.currentTimeMillis();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
@@ -454,8 +454,6 @@ public class TSFileService {
             ByteBuffer stringLengthBuffer;
             List<ByteBuffer> stringList;
             double[] doubles = null;
-            double[] doubles1 = new double[lineNum];
-            int doubles1Position = 0;
             long[] longs = new long[lineNum];
             long[] ints = new long[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
             int[][] bigInts = Constants.intColumnHashMapCompress.getTempArray(lineNum);
@@ -524,17 +522,17 @@ public class TSFileService {
                         }
                     } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         if (doubles == null) {
-                            doubles = new double[lineNum * (Constants.FLOAT_NUMS - 1)];
+                            doubles = new double[lineNum * Constants.FLOAT_NUMS];
                         }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
                         aggBucket.updateDouble(doubleFloatValue, i);
-                        final DoubleFile doubleFile = this.doubleFileService.get(key);
-                        if (doubleFile != null) {
-                            doubles1[doubles1Position++] = doubleFloatValue;
-                        } else {
+//                        final DoubleFile doubleFile = this.doubleFileService.get(key);
+//                        if (doubleFile != null) {
+//                            doubles1[doubles1Position++] = doubleFloatValue;
+//                        } else {
                         doubles[doublePosition] = doubleFloatValue;
                         doublePosition++;
-                        }
+//                        }
                     } else {
                         final ByteBuffer stringValue = columns.get(key).getStringValue();
                         totalStringLength += stringValue.remaining();
@@ -552,7 +550,7 @@ public class TSFileService {
                 position += array.length;
             }
             final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-            final byte[] compress = gzipCompress.compress(bytes);
+            final byte[] compress = Zstd.compress(bytes, 12);
 
             //压缩double
 //            ArrayUtils.printDouble(doubles);
@@ -561,7 +559,7 @@ public class TSFileService {
                 allocate.putDouble(value);
             }
             final byte[] array = allocate.array();
-            final byte[] compressDouble = Zstd.compress(array, 25);
+            final byte[] compressDouble = Zstd.compress(array, 15);
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
@@ -578,7 +576,7 @@ public class TSFileService {
             // 存储bigInt
             int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd2(bigInts);
             // 存储DoubleHashMapCompress
-            doubleOfferLine = doubleFileService.write(doubles1, SchemaUtil.getIndexArray()[49]);
+//            doubleOfferLine = doubleFileService.write(doubles1, SchemaUtil.getIndexArray()[49]);
 //            doubleIndexMap.put(SchemaUtil.getIndexArray()[39], doubleOfferLine);
             int total = 8 + 4 + compress1.length //timestamp
                     + compress2.length + 4 //int
@@ -656,3 +654,4 @@ public class TSFileService {
     }
 
 }
+

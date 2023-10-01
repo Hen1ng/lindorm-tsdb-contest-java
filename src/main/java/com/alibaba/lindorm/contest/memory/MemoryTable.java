@@ -62,7 +62,7 @@ public class MemoryTable {
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
-        this.fixThreadPool = Executors.newFixedThreadPool(16 * 4);
+        this.fixThreadPool = Executors.newFixedThreadPool(8);
         this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
@@ -96,7 +96,7 @@ public class MemoryTable {
                 bufferValues[bufferIndex] = valueSortedList;
                 Integer finalIndex = index;
                 Integer finalBufferIndex = bufferIndex;
-                fixThreadPool.submit( () -> {
+                fixThreadPool.execute( () -> {
                     tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex);
                     freeBufferByIndex(vin,finalBufferIndex);
                 });
@@ -181,24 +181,23 @@ public class MemoryTable {
         queryLastTimes.getAndIncrement();
         long totalStringLength = 0;
         try {
-//            final int size = values[slot].size();
-//            Value value;
-//            if (size == 0) {
-//                try {
-//                    bufferValuesLock.lock();
-//                    if (!vinToBufferIndex.containsKey(vin)) {
-//                        return null;
-//                    }
-//                    Queue<Integer> indexs = vinToBufferIndex.get(vin);
-//                    int bufferIndex = indexs.peek();
-//                    value = bufferValues[bufferIndex].get(0);
-//                } finally {
-//                    bufferValuesLock.unlock();
-//                }
-//            } else {
-//                value = values[slot].get(0);
-//            }
-            Value value = values[slot].get(0);
+            final int size = values[slot].size();
+            Value value;
+            if (size == 0) {
+                try {
+                    bufferValuesLock.lock();
+                    if (!vinToBufferIndex.containsKey(vin)) {
+                        return null;
+                    }
+                    Queue<Integer> indexs = vinToBufferIndex.get(vin);
+                    int bufferIndex = indexs.peek();
+                    value = bufferValues[bufferIndex].get(0);
+                } finally {
+                    bufferValuesLock.unlock();
+                }
+            } else {
+                value = values[slot].get(0);
+            }
             Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             for (String requestedColumn : requestedColumns) {
                 final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
@@ -318,18 +317,19 @@ public class MemoryTable {
 
     private ArrayList<Row> getTimeRangeRowFromMemoryTable(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int slot) {
         ArrayList<Row> result = new ArrayList<>();
+        List<Value> valueList = new ArrayList<>();
         try {
             final List<Value> sortedList = values[slot];
-//            valueList.addAll(sortedList);
-//            this.bufferValuesLock.lock();
-//            if(vinToBufferIndex.containsKey(vin)){
-//                Queue<Integer> indexs = vinToBufferIndex.get(vin);
-//                for (Integer index : indexs) {
-//                    valueList.addAll(bufferValues[index]);
-//                }
-//            }
-//            this.bufferValuesLock.unlock();
-            for (Value value : sortedList) {
+            valueList.addAll(sortedList);
+            this.bufferValuesLock.lock();
+            if(vinToBufferIndex.containsKey(vin)){
+                Queue<Integer> indexs = vinToBufferIndex.get(vin);
+                for (Integer index : indexs) {
+                    valueList.addAll(bufferValues[index]);
+                }
+            }
+            this.bufferValuesLock.unlock();
+            for (Value value : valueList) {
                 if (value.getTimestamp() >= timeLowerBound && value.getTimestamp() < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {

@@ -1,8 +1,13 @@
 package com.alibaba.lindorm.contest.index;
 
 
+import com.alibaba.lindorm.contest.compress.GzipCompress;
+import com.alibaba.lindorm.contest.file.TSFileService;
+
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 public class Index {
 
@@ -14,15 +19,8 @@ public class Index {
 
     private int bigIntOffset;
 
-    public void setTimestampList(List<Long> timestampList) {
-        this.timestampList = timestampList;
-    }
 
-    public List<Long> getTimestampList() {
-        return timestampList;
-    }
 
-    private List<Long> timestampList;
 
     public int getValueSize() {
         return valueSize;
@@ -64,7 +62,6 @@ public class Index {
 
     private int doubleLine;
 
-    private DoubleIndexMap doubleIndexMap;
 
     public Index(long offset
             , long maxTimestamp
@@ -87,6 +84,49 @@ public class Index {
 //        this.doubleIndexMap = doubleIndexMap;
     }
 
+    public byte[] bytes(){
+        byte[] bytes = aggBucket.bytes();
+        ByteBuffer allocate = ByteBuffer.allocate(4+bytes.length + 8 * 3 + 4 * 5);
+        allocate.putInt(bytes.length);
+        allocate.put(bytes);
+        allocate.putLong(offset);
+        allocate.putLong(maxTimestamp);
+        allocate.putLong(minTimestamp);
+        allocate.putInt(bigIntOffset);
+        allocate.putInt(valueSize);
+        allocate.putInt(length);
+        allocate.putInt(offsetLine);
+        allocate.putInt(doubleLine);
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        return gzipCompress.compress(allocate.array());
+    }
+    public static Index uncompress(byte[] bytes){
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        bytes = gzipCompress.deCompress(bytes);
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        int aggBucketLength = wrap.getInt();
+        byte[] aggBytes = new byte[aggBucketLength];
+        wrap.get(aggBytes,0,aggBucketLength);
+        AggBucket aggBucket = AggBucket.uncompress(aggBytes);
+        long offset = wrap.getLong();
+        long maxTimeStamp = wrap.getLong();
+        long minTimeStamp = wrap.getLong();
+        int bigIntOffset = wrap.getInt();
+        int valueSize = wrap.getInt();
+        int length = wrap.getInt();
+        int offsetLine = wrap.getInt();
+        int doubleLine = wrap.getInt();
+        return new Index(
+                offset,
+                maxTimeStamp,
+                minTimeStamp,
+                length,
+                valueSize,
+                offsetLine,
+                doubleLine,
+                aggBucket
+        );
+    }
     @Override
     public String toString() {
         return offset +
@@ -108,25 +148,45 @@ public class Index {
 
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Index index = (Index) o;
-        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp && valueSize == index.valueSize && length == index.length;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(offset, maxTimestamp, minTimestamp, valueSize, length);
-    }
-
     public int getBigIntOffset() {
         return bigIntOffset;
     }
 
     public void setBigIntOffset(int offset) {
         this.bigIntOffset = offset;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Index index = (Index) o;
+        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp && bigIntOffset == index.bigIntOffset && valueSize == index.valueSize && length == index.length && offsetLine == index.offsetLine && doubleLine == index.doubleLine && Objects.equals(aggBucket, index.aggBucket);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(offset, maxTimestamp, minTimestamp, aggBucket, bigIntOffset, valueSize, length, offsetLine, doubleLine);
+    }
+
+    public static void main(String[] args) {
+        Random random = new Random();
+        AggBucket aggBucket1 = new AggBucket();
+        aggBucket1.updateInt(1,1);
+        aggBucket1.updateInt(2,2);
+        Index index = new Index(random.nextLong(),
+                random.nextLong(),
+                random.nextLong(),
+                random.nextInt(),
+                random.nextInt(),
+                random.nextInt(),
+                random.nextInt(),
+                aggBucket1);
+        byte[] bytes = index.bytes();
+        Index index1 = uncompress(bytes);
+        boolean a = index1.equals(index);
+        System.out.println(a);
+
     }
 
 }

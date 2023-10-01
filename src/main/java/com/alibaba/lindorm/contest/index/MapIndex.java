@@ -4,7 +4,9 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.*;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,12 +64,7 @@ public class MapIndex {
             if (index.getMinTimestamp() >= timeUpperBound) {
                 continue;
             }
-            final List<Long> timestampList = index.getTimestampList();
-            for (Long aLong : timestampList) {
-                if (aLong >= timeLowerBound && aLong < timeUpperBound) {
-                    resultSet.add(index);
-                }
-            }
+            resultSet.add(index);
         }
         return resultSet;
     }
@@ -88,6 +85,46 @@ public class MapIndex {
         return Pair.of(i, maxTs);
     }
 
+    public static void saveMaPToFileCompress(File file) throws IOException {
+        FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
+        // 先压缩vin
+
+        for (Vin vin : INDEX_MAP.keySet()) {
+            List<Index> indices = INDEX_MAP.get(vin);
+            List<byte[]> indexBytes = new ArrayList<>();
+            int totalBytes = 0;
+            for (Index index : indices) {
+                byte[] bytes = index.bytes();
+                indexBytes.add(bytes);
+                totalBytes += bytes.length;
+            }
+            // vin length + vin
+            // index length + index's length + index bytes
+            ByteBuffer allocate = ByteBuffer.allocate(4 + vin.getVin().length +
+                    4 + 4 * indexBytes.size() + totalBytes);
+
+            allocate.putInt(vin.getVin().length);
+            allocate.put(vin.getVin());
+            allocate.putInt(indices.size());
+            for (byte[] indexByte : indexBytes) {
+                allocate.putInt(indexByte.length);
+                allocate.put(indexByte);
+            }
+            try {
+                int length = 0;
+                allocate.flip();
+                while(allocate.hasRemaining()) {
+                    length += fileChannel.write(allocate);
+                }
+                if(length !=  4 +vin.getVin().length +
+                        4 + 4 * indexBytes.size() + totalBytes){
+                    System.out.println("write index file error by fileChanel");
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
     public static void saveMapToFile(File file) {
         try {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
@@ -107,6 +144,40 @@ public class MapIndex {
         } catch (Exception e) {
             System.out.println("saveMapToFile error, e" + e);
         }
+    }
+    public static void loadMapFromFileunCompress(File file)
+            throws IOException {
+        FileChannel fileChannel = new RandomAccessFile(file, "r").getChannel();
+        ByteBuffer intBuffer = ByteBuffer.allocate(4);
+        while (fileChannel.read(intBuffer) > 0){
+            intBuffer.flip();
+            int vinLength = intBuffer.getInt();
+            ByteBuffer vinBuffer = ByteBuffer.allocate(vinLength);
+            int vinBufferlength = fileChannel.read(vinBuffer);
+            vinBuffer.flip();
+            if(vinBufferlength != vinLength){
+                System.out.println("read vin error");
+            }
+            Vin vin = new Vin(vinBuffer.array());
+            intBuffer.flip();
+            fileChannel.read(intBuffer);
+            intBuffer.flip();
+            int indexLength = intBuffer.getInt();
+            List<Index> indices = new ArrayList<>();
+            for(int i=0;i<indexLength;i++){
+                intBuffer.flip();
+                fileChannel.read(intBuffer);
+                intBuffer.flip();
+                int indexByteLen = intBuffer.getInt();
+                ByteBuffer indexBytes = ByteBuffer.allocate(indexByteLen);
+                fileChannel.read(indexBytes);
+                indexBytes.flip();
+                Index index = Index.uncompress(indexBytes.array());
+                indices.add(index);
+            }
+            INDEX_MAP.put(vin,indices);
+        }
+
     }
 
     public static void loadMapFromFile(File file)
@@ -141,6 +212,7 @@ public class MapIndex {
 
             }
         }
+        System.out.println("index file length : " + file.length());
         file.delete();
     }
 

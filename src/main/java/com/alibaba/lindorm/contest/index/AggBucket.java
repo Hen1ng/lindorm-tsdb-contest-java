@@ -1,6 +1,10 @@
 package com.alibaba.lindorm.contest.index;
 
+import com.alibaba.lindorm.contest.compress.GzipCompress;
+import com.alibaba.lindorm.contest.file.TSFileService;
+
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class AggBucket {
     // 40 int 10 double
@@ -21,12 +25,44 @@ public class AggBucket {
             if(i<10){
                 dMax[i] = -Double.MAX_VALUE;
                 dMin[i] = Double.MAX_VALUE;
-                dSum[i]=0;
+                dSum[i] = 0;
             }
             iMax[i] = Integer.MIN_VALUE;
             iSum[i] = 0;
             iMin[i] = Integer.MAX_VALUE;
         }
+    }
+    public byte[] bytes(){
+        ByteBuffer allocate = ByteBuffer.allocate(80 * 4 + 70 * 8);
+        for(int i=0;i<40;i++){
+            allocate.putInt(iMax[i]);
+            allocate.putInt(iMin[i]);
+            allocate.putDouble(iSum[i]);
+        }
+        for(int i=0;i<10;i++){
+            allocate.putDouble(dMax[i]);
+            allocate.putDouble(dMin[i]);
+            allocate.putDouble(dSum[i]);
+        }
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        return gzipCompress.compress(allocate.array());
+    }
+    public static AggBucket uncompress(byte[] bytes){
+        AggBucket aggBucket = new AggBucket();
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        byte[] bytes1 = gzipCompress.deCompress(bytes);
+        ByteBuffer wrap = ByteBuffer.wrap(bytes1);
+        for(int i=0;i<40;i++){
+            aggBucket.iMax[i] = wrap.getInt();
+            aggBucket.iMin[i] = wrap.getInt();
+            aggBucket.iSum[i] = wrap.getDouble();
+        }
+        for(int i=0;i<10;i++){
+            aggBucket.dMax[i] = wrap.getDouble();
+            aggBucket.dMin[i] = wrap.getDouble();
+            aggBucket.dSum[i] = wrap.getDouble();
+        }
+        return aggBucket;
     }
 
     public int getiMin(int index){return iMin[index];}
@@ -140,12 +176,34 @@ public class AggBucket {
         return bucket;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AggBucket aggBucket = (AggBucket) o;
+        return Arrays.equals(iMax, aggBucket.iMax) && Arrays.equals(iMin, aggBucket.iMin) && Arrays.equals(iSum, aggBucket.iSum) && Arrays.equals(dMax, aggBucket.dMax) && Arrays.equals(dSum, aggBucket.dSum) && Arrays.equals(dMin, aggBucket.dMin);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Arrays.hashCode(iMax);
+        result = 31 * result + Arrays.hashCode(iMin);
+        result = 31 * result + Arrays.hashCode(iSum);
+        result = 31 * result + Arrays.hashCode(dMax);
+        result = 31 * result + Arrays.hashCode(dSum);
+        result = 31 * result + Arrays.hashCode(dMin);
+        return result;
+    }
+
     public static void main(String[] args) {
         AggBucket aggBucket = new AggBucket();
         aggBucket.updateInt(1,2);
+        aggBucket.updateInt(4,5);
+
         String string = aggBucket.toString();
-        System.out.println(aggBucket.toString());
-        AggBucket aggBucket1 = AggBucket.fromString(string);
-        System.out.println(aggBucket1);
+        byte[] bytes = aggBucket.bytes();
+        AggBucket uncompress = uncompress(bytes);
+        boolean a = uncompress.equals(aggBucket);
+        System.out.println(a);
     }
 }
