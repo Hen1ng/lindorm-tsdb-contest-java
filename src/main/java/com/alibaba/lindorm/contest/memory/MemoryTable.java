@@ -50,9 +50,10 @@ public class MemoryTable {
     private final AtomicLong queryTimeRangeTimes = new AtomicLong(0);
 
 
+
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
-        this.values = new SortedList[size];
+        this.values = new SortedList[size];// 1001 * 160 = 16w 6001*160=96w
         this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
