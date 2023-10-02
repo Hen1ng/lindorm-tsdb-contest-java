@@ -92,10 +92,10 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 10; j++) {
+                        for (int j = 0; j < 1; j++) {
                             List<Row> rowList = new ArrayList<>();
-                            for (int i1 = 0; i1 < 10; i1++) {
-                                Vin vin = vins[0];
+                            for (int i1 = 0; i1 < 1; i1++) {
+                                Vin vin = vins[random.nextInt(100)];
                                 final long andIncrement = atomicLong.getAndIncrement();
                                 Map<String, ColumnValue> columns1 = new HashMap<>();
                                 for (String s : columns.keySet()) {
@@ -120,7 +120,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "5RVNubZ6ygdGt8xLC";
+                String v = "aFP3rLGw8dx8uCbH8";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));

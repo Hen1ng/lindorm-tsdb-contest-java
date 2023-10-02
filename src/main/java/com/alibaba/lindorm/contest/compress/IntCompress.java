@@ -212,6 +212,18 @@ public class IntCompress {
         return gzipCompress.compress(array);
     }
 
+
+    public static byte[] compressShort(short[] shorts) {
+//        ints = Simple9Codes.innerEncode(ints);
+        ByteBuffer allocate = ByteBuffer.allocate(shorts.length * 2);
+        for (short i : shorts) {
+            allocate.putShort(i);
+        }
+        final byte[] array = allocate.array();
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        return gzipCompress.compress(array);
+    }
+
     public static byte[] compressZstd(int[] ints) {
         ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
         for (int i : ints) {
@@ -241,6 +253,18 @@ public class IntCompress {
             ints[j] = wrap.getInt();
         }
         return ints;
+//        return Simple9Codes.decode(ints);
+    }
+
+    public static short[] decompressShort(byte[] bytes) {
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        final byte[] bytes1 = gzipCompress.deCompress(bytes);
+        final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
+        short[] shorts = new short[bytes1.length / 2];
+        for (int j = 0; j < shorts.length; j++) {
+            shorts[j] = wrap.getShort();
+        }
+        return shorts;
 //        return Simple9Codes.decode(ints);
     }
 
