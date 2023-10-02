@@ -4,7 +4,6 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.*;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -203,9 +202,7 @@ public class MapIndex {
                                 , Long.parseLong(split2[2])
                                 , Integer.parseInt(split2[3])
                                 , Integer.parseInt(split2[4])
-                                , Integer.parseInt(split2[5])
-                                , Integer.parseInt(split2[6])
-                                ,AggBucket.fromString(split2[7])
+                                ,AggBucket.fromString(split2[5])
 //                                , DoubleIndexMap.fromString(split2[8])
                         ));
                     }

@@ -1,23 +1,23 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.DoubleCompress;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;
 import com.alibaba.lindorm.contest.index.AggBucket;
-import com.alibaba.lindorm.contest.index.DoubleIndexMap;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
 import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
-import com.alibaba.lindorm.contest.util.*;
+import com.alibaba.lindorm.contest.util.ArrayUtils;
+import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.SchemaUtil;
+import com.alibaba.lindorm.contest.util.StaticsUtil;
 import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -32,21 +32,6 @@ public class TSFileService {
     public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
-    public static final ThreadLocal<AtomicInteger[]> INT_POSITION_THREAD_LOCAL = ThreadLocal.withInitial(() -> {
-        AtomicInteger[] bigIntPosition = new AtomicInteger[Constants.intColumnHashMapCompress.getColumnSize()];
-        for (int i = 0; i < bigIntPosition.length; i++) {
-            bigIntPosition[i] = new AtomicInteger();
-        }
-        return bigIntPosition;
-    });
-
-    public static final ThreadLocal<AtomicInteger[]> DOUBLE_POSITION_THREAD_LOCAL = ThreadLocal.withInitial(() -> {
-        AtomicInteger[] bigIntPosition = new AtomicInteger[Constants.doubleColumnHashMapCompress.getColumnSize()];
-        for (int i = 0; i < bigIntPosition.length; i++) {
-            bigIntPosition[i] = new AtomicInteger();
-        }
-        return bigIntPosition;
-    });
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
@@ -118,45 +103,21 @@ public class TSFileService {
                         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
-                                if (Constants.ZEROSET.contains(requestedColumn)) {
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
-                                } else {
-                                    if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(requestedColumn)) {
-                                        try {
-                                            Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
-                                            columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
-                                        } catch (Exception e) {
-                                            System.out.println("intColumnHashMapCompress COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                                        }
-                                    } else {
-                                        if (ints == null) {
-                                            final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
-                                            tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
-                                            allocate1.flip();
-                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
-                                        }
-                                        final ByteBuffer intBuffer = INT_BUFFER.get();
-                                        intBuffer.clear();
-                                        int off = columnIndex * valueSize + i;
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
-                                    }
+                                if (ints == null) {
+                                    final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
+                                    tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
+                                    allocate1.flip();
+                                    ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
                                 }
+                                final ByteBuffer intBuffer = INT_BUFFER.get();
+                                intBuffer.clear();
+                                int off = columnIndex * valueSize + i;
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
-//                                final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-//                                if (doubleFile != null) {
-//                                    ByteBuffer allocate1 = ByteBuffer.allocate(4);
-//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-//                                    allocate1.flip();
-//                                    final int anInt = allocate1.getInt();
-//                                    allocate1 = ByteBuffer.allocate(anInt);
-//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-//                                    final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-//                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-//                                } else {
                                 if (doubles == null) {
                                     final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
                                     tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
@@ -172,7 +133,6 @@ public class TSFileService {
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
-//                                }
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
@@ -296,49 +256,21 @@ public class TSFileService {
                     final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                     if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                         try {
-                            if (Constants.ZEROSET.contains(requestedColumn)) {
-                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
-                            } else {
-                                if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(requestedColumn)) {
-                                    try {
-                                        Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
-                                    } catch (Exception e) {
-                                        System.out.println("getBigInt COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                                    }
-                                } else {
-                                    try {
-                                        if (ints == null) {
-                                            final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
-                                            tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
-                                            allocate1.flip();
-                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
-                                        }
-                                        final ByteBuffer intBuffer = INT_BUFFER.get();
-                                        intBuffer.clear();
-                                        int off = columnIndex * valueSize + i;
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
-                                    } catch (Exception e) {
-                                        System.out.println("getNormalIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                                    }
-                                }
+                            if (ints == null) {
+                                final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
+                                tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
+                                allocate1.flip();
+                                ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
                             }
+                            final ByteBuffer intBuffer = INT_BUFFER.get();
+                            intBuffer.clear();
+                            int off = columnIndex * valueSize + i;
+                            columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
                         } catch (Exception e) {
                             System.out.println("getByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
                     } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                         try {
-//                            final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-//                            if (doubleFile != null) {
-//                                ByteBuffer allocate1 = ByteBuffer.allocate(4);
-//                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-//                                allocate1.flip();
-//                                final int anInt = allocate1.getInt();
-//                                allocate1 = ByteBuffer.allocate(anInt);
-//                                doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-//                                final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-//                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-//                            } else {
                             if (doubles == null) {
                                 final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
                                 tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
@@ -354,8 +286,6 @@ public class TSFileService {
                             }
                             int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                             columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
-
-//                            }
                         } catch (Exception e) {
                             System.out.println("getByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
@@ -455,22 +385,12 @@ public class TSFileService {
             List<ByteBuffer> stringList;
             double[] doubles = null;
             long[] longs = new long[lineNum];
-            long[] ints = new long[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
-            int[][] bigInts = Constants.intColumnHashMapCompress.getTempArray(lineNum);
+            long[] ints = new long[lineNum * Constants.INT_NUMS];
             int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
             int longPosition = 0;
             int doublePosition = 0;
-            final AtomicInteger[] bigIntPosition = INT_POSITION_THREAD_LOCAL.get();
-            for (AtomicInteger atomicInteger : bigIntPosition) {
-                atomicInteger.set(0);
-            }
-            final AtomicInteger[] bigDoublePosition = DOUBLE_POSITION_THREAD_LOCAL.get();
-            for (AtomicInteger atomicInteger : bigDoublePosition) {
-                atomicInteger.set(0);
-            }
             int intPosition = 0;
-            int doubleOfferLine = -1;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
                 intBuffer = TOTAL_INT_BUFFER.get();
                 doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
@@ -510,29 +430,15 @@ public class TSFileService {
                         int integerValue = columns.get(key).getIntegerValue();
                         aggBucket.updateInt(integerValue, i);
 //                        SchemaUtil.maps.get(key).add(integerValue);
-                        if (Constants.ZEROSET.contains(key)) {
-                            continue;
-                        }
-                        if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(key)) {
-                            int i1 = Constants.intColumnHashMapCompress.getColumnIndex(key);
-                            integerValue = Constants.intColumnHashMapCompress.addElement(key, integerValue);
-                            bigInts[i1][bigIntPosition[i1].getAndAdd(1)] = integerValue;
-                        } else {
-                            ints[intPosition++] = integerValue;
-                        }
+                        ints[intPosition++] = integerValue;
                     } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         if (doubles == null) {
                             doubles = new double[lineNum * Constants.FLOAT_NUMS];
                         }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
                         aggBucket.updateDouble(doubleFloatValue, i);
-//                        final DoubleFile doubleFile = this.doubleFileService.get(key);
-//                        if (doubleFile != null) {
-//                            doubles1[doubles1Position++] = doubleFloatValue;
-//                        } else {
                         doubles[doublePosition] = doubleFloatValue;
                         doublePosition++;
-//                        }
                     } else {
                         final ByteBuffer stringValue = columns.get(key).getStringValue();
                         totalStringLength += stringValue.remaining();
@@ -574,10 +480,7 @@ public class TSFileService {
                 System.out.println("compress int error" + e);
             }
             // 存储bigInt
-            int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd2(bigInts);
             // 存储DoubleHashMapCompress
-//            doubleOfferLine = doubleFileService.write(doubles1, SchemaUtil.getIndexArray()[49]);
-//            doubleIndexMap.put(SchemaUtil.getIndexArray()[39], doubleOfferLine);
             int total = 8 + 4 + compress1.length //timestamp
                     + compress2.length + 4 //int
                     + (4 + compressDouble.length) //double
@@ -614,8 +517,6 @@ public class TSFileService {
                         , minTimestamp
                         , total
                         , lineNum
-                        , offsetLine
-                        , doubleOfferLine
                         , aggBucket);
                 MapIndex.put(vin, index);
                 valueList.clear();

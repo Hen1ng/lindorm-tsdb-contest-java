@@ -14,7 +14,6 @@ import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
@@ -34,14 +33,10 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 
 public class TSDBEngineImpl extends TSDBEngine {
 
-    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
     private final AtomicLong executeTimeRangeQueryTimes;
-    private final AtomicLong executeAggregateQueryTimes;
-
-    private final AtomicLong executeDownsampleQueryTimes;
     private TSFileService fileService = null;
     private final MemoryTable memoryTable;
     private Unsafe unsafe = UnsafeUtil.getUnsafe();
@@ -51,8 +46,6 @@ public class TSDBEngineImpl extends TSDBEngine {
     private File bigIntFile;
     private File bigIntMapFile;
     private FilePosition filePosition;
-
-    private DoubleFileService doubleFileService;
 
 
     /**
@@ -97,8 +90,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.executeLatestQueryTimes = new AtomicLong(0);
         this.executeTimeRangeQueryTimes = new AtomicLong(0);
         this.executeLatestQueryVinsSize = new AtomicLong(0);
-        this.executeAggregateQueryTimes = new AtomicLong(0);
-        this.executeDownsampleQueryTimes = new AtomicLong(0);
     }
 
     @Override
@@ -113,16 +104,8 @@ public class TSDBEngineImpl extends TSDBEngine {
             StaticsUtil.columnInfos.add(new ColumnInfo());
         }
         if (RestartUtil.IS_FIRST_START) {
-            Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
-            Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress(this.dataPath);
-            Constants.stringColumnHashMapCompress = new StringColumnHashMapCompress();
-            Constants.intColumnHashMapCompress.prepare();
-            Constants.doubleColumnHashMapCompress.prepare();
-            Constants.stringColumnHashMapCompress.Prepare();
+
         } else {
-            Constants.intColumnHashMapCompress = IntColumnHashMapCompress.loadFromFile(dataPath.getPath());
-            Constants.doubleColumnHashMapCompress = DoubleColumnHashMapCompress.loadFromFile(dataPath.getPath());
-            Constants.stringColumnHashMapCompress = StringColumnHashMapCompress.loadFromFile(dataPath.getPath());
             memoryTable.loadLastTsToMemory();
         }
         System.gc();

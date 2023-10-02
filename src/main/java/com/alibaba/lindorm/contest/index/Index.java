@@ -17,9 +17,6 @@ public class Index {
 
     private AggBucket aggBucket;
 
-    private int bigIntOffset;
-
-
 
 
     public int getValueSize() {
@@ -36,10 +33,6 @@ public class Index {
         return offset;
     }
 
-    public int getOffsetLine() {
-        return offsetLine;
-    }
-
     public long getMaxTimestamp() {
         return maxTimestamp;
     }
@@ -54,13 +47,6 @@ public class Index {
 
     private int length;
 
-    private int offsetLine;
-
-    public int getDoubleLine() {
-        return doubleLine;
-    }
-
-    private int doubleLine;
 
 
     public Index(long offset
@@ -68,8 +54,6 @@ public class Index {
             , long minTimestamp
             , int length
             , int valueSize
-            , int offsetLine
-            , int doubleLine
             , AggBucket aggBucket
 //            , DoubleIndexMap doubleIndexMap
     ) {
@@ -78,25 +62,20 @@ public class Index {
         this.minTimestamp = minTimestamp;
         this.length = length;
         this.valueSize = valueSize;
-        this.offsetLine = offsetLine;
-        this.doubleLine = doubleLine;
         this.aggBucket = aggBucket;
 //        this.doubleIndexMap = doubleIndexMap;
     }
 
     public byte[] bytes(){
         byte[] bytes = aggBucket.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4+bytes.length + 8 * 3 + 4 * 5);
+        ByteBuffer allocate = ByteBuffer.allocate(4+bytes.length + 8 * 3 + 4 * 2);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
         allocate.putLong(maxTimestamp);
         allocate.putLong(minTimestamp);
-        allocate.putInt(bigIntOffset);
         allocate.putInt(valueSize);
         allocate.putInt(length);
-        allocate.putInt(offsetLine);
-        allocate.putInt(doubleLine);
         GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
         return gzipCompress.compress(allocate.array());
     }
@@ -111,19 +90,14 @@ public class Index {
         long offset = wrap.getLong();
         long maxTimeStamp = wrap.getLong();
         long minTimeStamp = wrap.getLong();
-        int bigIntOffset = wrap.getInt();
         int valueSize = wrap.getInt();
         int length = wrap.getInt();
-        int offsetLine = wrap.getInt();
-        int doubleLine = wrap.getInt();
         return new Index(
                 offset,
                 maxTimeStamp,
                 minTimeStamp,
                 length,
                 valueSize,
-                offsetLine,
-                doubleLine,
                 aggBucket
         );
     }
@@ -139,34 +113,23 @@ public class Index {
                 "@" +
                 valueSize +
                 "@" +
-                offsetLine +
-                "@" +
-                doubleLine +
-                "@" +
                 aggBucket.toString()
                 ;
 
     }
 
-    public int getBigIntOffset() {
-        return bigIntOffset;
-    }
-
-    public void setBigIntOffset(int offset) {
-        this.bigIntOffset = offset;
-    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Index index = (Index) o;
-        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp && bigIntOffset == index.bigIntOffset && valueSize == index.valueSize && length == index.length && offsetLine == index.offsetLine && doubleLine == index.doubleLine && Objects.equals(aggBucket, index.aggBucket);
+        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp  && valueSize == index.valueSize && length == index.length  && Objects.equals(aggBucket, index.aggBucket);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(offset, maxTimestamp, minTimestamp, aggBucket, bigIntOffset, valueSize, length, offsetLine, doubleLine);
+        return Objects.hash(offset, maxTimestamp, minTimestamp, aggBucket, valueSize, length);
     }
 
     public static void main(String[] args) {
@@ -177,8 +140,6 @@ public class Index {
         Index index = new Index(random.nextLong(),
                 random.nextLong(),
                 random.nextLong(),
-                random.nextInt(),
-                random.nextInt(),
                 random.nextInt(),
                 random.nextInt(),
                 aggBucket1);
