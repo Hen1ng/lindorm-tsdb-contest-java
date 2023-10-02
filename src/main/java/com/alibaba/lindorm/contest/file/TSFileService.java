@@ -95,7 +95,7 @@ public class TSFileService {
             int compressLength = timestampMetaBuffer.getInt();
             ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
             tsFile.getFromOffsetByFileChannel(compressLong, offset + 12);
-            final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
+            final long[] decompress = IntCompress.decompress2(compressLong.array(), valueSize);
             long[] ints = null;
             final ByteBuffer allocate = ByteBuffer.allocate(4);
             tsFile.getFromOffsetByFileChannel(allocate, offset + 12 + compressLength);
@@ -270,7 +270,7 @@ public class TSFileService {
         int compressLength = timestampMetaBuffer.getInt();
         ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
         tsFile.getFromOffsetByFileChannel(compressLong, offset + 12);
-        final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
+        final long[] decompress = IntCompress.decompress2(compressLong.array(), valueSize);
         //解压int
         long[] ints = null;
         final ByteBuffer allocate = ByteBuffer.allocate(4);
@@ -561,7 +561,7 @@ public class TSFileService {
             final byte[] array = allocate.array();
             final byte[] compressDouble = Zstd.compress(array, 15);
             // 压缩long
-            final byte[] compress1 = LongCompress.compress(longs);
+            final byte[] compress1 = IntCompress.compress2(longs);
             long previousLong = longs[longs.length - 1];
 
             //压缩int

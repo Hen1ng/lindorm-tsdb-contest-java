@@ -7,7 +7,6 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
-import com.alibaba.lindorm.contest.util.list.SortedList;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -52,8 +51,8 @@ public class MemoryTable {
 
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
-        this.values = new SortedList[size];
-        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
+        this.values = new LinkedList[size];
+        this.bufferValues = new LinkedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
         for(int i=0;i<60000;i++){
@@ -65,10 +64,12 @@ public class MemoryTable {
         this.fixThreadPool = Executors.newFixedThreadPool(8);
         this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
-            values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
+//            values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
+            values[i] = new LinkedList();
         }
         for(int i=0;i<Constants.TOTAL_BUFFER_NUMS;i++){
-            bufferValues[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
+//            bufferValues[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
+            bufferValues[i] = new LinkedList<>();
             freeList.add(i);
         }
     }
@@ -148,9 +149,9 @@ public class MemoryTable {
                 return null;
             }
             if (!RestartUtil.IS_FIRST_START) {
-                return getFromMemoryTable(vin, requestedColumns, i);
+                return getFromMemoryTableV2(vin, requestedColumns, i);
             }
-            final Row fromMemoryTable = getFromMemoryTable(vin, requestedColumns, i);
+            final Row fromMemoryTable = getFromMemoryTableV2(vin, requestedColumns, i);
             Row row = null;
             final Pair<Index, Long> last = MapIndex.getLast(vin);
             if (last != null && last.getLeft() != null) {
@@ -172,6 +173,40 @@ public class MemoryTable {
             System.out.println("getLastRowFromMemoryTable e" + e);
         } finally {
 //            spinLockArray[lock].readLock().unlock();
+        }
+        return null;
+    }
+
+    public Row getFromMemoryTableV2(Vin vin, Set<String> requestedColumns, int slot) {
+        final List<Value> valueList = values[slot];
+        long maxTimeStamp = Long.MIN_VALUE;
+        Value v = null;
+        for (Value value : valueList) {
+            final long timestamp = value.getTimestamp();
+            if (timestamp > maxTimeStamp) {
+                v = value;
+            }
+        }
+        long totalStringLength = 0;
+        if (v != null) {
+            Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
+            for (String requestedColumn : requestedColumns) {
+                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
+                    final ByteBuffer stringValue = v.getColumns().get(requestedColumn).getStringValue();
+                    final ByteBuffer allocate = ByteBuffer.allocate(stringValue.capacity());
+                    totalStringLength += stringValue.capacity();
+                    int position = stringValue.position();
+                    int limit = stringValue.limit();
+                    allocate.put(stringValue);
+                    stringValue.limit(limit);
+                    stringValue.position(position);
+                    columns.put(requestedColumn, new ColumnValue.StringColumn(allocate.flip()));
+                } else {
+                    columns.put(requestedColumn, v.getColumns().get(requestedColumn));
+                }
+            }
+            return new Row(vin, v.getTimestamp(), columns);
         }
         return null;
     }
