@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DataGenerator {
 
@@ -101,7 +102,15 @@ public class DataGenerator {
         int randomTime = random.nextInt(1000);
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start+3600]+randomTime;
-        return new TimeRangeDownsampleRequest("test",vin,"QZZS",timeLower,timeUpper,Aggregator.AVG,10000,new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+        int i = random.nextInt(4);
+        if(i==1) {
+            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+        }else if(i==2) {
+            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+        }else if(i==3){
+            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+        }
+        return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
     }
 
     public static void main(String[] args) {
@@ -134,10 +143,11 @@ public class DataGenerator {
             Schema schema = getSchema();
             tsdbEngineSample.createTable("test", schema);
             // Save generated data to a file for later comparison
+            AtomicLong totalTime = new AtomicLong();
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
                 int batchSize = 10;
-                for (int i = 0; i < 3600; i++) {
+                for (int i = 0; i <3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for(int j=0;j<10;j++) {
                         RowFactory rowFactory = randomRowFactory();
@@ -148,7 +158,10 @@ public class DataGenerator {
                     if (rows.size() == batchSize) {
                         executorService.execute(() -> {
                             try {
+                                long start = System.currentTimeMillis();
                                 tsdbEngineSample.write(new WriteRequest("test", new ArrayList<>(rows)));
+                                long end = System.currentTimeMillis();
+                                totalTime.addAndGet((end - start));
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
@@ -159,6 +172,7 @@ public class DataGenerator {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            System.out.println("write Time : " + totalTime.get());
             executorService.shutdown();
             try {
                 // 等待线程池终止，但最多等待5秒
@@ -183,6 +197,8 @@ public class DataGenerator {
                 ArrayList<Row> ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
                 if(rows.size() != ans.size()){
                     System.out.println("size not equal");
+                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
+                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
                 }
                 for(int j=0;j<rows.size();j++){
                     Row row = rows.get(j);
@@ -196,9 +212,7 @@ public class DataGenerator {
                         rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
                     }
                 }
-                if(i%100==0){
-                    System.out.println("DownSample query "+ i +" all right");
-                }
+                System.out.println("DownSample query "+ i +" all right");
             }
             System.out.println("DownSample Quey end ============= ALL RIGHT");
             tsdbEngine.shutdown();

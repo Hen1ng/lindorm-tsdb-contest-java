@@ -550,7 +550,7 @@ public class TSFileService {
                 position += array.length;
             }
             final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-            final byte[] compress = Zstd.compress(bytes, 12);
+            final byte[] compress = Zstd.compress(bytes, 10);
 
             //压缩double
 //            ArrayUtils.printDouble(doubles);

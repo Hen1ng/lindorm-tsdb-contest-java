@@ -23,7 +23,7 @@ public class Constants {
 
     public static final int TOTAL_BUFFER_NUMS = 1200;
 
-    public static final boolean OPEN_DOWNSAMPLE_BYPUCKET_OPT = false;
+    public static final boolean OPEN_DOWNSAMPLE_BYPUCKET_OPT = true;
 
 
 

@@ -89,6 +89,7 @@ public class MapIndex {
         FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
         // 先压缩vin
 
+        long IndexFileLength = 0;
         for (Vin vin : INDEX_MAP.keySet()) {
             List<Index> indices = INDEX_MAP.get(vin);
             List<byte[]> indexBytes = new ArrayList<>();
@@ -116,6 +117,7 @@ public class MapIndex {
                 while(allocate.hasRemaining()) {
                     length += fileChannel.write(allocate);
                 }
+                IndexFileLength += length;
                 if(length !=  4 +vin.getVin().length +
                         4 + 4 * indexBytes.size() + totalBytes){
                     System.out.println("write index file error by fileChanel");
@@ -124,6 +126,7 @@ public class MapIndex {
                 e.printStackTrace();
             }
         }
+        System.out.println("INDEX FILE LEN : "+IndexFileLength);
     }
     public static void saveMapToFile(File file) {
         try {
@@ -176,7 +179,9 @@ public class MapIndex {
                 indices.add(index);
             }
             INDEX_MAP.put(vin,indices);
+            intBuffer.flip();
         }
+        System.out.println("load Index into memory size : " + INDEX_MAP.size());
 
     }
 
