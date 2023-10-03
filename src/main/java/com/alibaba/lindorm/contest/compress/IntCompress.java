@@ -10,6 +10,7 @@ import com.alibaba.lindorm.contest.util.ZigZagUtil;
 import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -150,7 +151,7 @@ public class IntCompress {
 //        final byte[] compress3 = gzipCompress.compress(compress2);
 //        final boolean equals = Arrays.equals(testNum3, longs);
         System.out.println(a);
-//        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
+        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
     }
 
     public static byte[] compress2(long[] ints) {
@@ -161,16 +162,23 @@ public class IntCompress {
             }
             long[] output = new long[ints.length];
             final int compress = Simple8.compress(gapArray, output);
-            byte[] result = new byte[compress * 8];
-            int position = 0;
-            for (int i = 0; i < compress; i++) {
-                final long l = output[i];
-                final byte[] bytes = BytesUtil.long2Bytes(l);
-                ArrayUtils.copy(bytes, 0, result, position, 8);
-                position += 8;
-            }
-            GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-            return gzipCompress.compress(result);
+            ByteBuffer resultBuffer = ByteBuffer.allocate(compress*8);
+            long[] outputArray = new long[compress];
+            System.arraycopy(output,0,outputArray,0,compress);
+            LongBuffer longBuffer = resultBuffer.asLongBuffer();
+            longBuffer.put(outputArray);
+//            byte[] result = new byte[compress * 8];
+//            int position = 0;
+//            for (int i = 0; i < compress; i++) {
+//                final long l = output[i];
+//                final byte[] bytes = BytesUtil.long2Bytes(l);
+//                ArrayUtils.copy(bytes, 0, result, position, 8);
+//                position += 8;
+//            }
+//            return resultBuffer.array();
+            return Zstd.compress(resultBuffer.array(), 10);
+//            GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+//            return gzipCompress.compress(result);
 //            return result;
         } catch (Exception e) {
             System.out.println("compress2 error, e" + e);
@@ -179,12 +187,15 @@ public class IntCompress {
     }
 
     public static long[] decompress2(byte[] bytes1, int valueSize) {
-        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-        byte[] bytes = gzipCompress.deCompress(bytes1);
+//        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+//        byte[] bytes = gzipCompress.deCompress(bytes1);
+
+        byte[] bytes = Zstd.decompress(bytes1,valueSize*8);
         long[] output = new long[bytes.length / 8];
         int position = 0;
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
         for (int i = 0; i < bytes.length; i += 8) {
-            final long l = BytesUtil.bytes2Long(bytes, i);
+            final long l = wrap.getLong();
             output[position] = l;
             position++;
         }
@@ -218,7 +229,7 @@ public class IntCompress {
             allocate.putInt(i);
         }
         final byte[] array = allocate.array();
-        return Zstd.compress(array, 22);
+        return Zstd.compress(array, 12);
     }
 
     public static byte[] compress4(int[] ints) {

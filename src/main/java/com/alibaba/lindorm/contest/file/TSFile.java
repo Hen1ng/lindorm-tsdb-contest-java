@@ -85,7 +85,6 @@ public class TSFile {
             this.fileChannel.read(byteBuffer, offset - initPosition);
         } catch (Exception e) {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset + "initPosition " + initPosition);
-            e.printStackTrace();
         }
     }
 

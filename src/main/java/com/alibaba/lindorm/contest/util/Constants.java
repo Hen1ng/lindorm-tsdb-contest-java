@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 public class Constants {
     public static final int OS_PAGE_SIZE = 1024 * 4;
 
-    public static final int TS_FILE_NUMS = 30;
+    public static final int TS_FILE_NUMS = 100;
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;
     public static final long WARM_FILE_SIZE = 1024 * 1024 * 1024;
     public static final int LOAD_FILE_TO_MEMORY_NUM = 0;
@@ -21,7 +21,7 @@ public class Constants {
 
     public static final int TOTAL_VIN_NUMS = 5000;
 
-    public static final int TOTAL_BUFFER_NUMS = 1200;
+    public static final int TOTAL_BUFFER_NUMS = 0;
 
     public static final boolean OPEN_DOWNSAMPLE_BYPUCKET_OPT = true;
 

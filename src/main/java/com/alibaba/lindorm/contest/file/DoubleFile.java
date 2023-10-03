@@ -100,7 +100,6 @@ public class DoubleFile {
             this.fileChannel.read(byteBuffer, offset);
         } catch (Exception e) {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset);
-            e.printStackTrace();
         }
     }
 
