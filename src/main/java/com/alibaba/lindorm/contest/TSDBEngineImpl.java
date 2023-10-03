@@ -7,10 +7,6 @@
 
 package com.alibaba.lindorm.contest;
 
-import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
-import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
-import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
-import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
@@ -25,7 +21,10 @@ import sun.misc.Unsafe;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT;
@@ -223,7 +222,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                     rows.add(lastRow);
                 }
             }
-            executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
             if (executeLatestQueryTimes.get() % 200000 == 0) {
 //                MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size());

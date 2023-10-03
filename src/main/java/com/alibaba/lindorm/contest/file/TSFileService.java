@@ -23,12 +23,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class TSFileService {
 
-    public static final ThreadLocal<ByteBuffer> TOTAL_INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 4));
-    public static final ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 8));
+    public static final ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.FLOAT_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
     public static final ThreadLocal<ByteBuffer> INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(4));
-    public static final ThreadLocal<ByteBuffer> DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(8));
     public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
@@ -378,37 +376,25 @@ public class TSFileService {
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
-            ByteBuffer intBuffer;
             ByteBuffer doubleBuffer;
-            ByteBuffer longBuffer;
             ByteBuffer stringLengthBuffer;
             List<ByteBuffer> stringList;
-            double[] doubles = null;
             long[] longs = new long[lineNum];
             long[] ints = new long[lineNum * Constants.INT_NUMS];
             int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
             int longPosition = 0;
-            int doublePosition = 0;
             int intPosition = 0;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
-                intBuffer = TOTAL_INT_BUFFER.get();
                 doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
-                longBuffer = TOTAL_LONG_BUFFER.get();
                 stringLengthBuffer = TOTAL_STRING_LENGTH_BUFFER.get();
                 stringList = STRING_BUFFER_LIST.get();
-                intBuffer.clear();
                 doubleBuffer.clear();
-                longBuffer.clear();
                 stringLengthBuffer.clear();
                 stringList.clear();
             } else {
-                //存储int类型，大小为缓存数据行 * 每行多少个int * 4
-                intBuffer = ByteBuffer.allocate(lineNum * Constants.INT_NUMS * 4);
                 //存储double类型，大小为缓存数据行 * 每行多少个double * 8
-                doubleBuffer = ByteBuffer.allocateDirect(lineNum * Constants.FLOAT_NUMS * 8);
-                //存储时间戳，总共有多少行，有多少个时间戳
-                longBuffer = ByteBuffer.allocateDirect(lineNum * 8);
+                doubleBuffer = ByteBuffer.allocate(lineNum * Constants.FLOAT_NUMS * 8);
                 //存储每个字符串的长度
                 stringLengthBuffer = ByteBuffer.allocate(lineNum * Constants.STRING_NUMS * 4);
                 stringList = new ArrayList<>(lineNum * Constants.STRING_NUMS);
@@ -432,13 +418,9 @@ public class TSFileService {
 //                        SchemaUtil.maps.get(key).add(integerValue);
                         ints[intPosition++] = integerValue;
                     } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
-                        if (doubles == null) {
-                            doubles = new double[lineNum * Constants.FLOAT_NUMS];
-                        }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
                         aggBucket.updateDouble(doubleFloatValue, i);
-                        doubles[doublePosition] = doubleFloatValue;
-                        doublePosition++;
+                        doubleBuffer.putDouble(doubleFloatValue);
                     } else {
                         final ByteBuffer stringValue = columns.get(key).getStringValue();
                         totalStringLength += stringValue.remaining();
@@ -460,27 +442,16 @@ public class TSFileService {
 
             //压缩double
 //            ArrayUtils.printDouble(doubles);
-            final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
-            for (double value : doubles) {
-                allocate.putDouble(value);
-            }
-            final byte[] array = allocate.array();
+            final byte[] array = doubleBuffer.array();
             final byte[] compressDouble = Zstd.compress(array, 15);
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
 
             //压缩int
-            byte[] compress2 = null;
-            byte[] stringLengthArrayCompress = null;
-            try {
-                compress2 = IntCompress.compress2(ints);
-                stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
-            } catch (Exception e) {
-                System.out.println("compress int error" + e);
-            }
-            // 存储bigInt
-            // 存储DoubleHashMapCompress
+            byte[] compress2 = IntCompress.compress2(ints);
+            byte[] stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
+
             int total = 8 + 4 + compress1.length //timestamp
                     + compress2.length + 4 //int
                     + (4 + compressDouble.length) //double

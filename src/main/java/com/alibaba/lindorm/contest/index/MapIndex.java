@@ -1,6 +1,7 @@
 package com.alibaba.lindorm.contest.index;
 
 import com.alibaba.lindorm.contest.structs.Vin;
+import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.*;
@@ -13,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MapIndex {
 
-    public static final Map<Vin, List<Index>> INDEX_MAP = new ConcurrentHashMap<>();
+    public static final Map<Vin, List<Index>> INDEX_MAP = new ConcurrentHashMap<>(Constants.TOTAL_VIN_NUMS);
 
     public static void put(Vin vin, Index index) {
         List<Index> indices = INDEX_MAP.get(vin);
