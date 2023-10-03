@@ -43,12 +43,6 @@ public class SchemaUtil {
             System.out.println("key: " + key + " index : " + i);
             i++;
         }
-        for (String s : Constants.ZEROSET) {
-            INDEX_ARRAY[i] = s;
-            COLUMNS_INDEX.put(s, i);
-            System.out.println("key: " + s + " index : " + i);
-            i++;
-        }
         for (String key : FLOAT_MAP.keySet()) {
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);

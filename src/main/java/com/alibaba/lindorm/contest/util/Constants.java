@@ -41,7 +41,6 @@ public class Constants {
 
 
     static{
-        YXMSset = new ConcurrentSkipListSet<>();
 //        ZEROSET.add("DW");
 //        ZEROSET.add("QTGZLB");
 //        ZEROSET.add("FDJGZLB");
