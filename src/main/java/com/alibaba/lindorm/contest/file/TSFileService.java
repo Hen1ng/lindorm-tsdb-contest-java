@@ -1,11 +1,9 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.DoubleCompress;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.LongCompress;
 import com.alibaba.lindorm.contest.index.AggBucket;
-import com.alibaba.lindorm.contest.index.DoubleIndexMap;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -32,21 +30,6 @@ public class TSFileService {
     public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
-    public static final ThreadLocal<AtomicInteger[]> INT_POSITION_THREAD_LOCAL = ThreadLocal.withInitial(() -> {
-        AtomicInteger[] bigIntPosition = new AtomicInteger[Constants.intColumnHashMapCompress.getColumnSize()];
-        for (int i = 0; i < bigIntPosition.length; i++) {
-            bigIntPosition[i] = new AtomicInteger();
-        }
-        return bigIntPosition;
-    });
-
-    public static final ThreadLocal<AtomicInteger[]> DOUBLE_POSITION_THREAD_LOCAL = ThreadLocal.withInitial(() -> {
-        AtomicInteger[] bigIntPosition = new AtomicInteger[Constants.doubleColumnHashMapCompress.getColumnSize()];
-        for (int i = 0; i < bigIntPosition.length; i++) {
-            bigIntPosition[i] = new AtomicInteger();
-        }
-        return bigIntPosition;
-    });
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
@@ -174,7 +157,6 @@ public class TSFileService {
                                         + doubleCompressInt + 4
                                         + everyStringLength + 4);
                                 dataBuffer.get(bytes);
-                                GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
                                 stringBytes = Zstd.decompress(bytes, totalStringLength);
                             }
                             try {
@@ -352,7 +334,6 @@ public class TSFileService {
                                         + doubleCompressInt + 4
                                         + everyStringLength + 4);
                                 stringBuffer.flip();
-                                GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
                                 stringBytes = Zstd.decompress(stringBuffer.array(), totalStringLength);
                             }
                             try {
@@ -536,7 +517,6 @@ public class TSFileService {
                                         + doubleCompressInt + 4
                                         + everyStringLength + 4);
                                 stringBuffer.flip();
-                                GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
                                 stringBytes = Zstd.decompress(stringBuffer.array(), totalStringLength);
                             }
                             int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -595,20 +575,11 @@ public class TSFileService {
             List<ByteBuffer> stringList;
             double[] doubles = null;
             long[] longs = new long[lineNum];
-            long[] ints = new long[lineNum * (Constants.INT_NUMS - Constants.intColumnHashMapCompress.getColumnSize())];
-            int[][] bigInts = Constants.intColumnHashMapCompress.getTempArray(lineNum);
+            long[] ints = new long[lineNum * Constants.INT_NUMS];
             int[] stringLengthArray = new int[lineNum * Constants.STRING_NUMS];
             int stringLengthPosition = 0;
             int longPosition = 0;
             int doublePosition = 0;
-            final AtomicInteger[] bigIntPosition = INT_POSITION_THREAD_LOCAL.get();
-            for (AtomicInteger atomicInteger : bigIntPosition) {
-                atomicInteger.set(0);
-            }
-            final AtomicInteger[] bigDoublePosition = DOUBLE_POSITION_THREAD_LOCAL.get();
-            for (AtomicInteger atomicInteger : bigDoublePosition) {
-                atomicInteger.set(0);
-            }
             int intPosition = 0;
             int doubleOfferLine = -1;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
@@ -650,29 +621,15 @@ public class TSFileService {
                         int integerValue = columns.get(key).getIntegerValue();
                         aggBucket.updateInt(integerValue, i);
 //                        SchemaUtil.maps.get(key).add(integerValue);
-                        if (Constants.ZEROSET.contains(key)) {
-                            continue;
-                        }
-                        if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(key)) {
-                            int i1 = Constants.intColumnHashMapCompress.getColumnIndex(key);
-                            integerValue = Constants.intColumnHashMapCompress.addElement(key, integerValue);
-                            bigInts[i1][bigIntPosition[i1].getAndAdd(1)] = integerValue;
-                        } else {
-                            ints[intPosition++] = integerValue;
-                        }
+                        ints[intPosition++] = integerValue;
                     } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         if (doubles == null) {
                             doubles = new double[lineNum * Constants.FLOAT_NUMS];
                         }
                         final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
                         aggBucket.updateDouble(doubleFloatValue, i);
-//                        final DoubleFile doubleFile = this.doubleFileService.get(key);
-//                        if (doubleFile != null) {
-//                            doubles1[doubles1Position++] = doubleFloatValue;
-//                        } else {
                         doubles[doublePosition] = doubleFloatValue;
                         doublePosition++;
-//                        }
                     } else {
                         final ByteBuffer stringValue = columns.get(key).getStringValue();
                         totalStringLength += stringValue.remaining();
@@ -689,7 +646,6 @@ public class TSFileService {
                 ArrayUtils.copy(array, 0, bytes, position, array.length);
                 position += array.length;
             }
-            final GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
             final byte[] compress = Zstd.compress(bytes, 10);
 
             //压缩double
@@ -705,19 +661,10 @@ public class TSFileService {
             long previousLong = longs[longs.length - 1];
 
             //压缩int
-            byte[] compress2 = null;
-            byte[] stringLengthArrayCompress = null;
-            try {
-                compress2 = IntCompress.compress2(ints);
-                stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
-            } catch (Exception e) {
-                System.out.println("compress int error" + e);
-            }
+            byte[] compress2 = IntCompress.compress2(ints);
+            byte[] stringLengthArrayCompress = IntCompress.compress(stringLengthArray);
             // 存储bigInt
-            int offsetLine = Constants.intColumnHashMapCompress.compressAndAdd2(bigInts);
-            // 存储DoubleHashMapCompress
-//            doubleOfferLine = doubleFileService.write(doubles1, SchemaUtil.getIndexArray()[49]);
-//            doubleIndexMap.put(SchemaUtil.getIndexArray()[39], doubleOfferLine);
+            int offsetLine = -1;
             int total = 8 + 4 + compress1.length //timestamp
                     + compress2.length + 4 //int
                     + (4 + compressDouble.length) //double

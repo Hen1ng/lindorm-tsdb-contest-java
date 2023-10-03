@@ -487,8 +487,8 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
-        if (!Constants.OPEN_DOWNSAMPLE_BYPUCKET_OPT) {
-            return executeDownsampleQueryByBucket(downsampleReq);
+        if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
+            System.out.println("executeDownsampleQuery interval: " + downsampleReq.getInterval());
         }
         ArrayList<Row> rows = new ArrayList<>();
         final String columnName = downsampleReq.getColumnName();
