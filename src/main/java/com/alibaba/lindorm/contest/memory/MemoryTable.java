@@ -363,7 +363,7 @@ public class MemoryTable {
             final List<Index> indexList = MapIndex.get(vin, timeLowerBound, timeUpperBound);
             for (Index index : indexList) {
                 final Integer integer = VinDictMap.get(vin);
-                final ArrayList<Row> byIndex = tsFileService.getByIndex(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
+                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
                 if (!byIndex.isEmpty()) {
                     rowArrayList.addAll(byIndex);
                 }
