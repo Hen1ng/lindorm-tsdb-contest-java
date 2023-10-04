@@ -43,16 +43,8 @@ public class QueryTest {
 
             for (int i = 0; i < 40; i++) {
                 String key = String.valueOf(i);
-                if (i == 3) {
-                    key = "LONGITUDE";
-                }
-                if (i == 4) {
-                    key = "YXMS";
-                }if (i == 5) {
-                    key = "LATITUDE";
-                }
                 columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_INTEGER);
-                columns.put(key, new ColumnValue.IntegerColumn(Math.abs(random.nextInt(100))));
+                columns.put(key, new ColumnValue.IntegerColumn(i));
             }
 //            for (int i = 0; i < 2; i++) {
 //                String key = bigIntKey[i];
@@ -120,7 +112,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "qLXdMQgW7CbMnMgPF";
+                String v = "a0zEHBebyP14ZN6r9";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
@@ -131,9 +123,8 @@ public class QueryTest {
                 requestedColumns.add("0double");
                 requestedColumns.add("7double");
                 requestedColumns.add("1");
-                requestedColumns.add("LONGITUDE");
-                requestedColumns.add("LATITUDE");
-                requestedColumns.add("YXMS");
+                requestedColumns.add("2");
+                requestedColumns.add("33");
                 requestedColumns.add("9double");
 
                 final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);

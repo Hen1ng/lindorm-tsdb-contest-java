@@ -267,7 +267,7 @@ public class MemoryTable {
             }
             for (Index index : v2) {
                 final Integer integer = VinDictMap.get(vin);
-                final ArrayList<Row> byIndex = tsFileService.getByIndex(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
+                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
                 if (!byIndex.isEmpty()) {
                     rowArrayList.addAll(byIndex);
                 }
