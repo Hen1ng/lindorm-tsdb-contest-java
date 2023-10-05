@@ -370,7 +370,6 @@ public class TSFileService {
             int longPosition = 0;
             int doublePosition = 0;
             int intPosition = 0;
-            int doubleOfferLine = -1;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
                 intBuffer = TOTAL_INT_BUFFER.get();
                 doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
@@ -451,8 +450,6 @@ public class TSFileService {
             //压缩int
             byte[] compress2 = IntCompress.compress2(ints);
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray);
-            // 存储bigInt
-            int offsetLine = -1;
             int total = 8 + 2 + compress1.length //timestamp
                     + compress2.length + 2 //int
                     + (2 + compressDouble.length) //double
@@ -491,8 +488,6 @@ public class TSFileService {
                         , minTimestamp
                         , total
                         , lineNum
-                        , offsetLine
-                        , doubleOfferLine
                         , aggBucket);
                 MapIndex.put(vin, index);
                 valueList.clear();

@@ -44,14 +44,15 @@ public class AggBucket {
             allocate.putDouble(dMin[i]);
             allocate.putDouble(dSum[i]);
         }
-        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-        return gzipCompress.compress(allocate.array());
+//        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+//        return gzipCompress.compress(allocate.array());
+        return allocate.array();
     }
     public static AggBucket uncompress(byte[] bytes){
         AggBucket aggBucket = new AggBucket();
-        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-        byte[] bytes1 = gzipCompress.deCompress(bytes);
-        ByteBuffer wrap = ByteBuffer.wrap(bytes1);
+//        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+//        byte[] bytes1 = gzipCompress.deCompress(bytes);
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
         for(int i=0;i<40;i++){
             aggBucket.iMax[i] = wrap.getInt();
             aggBucket.iMin[i] = wrap.getInt();

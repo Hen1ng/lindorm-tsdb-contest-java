@@ -1,5 +1,7 @@
 package com.alibaba.lindorm.contest.index;
 
+import com.alibaba.lindorm.contest.compress.GzipCompress;
+import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Pair;
 
@@ -89,7 +91,7 @@ public class MapIndex {
         FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
         // 先压缩vin
 
-        long IndexFileLength = 0;
+        long indexFileLength = 0;
         for (Vin vin : INDEX_MAP.keySet()) {
             List<Index> indices = INDEX_MAP.get(vin);
             List<byte[]> indexBytes = new ArrayList<>();
@@ -101,33 +103,42 @@ public class MapIndex {
             }
             // vin length + vin
             // index length + index's length + index bytes
-            ByteBuffer allocate = ByteBuffer.allocate(4 + vin.getVin().length +
-                    4 + 4 * indexBytes.size() + totalBytes);
+            ByteBuffer allocate = ByteBuffer.allocate(vin.getVin().length + 4 +
+                    4 * indexBytes.size() + totalBytes);
 
-            allocate.putInt(vin.getVin().length);
             allocate.put(vin.getVin());
             allocate.putInt(indices.size());
             for (byte[] indexByte : indexBytes) {
                 allocate.putInt(indexByte.length);
                 allocate.put(indexByte);
             }
-            try {
-                int length = 0;
-                allocate.flip();
-                while(allocate.hasRemaining()) {
-                    length += fileChannel.write(allocate);
-                }
-                IndexFileLength += length;
-                if(length !=  4 +vin.getVin().length +
-                        4 + 4 * indexBytes.size() + totalBytes){
-                    System.out.println("write index file error by fileChanel");
-                }
-            }catch (Exception e){
-                e.printStackTrace();
-            }
+            final byte[] array = allocate.array();
+            final GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+            final byte[] compress = gzipCompress.compress(array);
+            final ByteBuffer allocate1 = ByteBuffer.allocate(compress.length + 4);
+            indexFileLength += compress.length + 4;
+            allocate1.putInt(compress.length);
+            allocate1.put(compress);
+            allocate1.flip();
+            fileChannel.write(allocate1);
+//            try {
+//                int length = 0;
+//                allocate.flip();
+//                while(allocate.hasRemaining()) {
+//                    length += fileChannel.write(allocate);
+//                }
+//                IndexFileLength += length;
+//                if(length !=  vin.getVin().length +
+//                        4 + 4 * indexBytes.size() + totalBytes){
+//                    System.out.println("write index file error by fileChanel");
+//                }
+//            }catch (Exception e){
+//                e.printStackTrace();
+//            }
         }
-        System.out.println("INDEX FILE LEN : "+IndexFileLength);
+        System.out.println("INDEX FILE LEN : " + indexFileLength);
     }
+
     public static void saveMapToFile(File file) {
         try {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
@@ -148,37 +159,33 @@ public class MapIndex {
             System.out.println("saveMapToFile error, e" + e);
         }
     }
+
     public static void loadMapFromFileunCompress(File file)
             throws IOException {
         FileChannel fileChannel = new RandomAccessFile(file, "r").getChannel();
         ByteBuffer intBuffer = ByteBuffer.allocate(4);
-        while (fileChannel.read(intBuffer) > 0){
+        while (fileChannel.read(intBuffer) > 0) {
             intBuffer.flip();
-            int vinLength = intBuffer.getInt();
-            ByteBuffer vinBuffer = ByteBuffer.allocate(vinLength);
-            int vinBufferlength = fileChannel.read(vinBuffer);
-            vinBuffer.flip();
-            if(vinBufferlength != vinLength){
-                System.out.println("read vin error");
-            }
-            Vin vin = new Vin(vinBuffer.array());
-            intBuffer.flip();
-            fileChannel.read(intBuffer);
-            intBuffer.flip();
-            int indexLength = intBuffer.getInt();
+            int compressLength = intBuffer.getInt();
+            ByteBuffer dataBuffer = ByteBuffer.allocate(compressLength);
+            fileChannel.read(dataBuffer);
+            final byte[] array = dataBuffer.array();
+            final GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+            final byte[] bytes = gzipCompress.deCompress(array);
+            final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+            byte[] vinArray = new byte[17];
+            byteBuffer.get(vinArray);
+            Vin vin = new Vin(vinArray);
+            final int indexSize = byteBuffer.getInt();
             List<Index> indices = new ArrayList<>();
-            for(int i=0;i<indexLength;i++){
-                intBuffer.flip();
-                fileChannel.read(intBuffer);
-                intBuffer.flip();
-                int indexByteLen = intBuffer.getInt();
-                ByteBuffer indexBytes = ByteBuffer.allocate(indexByteLen);
-                fileChannel.read(indexBytes);
-                indexBytes.flip();
-                Index index = Index.uncompress(indexBytes.array());
+            for (int i = 0; i < indexSize; i++) {
+                final int anInt = byteBuffer.getInt();
+                byte[] bytes1 = new byte[anInt];
+                byteBuffer.get(bytes1);
+                Index index = Index.uncompress(bytes1);
                 indices.add(index);
             }
-            INDEX_MAP.put(vin,indices);
+            INDEX_MAP.put(vin, indices);
             intBuffer.flip();
         }
         System.out.println("load Index into memory size : " + INDEX_MAP.size());
@@ -203,9 +210,7 @@ public class MapIndex {
                                 , Long.parseLong(split2[2])
                                 , Integer.parseInt(split2[3])
                                 , Integer.parseInt(split2[4])
-                                , Integer.parseInt(split2[5])
-                                , Integer.parseInt(split2[6])
-                                ,AggBucket.fromString(split2[7])
+                                , AggBucket.fromString(split2[7])
 //                                , DoubleIndexMap.fromString(split2[8])
                         ));
                     }
