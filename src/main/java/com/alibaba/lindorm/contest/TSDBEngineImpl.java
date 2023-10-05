@@ -10,6 +10,7 @@ package com.alibaba.lindorm.contest;
 import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
 import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
 import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
+import com.alibaba.lindorm.contest.compress.StringCompress;
 import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
@@ -46,6 +47,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     private final MemoryTable memoryTable;
     private Unsafe unsafe = UnsafeUtil.getUnsafe();
     private File indexFile;
+    private File ZstdDictionary;
     private File vinDictFile;
     private File schemaFile;
     private File bigIntFile;
@@ -67,6 +69,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.schemaFile = new File(dataPath.getPath() + "/schema.txt");
         this.bigIntFile = new File(dataPath.getPath() + "/bigInt.txt");
         this.bigIntMapFile = new File(dataPath.getPath() + "/bigIntMap.txt");
+        this.ZstdDictionary = new File(dataPath.getPath()+"/zstdDictionary");
         try {
             RestartUtil.setFirstStart(indexFile);
             this.filePosition = new FilePosition(dataPath.getPath() + "/file_position.txt");
@@ -123,6 +126,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.intColumnHashMapCompress = IntColumnHashMapCompress.loadFromFile(dataPath.getPath());
             Constants.doubleColumnHashMapCompress = DoubleColumnHashMapCompress.loadFromFile(dataPath.getPath());
             Constants.stringColumnHashMapCompress = StringColumnHashMapCompress.loadFromFile(dataPath.getPath());
+            StringCompress.loadDirectoryFromFile(this.ZstdDictionary);
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
@@ -171,7 +175,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     return null;
                 });
                 memoryTable.writeToFileBeforeShutdown();
-
+                StringCompress.saveDirectory(this.ZstdDictionary);
                 final Future<Void> submit1 = executorService1.submit(() -> {
                     Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
                     Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
@@ -502,11 +506,13 @@ public class TSDBEngineImpl extends TSDBEngine {
         int columnIndex = SchemaUtil.COLUMNS_INDEX.get(columnName);
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
+        Map<Long, ArrayList<Row>> buffer = new HashMap<>();
         int i1 = VinDictMap.get(vin);
         int i = 0;
         while (timeLowerBound + i * interval < timeUpperBound) {
             Map<String, ColumnValue> columns = new HashMap<>(1);
             ArrayList<Row> timeRangeRow = new ArrayList<>();
+            ArrayList<Row> timeRangeRow2 = new ArrayList<>();
             long startTime = timeLowerBound + i * interval;
             long endTime = timeLowerBound + (i + 1) * interval;
             // [start,end)
@@ -520,10 +526,17 @@ public class TSDBEngineImpl extends TSDBEngine {
                     switch (aggregator) {
                         case AVG:
                             for (Index index : indices) {
-                                if(index.getAggBucket().getiMax(columnIndex)<integerValue)continue;
-                                if(index.getAggBucket().getiMin(columnIndex)>integerValue)continue;
-                                ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1);
+                                if (index.getAggBucket().getiMax(columnIndex) < integerValue) continue;
+                                if (index.getAggBucket().getiMin(columnIndex) > integerValue) continue;
+                                ArrayList<Row> rowArrayList = null;
+                                if (buffer.containsKey(index.getOffset())) {
+                                    rowArrayList = buffer.get(index.getOffset());
+                                } else {
+                                    rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                    buffer.put(index.getOffset(), rowArrayList);
+                                }
                                 for (Row row : rowArrayList) {
+                                    if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) continue;
                                     if (columnFilter.doCompare(row.getColumns().get(columnName))) {
                                         isExist = true;
                                         break;
@@ -542,8 +555,15 @@ public class TSDBEngineImpl extends TSDBEngine {
                             for (Index index : indices) {
                                 if (index.getAggBucket().getiMin(columnIndex) > integerValue) continue;
                                 if (index.getAggBucket().getiMax(columnIndex) < integerValue) continue;
-                                ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1);
+                                ArrayList<Row> rowArrayList;
+                                if (buffer.containsKey(index.getOffset())) {
+                                    rowArrayList = buffer.get(index.getOffset());
+                                } else {
+                                    rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                    buffer.put(index.getOffset(), rowArrayList);
+                                }
                                 for (Row row : rowArrayList) {
+                                    if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) continue;
                                     if (columnFilter.doCompare(row.getColumns().get(columnName))) {
                                         isExist = true;
                                         break;
@@ -560,8 +580,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                         default:
                             System.out.println("error aggregator type");
                     }
-                }
-                else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
+                } else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
                     int integerValue = columnFilter.getValue().getIntegerValue();
                     switch (aggregator) {
                         case AVG:
@@ -576,12 +595,17 @@ public class TSDBEngineImpl extends TSDBEngine {
                                     continue;
                                 } else {
                                     //[start,end) Row
-                                    timeRangeRow.addAll(fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1));
+                                    if (buffer.containsKey(index.getOffset())) {
+                                        timeRangeRow.addAll(buffer.get(index.getOffset()));
+                                    } else {
+                                        ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                        timeRangeRow.addAll(rowArrayList);
+                                        buffer.put(index.getOffset(), rowArrayList);
+                                    }
                                 }
                             }
                             for (Row row : timeRangeRow) {
                                 if (row.getTimestamp() < startTime || row.getTimestamp() > endTime - 1) {
-                                    System.out.println("get time out of range : " + row.getTimestamp() + " at : [" + startTime + "," + endTime + "]");
                                     continue;
                                 }
                                 if (columnFilter.doCompare(row.getColumns().get(columnName))) {
@@ -599,15 +623,21 @@ public class TSDBEngineImpl extends TSDBEngine {
                             // greater and max
                             int maxInt = Integer.MIN_VALUE;
                             for (Index index : indices) {
-                                if(index.getAggBucket().getiMax(columnIndex) <= integerValue)continue;
+                                if (index.getAggBucket().getiMax(columnIndex) <= integerValue) continue;
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1) {
                                     maxInt = Math.max(maxInt, index.getAggBucket().getiMax(columnIndex));
                                 } else {
-                                    timeRangeRow.addAll(fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1));
+                                    if (!buffer.containsKey(index.getOffset())) {
+                                        ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                        timeRangeRow.addAll(rowArrayList);
+                                        buffer.put(index.getOffset(), rowArrayList);
+                                    } else {
+                                        timeRangeRow.addAll(buffer.get(index.getOffset()));
+                                    }
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                if (row.getTimestamp() < startTime || row.getTimestamp() > endTime - 1) continue;
+                                if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) continue;
                                 if (columnFilter.doCompare(row.getColumns().get(columnName))) {
                                     maxInt = Math.max(maxInt, row.getColumns().get(columnName).getIntegerValue());
                                 }
@@ -622,8 +652,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                             System.out.println("error aggregator type");
                     }
                 }
-            }
-            else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+            } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
                 if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)) {
                     // first remove useless index
                     boolean isExist = false;
@@ -633,8 +662,15 @@ public class TSDBEngineImpl extends TSDBEngine {
                             for (Index index : indices) {
                                 if (index.getAggBucket().getdMin(columnIndex) > doubleFloatValue) continue;
                                 if (index.getAggBucket().getdMax(columnIndex) < doubleFloatValue) continue;
-                                ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1);
+                                ArrayList<Row> rowArrayList;
+                                if (buffer.containsKey(index.getOffset())) {
+                                    rowArrayList = buffer.get(index.getOffset());
+                                } else {
+                                    rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                    buffer.put(index.getOffset(), rowArrayList);
+                                }
                                 for (Row row : rowArrayList) {
+                                    if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) continue;
                                     if (columnFilter.doCompare(row.getColumns().get(columnName))) {
                                         isExist = true;
                                         break;
@@ -653,8 +689,15 @@ public class TSDBEngineImpl extends TSDBEngine {
                             for (Index index : indices) {
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1
                                         && !(index.getAggBucket().getiMax(columnIndex) < doubleFloatValue || index.getAggBucket().getiMin(columnIndex) > doubleFloatValue)) {
-                                    ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1);
+                                    ArrayList<Row> rowArrayList;
+                                    if (!buffer.containsKey(index.getOffset())) {
+                                        rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                        buffer.put(index.getOffset(), rowArrayList);
+                                    } else {
+                                        rowArrayList = buffer.get(index.getOffset());
+                                    }
                                     for (Row row : rowArrayList) {
+                                        if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) continue;
                                         if (columnFilter.doCompare(row.getColumns().get(columnName))) {
                                             isExist = true;
                                             break;
@@ -672,8 +715,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                         default:
                             System.out.println("error aggregator type");
                     }
-                }
-                else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
+                } else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
                     double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
                     switch (aggregator) {
                         case AVG:
@@ -688,12 +730,17 @@ public class TSDBEngineImpl extends TSDBEngine {
                                     continue;
                                 } else {
                                     //[start,end) Row
-                                    timeRangeRow.addAll(fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1));
+                                    if (!buffer.containsKey(index.getOffset())) {
+                                        ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                        timeRangeRow.addAll(rowArrayList);
+                                        buffer.put(index.getOffset(), rowArrayList);
+                                    } else {
+                                        timeRangeRow.addAll(buffer.get(index.getOffset()));
+                                    }
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                if (row.getTimestamp() < startTime || row.getTimestamp() > endTime - 1) {
-                                    System.out.println("get time out of range : " + row.getTimestamp() + " at : [" + startTime + "," + endTime + "]");
+                                if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) {
                                     continue;
                                 }
                                 if (columnFilter.doCompare(row.getColumns().get(columnName))) {
@@ -711,16 +758,21 @@ public class TSDBEngineImpl extends TSDBEngine {
                             // greater and max
                             double maxDouble = -Double.MAX_VALUE;
                             for (Index index : indices) {
-                                if(index.getAggBucket().getdMax(columnIndex) <= doubleFloatValue) continue;
+                                if (index.getAggBucket().getdMax(columnIndex) <= doubleFloatValue) continue;
                                 if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1) {
                                     maxDouble = Math.max(maxDouble, index.getAggBucket().getdMax(columnIndex));
                                 } else {
-                                    timeRangeRow.addAll(fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1));
+                                    if (!buffer.containsKey(index.getOffset())) {
+                                        ArrayList<Row> rowArrayList = fileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, i1);
+                                        timeRangeRow.addAll(rowArrayList);
+                                        buffer.put(index.getOffset(), rowArrayList);
+                                    } else {
+                                        timeRangeRow.addAll(buffer.get(index.getOffset()));
+                                    }
                                 }
                             }
                             for (Row row : timeRangeRow) {
-                                if (row.getTimestamp() < startTime || row.getTimestamp() > endTime - 1) {
-                                    System.out.println("get time out of range : " + row.getTimestamp() + " at : [" + startTime + "," + endTime + "]");
+                                if (row.getTimestamp() < startTime || row.getTimestamp() >= endTime) {
                                     continue;
                                 }
                                 if (columnFilter.doCompare(row.getColumns().get(columnName))) {
@@ -867,7 +919,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                             }
                         }
                         columns.put(columnName, new ColumnValue.DoubleFloatColumn(max));
-                         rows.add(new Row(vin, timeLowerBound + i * interval, columns));
+                        rows.add(new Row(vin, timeLowerBound + i * interval, columns));
                     }
                 }
             } else {

@@ -3,16 +3,13 @@ package com.alibaba.lindorm.contest.compress;
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.util.ZigZagUtil;
-import com.alibaba.lindorm.contest.util.ArrayUtils;
-import com.alibaba.lindorm.contest.util.BytesUtil;
+import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
 import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 public class IntCompress {
     static Composition codec = new Composition(new NewPFDS9(), new VariableByte());
@@ -43,6 +40,12 @@ public class IntCompress {
     static int[] testNum5 = new int[]{68, 667, 437, 1480, 968, 964, 961, 1933, 405, 35, 1902, 122, 1138, 1324, 488, 1383, 1118, 1029, 1817, 820, 1742, 352, 2057, 2106, 1163, 1795, 855, 2076, 1221, 2200, 1242, 1672, 165, 1132, 161, 3, 254, 1, 255, 1, 2, 1, 254, 1, 1, 2, 2, 2, 2, 3, 254, 1, 254, 3, 254, 255, 254, 3, 3, 3, 2, 255, 254, 255, 3, 3, 3, 255, 254, 2, 47820, 59728, 44641, 13477, 49484, 50164, 14740, 47490, 25463, 51510, 51859, 58147, 43763, 13998, 14518, 15631, 32144, 20065, 5390, 33423, 43165, 29214, 34052, 37514, 21069, 48404, 42005, 42066, 8140, 41894, 51609, 52958, 6127, 45333, 21674, 6962, 4748, 10140, 13698, 1916, 2748, 500, 14797, 14862, 1097, 13815, 8027, 5408, 14012, 8840, 7230, 1008, 8914, 8131, 797, 7494, 3266, 11314, 11790, 9007, 14381, 1775, 10709, 1421, 7193, 2885, 840, 2554, 387, 5452, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 2, 1, 5, 4, 5, 3, 3, 5, 1, 2, 7, 0, 0, 7, 2, 1, 4, 7, 6, 6, 2, 5, 6, 7, 6, 6, 1, 4, 7, 0, 7, 2, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51, 111, 169, 251, 225, 190, 99, 156, 201, 66, 220, 170, 173, 137, 144, 13, 29, 160, 223, 6, 245, 247, 162, 25, 97, 147, 165, 173, 101, 222, 53, 80, 241, 148, 234, 2, 1, 255, 1, 254, 254, 255, 1, 254, 255, 1, 254, 2, 2, 255, 1, 255, 1, 2, 1, 254, 2, 254, 254, 254, 255, 1, 255, 254, 255, 254, 1, 255, 255, 254, 255, 254, 2, 255, 254, 1, 1, 1, 2, 2, 255, 2, 2, 255, 255, 254, 255, 254, 254, 1, 2, 2, 255, 254, 254, 1, 255, 1, 255, 1, 254, 1, 255, 1, 254, 184, 112, 142, 187, 45, 48, 38, 120, 191, 167, 9, 204, 131, 201, 164, 118, 128, 100, 220, 115, 95, 248, 115, 140, 108, 37, 202, 144, 210, 92, 5, 146, 169, 19, 168, 58441750, 37115420, 57832796, 7222851, 32828816, 74888948, 41228240, 67973059, 48798056, 80656449, 48072986, 59304556, 41538424, 21112461, 48353461, 74138134, 57663706, 77280238, 40750283, 41086067, 33717230, 80214490, 55921711, 81654949, 15988327, 74911263, 43654481, 7505900, 1977663, 16097542, 4057237, 39422326, 70413326, 50624658, 56025028, 9766, 10666, 11520, 3154, 65535, 19524, 11705, 17737, 10854, 17305, 8557, 7403, 2255, 3680, 13623, 9026, 16341, 6666, 2760, 5002, 6480, 403, 2372, 17283, 15275, 8726, 15499, 14605, 18053, 1897, 8990, 9376, 4532, 16997, 17568, 109952810, 163174239, 131241822, 73340376, 34585697, 70570295, 62720590, 28018634, 114577483, 1123689, 119830543, 49256028, 61850545, 675619, 151694647, 102848042, 58293734, 167091808, 89461480, 158181732, 80155390, 39987468, 28104392, 36011410, 3817471, 13213687, 102441233, 108108186, 67943552, 5614790, 28628173, 90973163, 130300361, 63594980, 152302799, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 134, 232, 115, 93, 31, 122, 51, 211, 24, 87, 165, 187, 182, 154, 73, 103, 11, 82, 234, 228, 29, 150, 46, 204, 34, 222, 11, 10, 216, 21, 146, 251, 130, 143, 54, 2272, 55913, 18481, 24661, 44590, 56063, 44804, 22526, 7512, 53812, 41012, 48627, 42036, 42526, 43954, 33215, 14547, 58648, 39641, 14961, 39390, 33180, 22597, 55255, 21804, 36848, 32369, 48745, 58128, 13260, 46275, 55593, 42204, 48916, 17413, 59, 204, 82, 144, 56, 74, 37, 200, 9, 176, 159, 112, 62, 255, 148, 64, 205, 20, 254, 45, 2, 83, 102, 234, 183, 187, 35, 201, 45, 135, 25, 148, 252, 244, 229, 558, 383, 475, 994, 9, 146, 937, 38, 748, 91, 577, 992, 975, 3, 486, 454, 689, 397, 368, 724, 696, 105, 757, 396, 813, 435, 498, 990, 943, 520, 340, 676, 849, 975, 305, 206, 233, 99, 254, 22, 150, 90, 99, 54, 93, 11, 33, 84, 124, 55, 243, 120, 42, 207, 185, 7, 15, 85, 83, 119, 42, 131, 41, 176, 140, 209, 177, 116, 150, 180, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 49, 209, 110, 157, 180, 149, 254, 231, 132, 94, 68, 3, 174, 232, 83, 78, 192, 139, 235, 153, 250, 223, 67, 33, 211, 236, 58, 9, 237, 149, 242, 152, 149, 120, 51, 2301, 1852, 1164, 1053, 878, 1931, 2327, 2340, 353, 1626, 2289, 929, 1406, 1394, 707, 1277, 581, 1551, 849, 223, 1089, 447, 52, 2364, 2210, 2324, 1475, 1138, 1462, 1211, 80, 1927, 1444, 2091, 1911, 160, 248, 93, 243, 127, 77, 155, 132, 171, 53, 7, 9, 1, 119, 173, 224, 36, 54, 5, 211, 217, 30, 161, 254, 245, 235, 203, 13, 74, 252, 171, 111, 158, 192, 145, 1981, 10105, 2296, 3300, 17876, 6511, 248, 8402, 19826, 8668, 18838, 17448, 19236, 16227, 1037, 8449, 14723, 13789, 2648, 9631, 17722, 12928, 2407, 7367, 3074, 15832, 9991, 13704, 6796, 819, 12964, 14820, 16208, 2000, 1570, 12632, 9874, 3425, 16225, 16386, 17831, 4642, 19238, 7123, 2069, 8699, 1807, 2795, 15413, 566, 15935, 16364, 12862, 16564, 16447, 14840, 4349, 10722, 3382, 281, 4036, 4640, 19617, 8072, 13987, 14357, 106, 4819, 110, 13353, 55740, 14750, 3506, 57712, 53008, 17174, 19776, 10634, 30989, 17438, 38759, 56727, 47175, 20614, 6511, 55509, 37086, 32278, 12161, 43405, 55846, 28762, 19306, 51988, 57617, 11159, 41927, 14754, 17538, 16227, 35175, 36513, 42290, 46431, 55994, 53493, 47536, 4941, 3031, 45918, 44243, 21328, 13168, 1890, 26582, 13887, 48725, 1881, 58937, 30653, 39103, 53193, 13556, 34234, 29015, 59937, 11339, 9121, 8593, 7959, 4745, 51950, 2465, 15366, 16699, 25867, 56450, 5779, 37806, 55234, 12, 49, 34, 47, 63, 4, 13, 58, 44, 47, 60, 55, 54, 12, 29, 47, 1, 61, 26, 32, 12, 4, 23, 20, 12, 27, 0, 23, 44, 44, 21, 47, 46, 23, 14, 144, 95, 120, 19, 37, 227, 33, 180, 195, 210, 167, 255, 63, 119, 82, 104, 71, 164, 212, 107, 191, 184, 180, 138, 48, 115, 195, 104, 55, 68, 156, 249, 177, 131, 251, 93, 56, 51, 156, 101, 7, 77, 27, 163, 42, 107, 134, 132, 178, 111, 78, 11, 102, 187, 108, 175, 133, 48, 32, 111, 185, 112, 14, 237, 92, 58, 58, 162, 55, 206, 227403, 359983, 275461, 207285, 384261, 795727, 733075, 192029, 386461, 634208, 94406, 492310, 502013, 575265, 926245, 213963, 314021, 278363, 835679, 721184, 80313, 566885, 421804, 385221, 871021, 466650, 194770, 795095, 477060, 815946, 224197, 821601, 530657, 951428, 851441, 106, 198, 194, 78, 135, 236, 237, 117, 16, 249, 254, 33, 214, 3, 71, 14, 200, 211, 96, 186, 181, 151, 60, 38, 23, 100, 31, 250, 240, 145, 41, 89, 195, 92, 229, 114, 29, 239, 88, 246, 129, 104, 227, 57, 61, 100, 246, 236, 167, 97, 212, 111, 232, 9, 119, 72, 34, 80, 61, 246, 85, 64, 230, 101, 57, 147, 27, 42, 127, 227, 2, 1, 255, 1, 1, 255, 2, 1, 254, 254, 2, 2, 1, 2, 1, 255, 1, 1, 254, 255, 255, 255, 255, 1, 1, 1, 254, 1, 255, 255, 255, 2, 254, 2, 1, 140, 49, 171, 48, 197, 184, 176, 219, 66, 110, 240, 86, 22, 175, 21, 19, 47, 64, 191, 197, 124, 168, 89, 249, 236, 134, 173, 245, 98, 14, 217, 137, 18, 140, 197, 132, 130, 180, 148, 162, 78, 66, 50, 116, 61, 15, 75, 235, 87, 24, 133, 206, 70, 134, 213, 58, 141, 13, 180, 231, 78, 247, 227, 254, 57, 77, 5, 24, 17, 181, 116, 98, 74, 159, 20, 230, 204, 206, 137, 1, 83, 210, 20, 224, 69, 75, 15, 158, 82, 139, 210, 5, 14, 101, 97, 184, 115, 228, 203, 187, 50, 241, 11, 239, 3, 85, 24, 28, 29, 38, 89, 79, 62, 2, 50, 65, 9, 16, 24, 42, 32, 28, 83, 9, 21, 64, 21, 44, 77, 5, 74, 33, 57, 53, 62, 72, 39, 0, 29, 62, 254, 3, 254, 0, 0, 1, 254, 3, 1, 0, 3, 2, 255, 255, 255, 2, 255, 0, 1, 1, 2, 255, 1, 255, 254, 0, 1, 255, 2, 255, 2, 2, 255, 3, 255, 177, 120, 20, 199, 97, 154, 136, 41, 118, 97, 133, 102, 10, 57, 58, 198, 216, 73, 27, 23, 22, 165, 71, 41, 155, 195, 7, 211, 22, 206, 193, 121, 172, 135, 113, 236, 40, 207, 181, 84, 187, 49, 116, 210, 200, 170, 70, 141, 38, 57, 130, 176, 73, 144, 102, 85, 61, 78, 54, 81, 238, 82, 23, 71, 67, 232, 79, 231, 101, 49, 68, 188, 206, 112, 69, 207, 225, 106, 219, 158, 17, 9, 127, 136, 131, 89, 228, 13, 151, 242, 20, 231, 174, 207, 189, 16, 238, 78, 44, 180, 60, 193, 63, 1, 213, 211, 47, 231, 120, 170, 142, 197, 224, 162, 157, 235, 47, 60, 131, 0, 64, 93, 229, 235, 80, 77, 50, 121, 70, 96, 153, 27, 37, 2, 51, 70, 36, 59, 240, 69, 45, 237, 114, 246, 71, 15, 70, 27, 243, 90, 220, 220, 77, 85, 20, 38, 36, 30, 100, 83, 84, 160, 227, 239, 36, 197, 186, 108, 18, 113, 126, 245, 22, 185, 156};
 
     static int[] testNum4 = new int[1575];
+
+    private static final byte UNCOMPRESS = 0;
+
+    private static final byte SIMPLE8 = 1;
+    private static final byte MAP_COMPRESS = 2;
+
 
     static {
         Random random = new Random();
@@ -107,6 +110,234 @@ public class IntCompress {
 
         return result;
     }
+    public static void setCompressType(byte type, int index, byte[] compressTypes) {
+        int offset = index * 2;
+        int byteIndex = offset / 8;
+        int byteOffset = offset % 8;
+        compressTypes[byteIndex] |= (byte) (type << byteOffset);
+    }
+
+    public static byte getCompressType(int index, byte[] compressType) {
+        int offset = index * 2;
+        int byteIndex = offset / 8;
+        int byteOffset = offset % 8;
+        byte value = (byte) (compressType[byteIndex] >> byteOffset);
+        return (byte) (value & 0b11);
+    }
+
+    public static byte setTwoBitValueInByte(int num,int index,byte values){
+        return (byte) (values| num<<(6-index*2));
+        //index = 0, num << 6 0~1
+        //index = 1, num << 4 2~3
+        //index = 2, num << 2 4~5
+        //index = 3, num << 0 6~7
+    }
+    public static int getTwoBitValueFromByte(int index, byte values) {
+        return (values >> (6 - index * 2)) & 0b11;  // mask the other bits and only get the 2-bit value
+    }
+    public static byte compressTwoIntInByte(int num1, int num2) {
+        if (num1 < 0 || num1 >= 16 || num2 < 0 || num2 >= 16) {
+            throw new IllegalArgumentException("Both numbers must be between 0 and 15 (inclusive).");
+        }
+        return (byte) ((num1 << 4) | num2);
+    }
+
+    public static int[] decompressByteToInts(byte compressed) {
+        int num1 = (compressed & 0xFF) >> 4; // 注意，先通过 & 0xFF 转为无符号整数
+        int num2 = compressed & 0x0F;
+        return new int[]{num1, num2};
+    }
+
+    public static byte[] compressSingleColumn(long ints[], int start, int end, int index, byte[] compressTypes) {
+        Map<Integer, Integer> map = new HashMap<>();
+        Map<Integer, Integer> invMap = new HashMap<>();
+        int numOfInt = 0;
+        long[] values = new long[end - start];
+        System.arraycopy(ints, start, values, 0, end - start);
+        for (int i = 0; i < values.length; i++) {
+            if (map.containsKey((int) values[i])) {
+                continue;
+            } else {
+                map.put((int) values[i], numOfInt);
+                invMap.put(numOfInt, (int) values[i]);
+                numOfInt++;
+            }
+            if(numOfInt>4)break;
+        }
+        byte[] compress = new byte[0];
+        if (numOfInt <= 4) {
+            // 2 4 16
+            // 一个int 4B : bytes长度
+            // 16个int : 字典 -> 优化成可变长压缩length + dict
+            // 160*4bit = 80B 160*0.25
+            // total 80+16*4+4 = 148B
+            // 148/(160*4)=23%
+            // 64/640=0.1
+            setCompressType(MAP_COMPRESS, index, compressTypes);
+            byte dictLength = (byte) (numOfInt > 4 ? 16 : 4);
+            if(dictLength == 4) {
+                int length = 4 //totalByteLength
+                        + 1 //dict length
+                        + 4 * 4 // int枚举
+                        + (end - start + 3) / 4;
+                ByteBuffer byteBuffer = ByteBuffer.allocate(length);
+                // total length 4
+                byteBuffer.putInt(length - 4);
+                // dict length 1
+                byteBuffer.put(dictLength);
+                // dict 4*4
+                for (int i = 0; i < dictLength; i++) {
+                    if (i < numOfInt) {
+                        byteBuffer.putInt(invMap.get(i));
+                    } else {
+                        byteBuffer.putInt(0);
+                    }
+                }
+                // array values (length + 3)/4 as ceil(length/4)
+                byte tmp = 0;
+                for (int i = 0; i < values.length; i++) {
+                    int indexInByte = i % 4;
+                    tmp = setTwoBitValueInByte(map.get((int)values[i]),indexInByte,tmp);
+                    if(indexInByte == 3 || i == values.length-1){
+                        byteBuffer.put(tmp);
+                        tmp = 0;
+                    }
+                }
+                return byteBuffer.array();
+            }
+            else {
+                int length = 4 + 1 + 4 * 16 + (end - start + 1) / 2;
+                ByteBuffer byteBuffer = ByteBuffer.allocate(length);
+                byteBuffer.putInt(length - 4);
+                byteBuffer.put(dictLength);
+                for (int i = 0; i < dictLength; i++) {
+                    if (i < numOfInt) {
+                        byteBuffer.putInt(invMap.get(i));
+                    } else {
+                        byteBuffer.putInt(0);
+                    }
+                }
+                for (int i = 0; i < values.length; i += 2) {
+                    byte b;
+                    if (i + 1 >= values.length) {
+                        b = compressTwoIntInByte(map.get((int) values[i]), 0);
+                    } else {
+                        b = compressTwoIntInByte(map.get((int) values[i]), map.get((int) values[i + 1]));
+                    }
+                    byteBuffer.put(b);
+                }
+                return byteBuffer.array();
+            }
+        } else {
+            setCompressType(SIMPLE8, index, compressTypes);
+            compress = compress2(values);
+        }
+        ByteBuffer byteBuffer = ByteBuffer.allocate(compress.length + 4);
+        byteBuffer.putInt(compress.length);
+        byteBuffer.put(compress);
+        return byteBuffer.array();
+    }
+
+    public static long[] unCompressSingleColumn(byte[] bytes, int start, int end, byte compressType, int lineNum) {
+        byte[] values = new byte[end - start];
+        System.arraycopy(bytes, start, values, 0, end - start);
+        long[] unCompress = new long[lineNum];
+        long[] res = new long[0];
+        int index = 0;
+        if (compressType == SIMPLE8) {
+            res = decompress2(values, lineNum);
+            return res;
+        } else if (compressType == MAP_COMPRESS) {
+            ByteBuffer wrap = ByteBuffer.wrap(values);
+            byte dictLength = wrap.get();
+            if(dictLength == 4){
+                int[] ints = new int[4];
+                for (int i = 0; i < 4; i++) {
+                    ints[i] = wrap.getInt();
+                }
+                int lineIndex = 0;
+                for (int i = wrap.position(); i < values.length; i++) {
+                    for(int j=0;j<4;j++){
+                        int longValue = ints[getTwoBitValueFromByte(j, values[i])];
+                        if(lineIndex < lineNum){
+                            unCompress[lineIndex] = longValue;
+                            lineIndex++;
+                        }else{
+                            break;
+                        }
+                    }
+                }
+                return unCompress;
+            }else{
+                int[] ints = new int[16];
+                for (int i = 0; i < 16; i++) {
+                    ints[i] = wrap.getInt();
+                }
+                for (int i = wrap.position(); i < values.length; i++) {
+                    int[] ints1 = decompressByteToInts(values[i]);
+                    unCompress[index++] = ints[ints1[0]];
+                    if (index + 1 <= lineNum) {
+                        unCompress[index++] = ints[ints1[1]];
+                    }
+                }
+                return unCompress;
+            }
+        }
+        return res;
+    }
+
+    public static byte[] compress3(long[] ints, int lineNum) {
+        int index = 0;
+        ArrayList<byte[]> arrayList = new ArrayList<>();
+        int totalLength = 0;
+        byte[] compressTypes = new byte[10]; // 40列的压缩列星，每列2bit*40 =  10B
+        while (index * lineNum < ints.length) {
+            int start = index * lineNum;
+            int end = start + lineNum;
+            byte[] bytes = compressSingleColumn(ints, start, end, index, compressTypes);
+            arrayList.add(bytes);
+            totalLength += bytes.length;
+            index++;
+        }
+        ByteBuffer allocate = ByteBuffer.allocate(1 + 10 + totalLength);
+        allocate.put((byte) (ints.length / lineNum));
+        allocate.put(compressTypes);
+        for (byte[] bytes : arrayList) {
+            allocate.put(bytes);
+        }
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        return Zstd.compress(allocate.array(),12);
+    }
+
+    public static long[] decompress3(byte[] bytes, int valueSize) {
+        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+        bytes = Zstd.decompress(bytes,valueSize*8);
+        int columnNum = bytes[0];
+        byte[] compressTypes = new byte[10];
+        System.arraycopy(bytes, 1, compressTypes, 0, 10);
+        int start = 11;
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        wrap.position(start);
+        ArrayList<long[]> arrayList = new ArrayList<>();
+        int totalLength = 0;
+        for (int i = 0; i < columnNum; i++) {
+            byte compressType = getCompressType(i, compressTypes);
+            int length = wrap.getInt();
+            start += 4;
+            long[] longs = unCompressSingleColumn(bytes, start, start + length, compressType, valueSize/Constants.CACHE_VINS_LINE_NUMS);
+            arrayList.add(longs);
+            totalLength += longs.length;
+            wrap.position(start + length);
+            start += length;
+        }
+        long[] result = new long[totalLength];
+        int copyIndex = 0;
+        for (long[] longs : arrayList) {
+            System.arraycopy(longs, 0, result, copyIndex, longs.length);
+            copyIndex += longs.length;
+        }
+        return result;
+    }
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
@@ -128,9 +359,9 @@ public class IntCompress {
 //        }
         long[] data = testNum3.clone();
         int[] data1 = testNum5.clone();
-        final byte[] bytes = compress2(data);
+        final byte[] bytes = compress3(data,45);
 //        final int[] output = new int[data.length];
-        final long[] longs = decompress2(bytes, testNum3.length);
+        final long[] longs = decompress3(bytes,45);
 //        final byte[] bytes1 = compressZstd(data1);
         boolean a = Arrays.equals(testNum3, longs);
 //
@@ -151,7 +382,7 @@ public class IntCompress {
 //        final byte[] compress3 = gzipCompress.compress(compress2);
 //        final boolean equals = Arrays.equals(testNum3, longs);
         System.out.println(a);
-//        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
+        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
     }
 
     public static byte[] compress2(long[] ints) {
@@ -162,12 +393,24 @@ public class IntCompress {
             }
             long[] output = new long[ints.length];
             final int compress = Simple8.compress(gapArray, output);
-            ByteBuffer resultBuffer = ByteBuffer.allocate(compress * 8);
+            ByteBuffer resultBuffer = ByteBuffer.allocate(compress*8);
             long[] outputArray = new long[compress];
-            System.arraycopy(output, 0, outputArray, 0, compress);
+            System.arraycopy(output,0,outputArray,0,compress);
             LongBuffer longBuffer = resultBuffer.asLongBuffer();
             longBuffer.put(outputArray);
+//            byte[] result = new byte[compress * 8];
+//            int position = 0;
+//            for (int i = 0; i < compress; i++) {
+//                final long l = output[i];
+//                final byte[] bytes = BytesUtil.long2Bytes(l);
+//                ArrayUtils.copy(bytes, 0, result, position, 8);
+//                position += 8;
+//            }
+//            return resultBuffer.array();
             return Zstd.compress(resultBuffer.array(), 12);
+//            GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+//            return gzipCompress.compress(result);
+//            return result;
         } catch (Exception e) {
             System.out.println("compress2 error, e" + e);
         }
@@ -175,7 +418,10 @@ public class IntCompress {
     }
 
     public static long[] decompress2(byte[] bytes1, int valueSize) {
-        byte[] bytes = Zstd.decompress(bytes1, valueSize * 8);
+//        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
+//        byte[] bytes = gzipCompress.deCompress(bytes1);
+
+        byte[] bytes = Zstd.decompress(bytes1,valueSize*8);
         long[] output = new long[bytes.length / 8];
         int position = 0;
         ByteBuffer wrap = ByteBuffer.wrap(bytes);

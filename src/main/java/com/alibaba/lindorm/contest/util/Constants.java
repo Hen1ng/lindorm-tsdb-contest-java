@@ -21,7 +21,7 @@ public class Constants {
 
     public static final int TOTAL_VIN_NUMS = 5000;
 
-    public static final int TOTAL_BUFFER_NUMS = 1200;
+    public static final int TOTAL_BUFFER_NUMS = 0;
 
     public static final boolean OPEN_DOWNSAMPLE_BYPUCKET_OPT = true;
 
