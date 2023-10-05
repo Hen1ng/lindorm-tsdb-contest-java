@@ -161,7 +161,7 @@ public class TSFileService {
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
                                 int stringPosition = (stringNum * valueSize + i) * 2;
-                                int anInt = stringLengthBuffer.getInt(stringPosition);
+                                int anInt = stringLengthBuffer.getShort(stringPosition);
                                 if (anInt != 0) {
                                     int position = 0;
                                     try {
@@ -194,179 +194,6 @@ public class TSFileService {
         return rowArrayList;
     }
 
-    @Deprecated
-    public ArrayList<Row> getByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
-        ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
-        rowArrayList.clear();
-        try {
-            final long offset = index.getOffset();
-            final int valueSize = index.getValueSize();
-            final int length = index.getLength();
-            int m = j % Constants.TS_FILE_NUMS;
-            final TSFile tsFile = getTsFileByIndex(m);
-            ByteBuffer timestampMetaBuffer = ByteBuffer.allocateDirect(10);
-            ByteBuffer stringLengthBuffer = null;
-            tsFile.getFromOffsetByFileChannel(timestampMetaBuffer, offset);
-            timestampMetaBuffer.flip();
-            long longPrevious = timestampMetaBuffer.getLong();
-            int compressLength = timestampMetaBuffer.getInt();
-            ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
-            tsFile.getFromOffsetByFileChannel(compressLong, offset + 10);
-            final long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
-            long[] ints = null;
-            final ByteBuffer allocate = ByteBuffer.allocate(4);
-            tsFile.getFromOffsetByFileChannel(allocate, offset + 10 + compressLength);
-            allocate.flip();
-            final int intCompressLength = allocate.getInt();
-            byte[] stringBytes = null;
-            final ByteBuffer byteBuffer1 = ByteBuffer.allocateDirect(4);
-            tsFile.getFromOffsetByFileChannel(byteBuffer1, offset + 10 + compressLength + intCompressLength + 4);
-            byteBuffer1.flip();
-            final int doubleCompressInt = byteBuffer1.getInt();
-            double[] doubles = null;
-            short everyStringLength = -1;
-            short totalStringLength = 0;
-            int i = 0;//多少行
-            for (long aLong : decompress) {
-                if (aLong >= timeLowerBound && aLong < timeUpperBound) {
-                    Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
-                    for (String requestedColumn : requestedColumns) {
-                        final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
-                        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                        if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
-                            try {
-                                if (Constants.ZEROSET.contains(requestedColumn)) {
-                                    columns.put(requestedColumn, new ColumnValue.IntegerColumn(0));
-                                } else {
-                                    if (Constants.intColumnHashMapCompress != null && Constants.intColumnHashMapCompress.exist(requestedColumn)) {
-                                        try {
-                                            Integer element = Constants.intColumnHashMapCompress.getElement2(requestedColumn, (index.getOffsetLine() + i));
-                                            columns.put(requestedColumn, new ColumnValue.IntegerColumn(element));
-                                        } catch (Exception e) {
-                                            System.out.println("intColumnHashMapCompress COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                                        }
-                                    } else {
-                                        if (ints == null) {
-                                            final ByteBuffer allocate1 = ByteBuffer.allocate(intCompressLength);
-                                            tsFile.getFromOffsetByFileChannel(allocate1, offset + 12 + compressLength + 4);
-                                            allocate1.flip();
-                                            ints = IntCompress.decompress2(allocate1.array(), index.getValueSize() * Constants.INT_NUMS);
-                                        }
-                                        final ByteBuffer intBuffer = INT_BUFFER.get();
-                                        intBuffer.clear();
-                                        int off = columnIndex * valueSize + i;
-                                        columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
-                                    }
-                                }
-                            } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
-                            }
-                        } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
-                            try {
-//                                final DoubleFile doubleFile = this.doubleFileService.get(requestedColumn);
-//                                if (doubleFile != null) {
-//                                    ByteBuffer allocate1 = ByteBuffer.allocate(4);
-//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine());
-//                                    allocate1.flip();
-//                                    final int anInt = allocate1.getInt();
-//                                    allocate1 = ByteBuffer.allocate(anInt);
-//                                    doubleFile.getFromOffsetByFileChannel(allocate1, index.getDoubleLine() + 4);
-//                                    final double[] decode = DoubleCompress.decode(allocate1.flip(), valueSize);
-//                                    columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(decode[i]));
-//                                } else {
-                                if (doubles == null) {
-                                    final ByteBuffer byteBuffer = ByteBuffer.allocate(doubleCompressInt);
-                                    tsFile.getFromOffsetByFileChannel(byteBuffer, offset + 12 + compressLength
-                                            + intCompressLength + 4
-                                            + 4);
-                                    final byte[] array = byteBuffer.array();
-                                    final byte[] bytes = Zstd.decompress(array, valueSize * Constants.FLOAT_NUMS * 8);
-                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                    doubles = new double[bytes.length / 8];
-                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-                                        doubles[i1] = wrap.getDouble();
-                                    }
-                                }
-                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
-                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
-//                                }
-                            } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
-                            }
-                        } else {
-                            if (stringLengthBuffer == null) {
-                                stringLengthBuffer = ByteBuffer.allocateDirect(2);
-                                tsFile.getFromOffsetByFileChannel(stringLengthBuffer, offset
-                                        + 12 + compressLength
-                                        + intCompressLength + 4
-                                        + doubleCompressInt + 4);
-                                stringLengthBuffer.flip();
-                                everyStringLength = stringLengthBuffer.getShort();
-                                final ByteBuffer byteBuffer = ByteBuffer.allocate(everyStringLength);
-                                tsFile.getFromOffsetByFileChannel(byteBuffer, offset
-                                        + 12 + compressLength
-                                        + intCompressLength + 4
-                                        + doubleCompressInt + 4
-                                        + 2);
-                                final byte[] array = byteBuffer.array();
-                                final short[] decompress1 = IntCompress.decompressShort(array);
-                                stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
-                                for (short i1 : decompress1) {
-                                    totalStringLength += i1;
-                                    stringLengthBuffer.putShort(i1);
-                                }
-                            }
-                            if (stringBytes == null) {
-                                int stringLength = length -
-                                        (12 + compressLength  //long
-                                                + intCompressLength + 4 // int
-                                                + doubleCompressInt + 4 // double
-                                                + everyStringLength + 2);
-                                final ByteBuffer stringBuffer = ByteBuffer.allocate(stringLength);
-                                tsFile.getFromOffsetByFileChannel(stringBuffer, offset
-                                        + 12 + compressLength
-                                        + intCompressLength + 4
-                                        + doubleCompressInt + 4
-                                        + everyStringLength + 2);
-                                stringBuffer.flip();
-                                GzipCompress gzipCompress = GZIP_COMPRESS_THREAD_LOCAL.get();
-                                stringBytes = Zstd.decompress(stringBuffer.array(), totalStringLength);
-                            }
-                            int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
-                            int stringPosition = (stringNum * valueSize + i) * 2;
-                            short anInt = 0;
-                            try {
-                                anInt = stringLengthBuffer.getShort(stringPosition);
-                            } catch (Exception e) {
-                                System.out.println("getByIndex get string length error, e" + e);
-                            }
-                            if (anInt != 0) {
-                                int position = 0;
-                                try {
-                                    for (int i1 = 0; i1 < stringPosition; i1 += 2) {
-                                        position += stringLengthBuffer.getShort(i1);
-                                    }
-                                } catch (Exception e) {
-                                    System.out.println("getByIndex get string offset error, e" + e);
-                                }
-                                byte[] string = new byte[anInt];
-                                ArrayUtils.copy(stringBytes, position, string, 0, anInt);
-                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(string)));
-                            } else {
-                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.allocate(0)));
-                            }
-                        }
-                    }
-                    rowArrayList.add(new Row(vin, aLong, columns));
-                }
-                i++;
-            }
-        } catch (Exception e) {
-            System.out.println("getByIndex error, e" + e);
-        }
-        return rowArrayList;
-
-    }
 
     public Row getByIndex(Vin vin, long timestamp, Index index, Set<String> requestedColumns, int j) {
         final long offset = index.getOffset();
@@ -635,9 +462,9 @@ public class TSFileService {
             try {
                 StaticsUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength);
                 StaticsUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length + stringLengthArrayCompress.length + 2);
-                StaticsUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(4 + compressDouble.length);
-                StaticsUtil.LONG_COMPRESS_LENGTH.getAndAdd(8 + 4 + compress1.length);
-                StaticsUtil.INT_COMPRESS_LENGTH.getAndAdd(compress2.length + 4);
+                StaticsUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(2 + compressDouble.length);
+                StaticsUtil.LONG_COMPRESS_LENGTH.getAndAdd(8 + 2 + compress1.length);
+                StaticsUtil.INT_COMPRESS_LENGTH.getAndAdd(compress2.length + 2);
                 //long
                 byteBuffer.putLong(previousLong);
                 byteBuffer.putShort((short) compress1.length);
