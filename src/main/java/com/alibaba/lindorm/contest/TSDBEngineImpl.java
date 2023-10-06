@@ -126,7 +126,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             Constants.intColumnHashMapCompress = IntColumnHashMapCompress.loadFromFile(dataPath.getPath());
             Constants.doubleColumnHashMapCompress = DoubleColumnHashMapCompress.loadFromFile(dataPath.getPath());
             Constants.stringColumnHashMapCompress = StringColumnHashMapCompress.loadFromFile(dataPath.getPath());
-            StringCompress.loadDirectoryFromFile(this.ZstdDictionary);
+//            StringCompress.loadDirectoryFromFile(this.ZstdDictionary);
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
@@ -175,7 +175,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     return null;
                 });
                 memoryTable.writeToFileBeforeShutdown();
-                StringCompress.saveDirectory(this.ZstdDictionary);
+//                StringCompress.saveDirectory(this.ZstdDictionary);
                 final Future<Void> submit1 = executorService1.submit(() -> {
                     Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
                     Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
