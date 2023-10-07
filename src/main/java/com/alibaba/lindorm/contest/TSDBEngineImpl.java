@@ -15,6 +15,7 @@ import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.BigBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
@@ -371,28 +372,44 @@ public class TSDBEngineImpl extends TSDBEngine {
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
         int i1 = VinDictMap.get(aggregationReq.getVin());
-        List<Index> indices = MapIndex.get(i1, aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound());
+        List<BigBucket> bigBuckets = MapIndex.getBucket(i1, aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound());
+
         ArrayList<Row> timeRangeRow = new ArrayList<>();
         switch (aggregator) {
             case AVG:
                 int size = 0;
                 double intSum = 0;
                 double doubleSum = 0;
-                for (Index index : indices) {
-                    if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() <= aggregationReq.getTimeUpperBound() - 1) {
+                for (BigBucket bigBucket : bigBuckets) {
+                    if (bigBucket.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && bigBucket.getMaxTimestamp() <= aggregationReq.getTimeUpperBound() - 1){
                         if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                            intSum += index.getAggBucket().getiSum(columnIndex);
-                            size += index.getValueSize();
+                            intSum += bigBucket.getiSum(columnIndex);
+                            size += bigBucket.getValueSize();
                         } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                            doubleSum += index.getAggBucket().getdSum(columnIndex);
-                            size += index.getValueSize();
+                            doubleSum += bigBucket.getdSum(columnIndex);
+                            size += bigBucket.getValueSize();
                         } else {
                             System.out.println("executeAggregateQuery columnValue string type not support compare");
                         }
-                    } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-                        timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
-                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-                        timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
+                    }else {
+                        List<Index> indices = bigBucket.getIndexList();
+                        for (Index index : indices) {
+                            if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() <= aggregationReq.getTimeUpperBound() - 1) {
+                                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                                    intSum += index.getAggBucket().getiSum(columnIndex);
+                                    size += index.getValueSize();
+                                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                                    doubleSum += index.getAggBucket().getdSum(columnIndex);
+                                    size += index.getValueSize();
+                                } else {
+                                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+                                }
+                            } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
+                                timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
+                            } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
+                                timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
+                            }
+                        }
                     }
                 }
                 if (columnType.equals(COLUMN_TYPE_INTEGER)) {
@@ -420,19 +437,32 @@ public class TSDBEngineImpl extends TSDBEngine {
             case MAX:
                 int maxInt = Integer.MIN_VALUE;
                 double maxDouble = -Double.MAX_VALUE;
-                for (Index index : indices) {
-                    if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() < aggregationReq.getTimeUpperBound() - 1) {
+                for (BigBucket bigBucket : bigBuckets) {
+                    if (bigBucket.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && bigBucket.getMaxTimestamp() < aggregationReq.getTimeUpperBound() - 1) {
                         if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                            maxInt = Math.max(index.getAggBucket().getiMax(columnIndex), maxInt);
+                            maxInt = Math.max(bigBucket.getiMax(columnIndex), maxInt);
                         } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                            maxDouble = Math.max(index.getAggBucket().getdMax(columnIndex), maxDouble);
+                            maxDouble = Math.max(bigBucket.getdMax(columnIndex), maxDouble);
                         } else {
                             System.out.println("executeAggregateQuery columnValue string type not support compare");
                         }
-                    } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-                        timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
-                    } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-                        timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
+                    }else {
+                        List<Index> indices = bigBucket.getIndexList();
+                        for (Index index : indices) {
+                            if (index.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMaxTimestamp() < aggregationReq.getTimeUpperBound() - 1) {
+                                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                                    maxInt = Math.max(index.getAggBucket().getiMax(columnIndex), maxInt);
+                                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                                    maxDouble = Math.max(index.getAggBucket().getdMax(columnIndex), maxDouble);
+                                } else {
+                                    System.out.println("executeAggregateQuery columnValue string type not support compare");
+                                }
+                            } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
+                                timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
+                            } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
+                                timeRangeRow.addAll(fileService.getByIndexV2(aggregationReq.getVin(), timeLower, timeUpper, index, requestedColumns, i1));
+                            }
+                        }
                     }
                 }
                 if (columnType.equals(COLUMN_TYPE_INTEGER)) {

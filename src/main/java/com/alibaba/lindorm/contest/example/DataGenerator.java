@@ -117,7 +117,7 @@ public class DataGenerator {
         initTimeStamp(16492012515000L);
         vins = new Vin[VIN_NUMS];
         for(int i=0;i<VIN_NUMS;i++){
-            vins[i] = new Vin(generateRandomString(100).getBytes());
+            vins[i] = new Vin(generateRandomString(17).getBytes());
         }
         randomDouble = new double[100];
         for (int i = 0; i < randomDouble.length; i++) {

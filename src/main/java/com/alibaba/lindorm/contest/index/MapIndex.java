@@ -17,20 +17,45 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MapIndex {
 
+    public static List<BigBucket>[] BUCKET_ARRAY = new List[Constants.TOTAL_VIN_NUMS];
+
     public static  List<Index>[] INDEX_ARRAY = new List[Constants.TOTAL_VIN_NUMS];
 
     public static void clear() {
-        List<Index>[] INDEX_ARRAY = new List[Constants.TOTAL_VIN_NUMS] ;
+        List<Index>[] INDEX_ARRAY = null;
     }
 
     static {
         for (int i = 0; i < INDEX_ARRAY.length; i++) {
             INDEX_ARRAY[i] = new LinkedList<>();
         }
+        for(int i=0;i<BUCKET_ARRAY.length;i++){
+            BUCKET_ARRAY[i] = new LinkedList<>();
+        }
     }
 
     public static void put(int vinIndex, Index index) {
         INDEX_ARRAY[vinIndex].add(index);
+    }
+
+    public static List<BigBucket> getBucket(int vinIndex, long timeLowerBound, long timeUpperBound){
+        List<BigBucket> bigBuckets = BUCKET_ARRAY[vinIndex];
+        List<BigBucket> indexList = new ArrayList<>();
+        if (bigBuckets == null) {
+            return bigBuckets;
+        }
+        for (BigBucket bigBucket : bigBuckets) {
+            final long maxTimestamp = bigBucket.getMaxTimestamp();
+            final long minTimestamp = bigBucket.getMinTimestamp();
+            if (maxTimestamp < timeLowerBound) {
+                continue;
+            }
+            if (minTimestamp >= timeUpperBound) {
+                continue;
+            }
+            indexList.add(bigBucket);
+        }
+        return indexList;
     }
 
     public static List<Index> get(int vinIndex, long timeLowerBound, long timeUpperBound) {
@@ -192,6 +217,21 @@ public class MapIndex {
             final Integer i = VinDictMap.get(vin);
             INDEX_ARRAY[i] = indices;
             intBuffer.flip();
+        }
+        for(int i=0;i<INDEX_ARRAY.length;i++){
+            int j = 0;
+            BigBucket bigBucket = new BigBucket();
+            while (j < INDEX_ARRAY[i].size()){
+                bigBucket.addBucket(INDEX_ARRAY[i].get(j));
+                if(j%10==0){
+                    BUCKET_ARRAY[i].add(bigBucket);
+                    bigBucket = new BigBucket();
+                }
+                j++;
+            }
+            if(bigBucket.getIndexSize() != 0){
+                BUCKET_ARRAY[i].add(bigBucket);
+            }
         }
         System.out.println("load Index into memory size : " + INDEX_ARRAY.length);
 
