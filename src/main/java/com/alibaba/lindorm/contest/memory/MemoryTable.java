@@ -41,12 +41,12 @@ public class MemoryTable {
     private final ConcurrentHashMap<Vin, Queue<Integer>> vinToBufferIndex;
 
     private final Queue<Integer> freeList;
-    private final List<Value>[] bufferValues;
-    private final List<Value>[] values;
+    private final List<Row>[] bufferValues;
+    private final List<Row>[] values;
 
     private final int size;
     private final AtomicInteger atomicIndex = new AtomicInteger(0);
-    private final ReentrantReadWriteLock[] spinLockArray;
+    private final SpinLockArray spinLockArray;
     private final TSFileService tsFileService;
     private final AtomicLong queryLastTimes = new AtomicLong(0);
     private final AtomicLong queryTimeRangeTimes = new AtomicLong(0);
@@ -57,10 +57,10 @@ public class MemoryTable {
         this.values = new SortedList[size];
         this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
-        this.spinLockArray = new ReentrantReadWriteLock[60000];
-        for(int i=0;i<60000;i++){
-            this.spinLockArray[i] = new ReentrantReadWriteLock();
-        }
+        this.spinLockArray = new SpinLockArray(60000);
+//        for(int i=0;i<60000;i++){
+//            this.spinLockArray[i] = new ReentrantReadWriteLock();
+//        }
         this.bufferValuesLock = new ReentrantLock();
         this.hasFreeBuffer = this.bufferValuesLock.newCondition();
         this.freeList = new LinkedList<>();
@@ -75,59 +75,59 @@ public class MemoryTable {
         }
     }
 
-    public void asyncPut(Row row){
-        Vin vin = row.getVin();
-        long ts = row.getTimestamp();
-        final byte[] vin1 = vin.getVin();
-        final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % spinLockArray.length;
-        spinLockArray[lock].writeLock().lock();
-        try {
-            Integer index = VinDictMap.get(vin);
-            if (index == null) {
-                index = atomicIndex.getAndIncrement();
-                VinDictMap.put(vin, index);
-            }
-            List<Value> valueSortedList = values[index];
-            valueSortedList.add(new Value(ts, row.getColumns()));
-            if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
-                int bufferIndex = getFreeBufferIndex(vin);
-                // maybe used copy will be speed up
-                assert(bufferValues[bufferIndex].isEmpty());
-                values[index] = bufferValues[bufferIndex];
-                bufferValues[bufferIndex] = valueSortedList;
-                Integer finalIndex = index;
-                Integer finalBufferIndex = bufferIndex;
-                fixThreadPool.execute( () -> {
-                    tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex);
-                    freeBufferByIndex(vin,finalBufferIndex);
-                });
-            }
-        } finally {
-            spinLockArray[lock].writeLock().unlock();
-        }
-    }
+//    public void asyncPut(Row row){
+//        Vin vin = row.getVin();
+//        long ts = row.getTimestamp();
+//        final byte[] vin1 = vin.getVin();
+//        final int hash = getStringHash(vin1, 0, vin1.length);
+//        int lock = hash % spinLockArray.length;
+//        spinLockArray[lock].writeLock().lock();
+//        try {
+//            Integer index = VinDictMap.get(vin);
+//            if (index == null) {
+//                index = atomicIndex.getAndIncrement();
+//                VinDictMap.put(vin, index);
+//            }
+//            List<Row> valueSortedList = values[index];
+//            valueSortedList.add(row);
+//            if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
+//                int bufferIndex = getFreeBufferIndex(vin);
+//                // maybe used copy will be speed up
+//                assert(bufferValues[bufferIndex].isEmpty());
+//                values[index] = bufferValues[bufferIndex];
+//                bufferValues[bufferIndex] = valueSortedList;
+//                Integer finalIndex = index;
+//                Integer finalBufferIndex = bufferIndex;
+//                fixThreadPool.execute( () -> {
+//                    tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex);
+//                    freeBufferByIndex(vin,finalBufferIndex);
+//                });
+//            }
+//        } finally {
+//            spinLockArray[lock].writeLock().unlock();
+//        }
+//    }
 
     public void put(Row row) {
         Vin vin = row.getVin();
         long ts = row.getTimestamp();
         final byte[] vin1 = vin.getVin();
         final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % spinLockArray.length;
-        spinLockArray[lock].writeLock().lock();
+        int lock = hash % spinLockArray.length();
+        spinLockArray.lockWrite(lock);
         try {
             Integer index = VinDictMap.get(vin);
             if (index == null) {
                 index = atomicIndex.getAndIncrement();
                 VinDictMap.put(vin, index);
             }
-            final List<Value> valueSortedList = values[index];
-            valueSortedList.add(new Value(ts, row.getColumns()));
+            final List<Row> valueSortedList = values[index];
+            valueSortedList.add(row);
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
                 tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
             }
         } finally {
-            spinLockArray[lock].writeLock().unlock();
+            spinLockArray.unlockWrite(lock);
         }
     }
 
@@ -184,7 +184,7 @@ public class MemoryTable {
         long totalStringLength = 0;
         try {
             final int size = values[slot].size();
-            Value value;
+            Row value;
             if (size == 0) {
                 try {
                     bufferValuesLock.lock();
@@ -256,7 +256,7 @@ public class MemoryTable {
         final byte[] vin1 = vin.getVin();
         final int keyHash = getStringHash(vin1, 0, vin1.length);
         int slot = keyHash % size;
-        spinLockArray[slot].readLock().lock();
+//        spinLockArray.lockRead(slot);
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
@@ -277,7 +277,7 @@ public class MemoryTable {
             }
             return rowArrayList;
         } finally {
-            spinLockArray[slot].readLock().lock();
+//            spinLockArray[slot].readLock().lock();
         }
     }
 
@@ -319,9 +319,9 @@ public class MemoryTable {
 
     private ArrayList<Row> getTimeRangeRowFromMemoryTable(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int slot) {
         ArrayList<Row> result = new ArrayList<>();
-        List<Value> valueList = new ArrayList<>();
+        List<Row> valueList = new ArrayList<>();
         try {
-            final List<Value> sortedList = values[slot];
+            final List<Row> sortedList = values[slot];
             valueList.addAll(sortedList);
             this.bufferValuesLock.lock();
             if(vinToBufferIndex.containsKey(vin)){
@@ -331,7 +331,7 @@ public class MemoryTable {
                 }
             }
             this.bufferValuesLock.unlock();
-            for (Value value : valueList) {
+            for (Row value : valueList) {
                 if (value.getTimestamp() >= timeLowerBound && value.getTimestamp() < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {
@@ -379,7 +379,7 @@ public class MemoryTable {
     public void writeToFileBeforeShutdown() {
         try {
             for (int i = 0; i < values.length; i++) {
-                List<Value> valueList = values[i];
+                List<Row> valueList = values[i];
                 if (valueList.size() >= 1) {
                     final Vin vin = new Vin(VinDictMap.get(i));
                     tsFileService.write(vin, valueList, valueList.size(), i);
@@ -395,7 +395,7 @@ public class MemoryTable {
         try {
             int threadNum = 10;
             final ExecutorService executorService = Executors.newFixedThreadPool(threadNum);
-            List<List<List<Value>>> listList = new ArrayList<>();
+            List<List<List<Row>>> listList = new ArrayList<>();
             for (int i = 0; i < threadNum; i++) {
                 listList.add(new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS));
             }
@@ -405,9 +405,9 @@ public class MemoryTable {
                 listList.get(mod).add(values[i1]);
             }
             List<Future<Void>> futures = new ArrayList<>(threadNum);
-            for (List<List<Value>> sortedLists : listList) {
+            for (List<List<Row>> sortedLists : listList) {
                 final Future<Void> submit = executorService.submit(() -> {
-                    for (List<Value> valueList : sortedLists) {
+                    for (List<Row> valueList : sortedLists) {
                         if (!valueList.isEmpty()) {
                             final Vin vin = new Vin(VinDictMap.get(i));
                             tsFileService.write(vin, valueList, valueList.size(), i);
@@ -425,7 +425,7 @@ public class MemoryTable {
         }
     }
 
-    public List<Value>[] getValues() {
+    public List<Row>[] getValues() {
         return values;
     }
 
@@ -443,9 +443,8 @@ public class MemoryTable {
                 if (row == null) {
                     throw new RuntimeException("loadLastTsToMemory error, row is null");
                 }
-                final List<Value> valueSortedList = this.values[i];
-                final Value value = new Value(timestamp, row.getColumns());
-                valueSortedList.add(value);
+                final List<Row> valueSortedList = this.values[i];
+                valueSortedList.add(row);
             }
 //            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
 //            start = System.currentTimeMillis();

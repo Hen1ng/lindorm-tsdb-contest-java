@@ -6,7 +6,6 @@ import com.alibaba.lindorm.contest.compress.LongCompress;
 import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
-import com.alibaba.lindorm.contest.memory.Value;
 import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
@@ -350,7 +349,7 @@ public class TSFileService {
      * @param valueList
      * @param lineNum
      */
-    public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
+    public void write(Vin vin, List<Row> valueList, int lineNum, int j) {
         try {
             AggBucket aggBucket = new AggBucket();
             long start = System.currentTimeMillis();
@@ -397,7 +396,7 @@ public class TSFileService {
             long minTimestamp = Long.MAX_VALUE;
             for (int i = 0; i < indexArray.length; i++) {
                 final String key = indexArray[i];
-                for (Value value : valueList) {
+                for (Row value : valueList) {
                     long timestamp = value.getTimestamp();
                     maxTimestamp = Math.max(maxTimestamp, timestamp);
                     minTimestamp = Math.min(minTimestamp, timestamp);
@@ -442,7 +441,7 @@ public class TSFileService {
                 allocate.putDouble(value);
             }
             final byte[] array = allocate.array();
-            final byte[] compressDouble = Zstd.compress(array, 15);
+            final byte[] compressDouble = Zstd.compress(array, 13);
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
