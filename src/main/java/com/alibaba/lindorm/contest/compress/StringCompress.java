@@ -183,45 +183,12 @@ public class StringCompress {
 
 
     public static byte[] compress(byte[] bytes) throws IOException {
-        ByteBuffer allocate;
-        long count = COMPRESS_COUNT.addAndGet(1);
-        if(count<=1000){
-            zstdDictTrainer.addSample(bytes);
-        }
-        if ( count == 1000) {
-            dictionary = zstdDictTrainer.trainSamples();
-            zstdDictCompress = new ZstdDictCompress(dictionary,Zstd.defaultCompressionLevel());
-            zstdDictDecompress = new ZstdDictDecompress(dictionary);
-        }
-        if(count >= 1000){
-            while (zstdDictCompress == null) {
-                Thread.onSpinWait();
-            }
-            byte[] compress = Zstd.compress(bytes, zstdDictCompress);
-            allocate = ByteBuffer.allocate(1 + compress.length);
-            allocate.put(USING_DIRECTORY);
-            allocate.put(compress);
-        }else {
-            byte[] compress = Zstd.compress(bytes, 12);
-            allocate = ByteBuffer.allocate(1 + compress.length);
-            allocate.put(NOT_USING_DIRECTORY);
-            allocate.put(compress);
-        }
-//        return deflaterCompress.compress(bytes);
-//        bytes = gzipCompress.compress(bytes);
-        return allocate.array();
+
+        return Zstd.compress(bytes,12);
     }
 
     public static byte[] deCompress(byte[] bytes, int valueSize) {
-        ByteBuffer wrap = ByteBuffer.wrap(bytes,1,bytes.length-1);
-        byte b =  bytes[0];
-        byte[] bytes1 = new byte[bytes.length - 1];
-        wrap.get(bytes1,0,bytes.length-1);
-        if(b == NOT_USING_DIRECTORY){
-            return Zstd.decompress(bytes1,valueSize);
-        }else{
-            return Zstd.decompress(bytes1,zstdDictDecompress,valueSize);
-        }
+            return Zstd.decompress(bytes,valueSize);
     }
 
     static {
@@ -301,20 +268,33 @@ public class StringCompress {
     }
     public static void main(String[] args) throws IOException {
         List<ByteBuffer> stringList = new ArrayList<>();
+        int totalLength = 0;
         for (String[] datum : data) {
             System.out.println(datum.length);
             for (String string : datum) {
-                stringList.add(ByteBuffer.wrap(string.getBytes()));
+                totalLength += string.length();
             }
         }
+        ByteBuffer byteBuffer = ByteBuffer.allocate(totalLength);
 
-        int valueSize = 160;  // 或其他适当的值
+
+        for (String[] datum : data) {
+            for (String string : datum) {
+                byteBuffer.put(string.getBytes());
+            }
+        }
+        byte[] bytes = byteBuffer.array();
+        byte[] compress = compress(bytes);
+        byte[] bytes1 = deCompress(compress, bytes.length);
+        boolean equals = Arrays.equals(bytes1, bytes);
+        System.out.println(equals);
+        System.out.println("compress rate : " + 1.0*compress.length/bytes.length);
 
         // 使用compress1函数压缩
-        byte[] compressedData = compress1(stringList, valueSize);
-
-        // 使用decompress1函数解压
-        ArrayList<ByteBuffer> decompressedData = decompress1(compressedData, valueSize);
+//        byte[] compressedData = compress1(stringList, valueSize);
+//
+//        // 使用decompress1函数解压
+//        ArrayList<ByteBuffer> decompressedData = decompress1(compressedData, valueSize);
 
         // 校验数据
     }
