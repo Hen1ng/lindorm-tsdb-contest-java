@@ -489,7 +489,7 @@ public class TSFileService {
                         , total
                         , lineNum
                         , aggBucket);
-                MapIndex.put(vin, index);
+                MapIndex.put(j, index);
                 valueList.clear();
             } catch (Exception e) {
                 System.out.println("write append error" + e);

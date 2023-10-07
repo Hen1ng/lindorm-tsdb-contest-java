@@ -188,7 +188,7 @@ public class DataGenerator {
             }
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
-            MapIndex.INDEX_MAP.clear();
+            MapIndex.clear();
             tsdbEngine.connect();
             System.out.println("DownSample Quey Begin =============");
             for(int i=0;i<100000;i++){

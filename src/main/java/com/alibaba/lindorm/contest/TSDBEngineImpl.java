@@ -105,10 +105,10 @@ public class TSDBEngineImpl extends TSDBEngine {
     public void connect() throws IOException {
         System.out.println("connect start...");
         long start = System.currentTimeMillis();
-        MapIndex.loadMapFromFileunCompress(indexFile);
 //        MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
+        MapIndex.loadMapFromFileunCompress(indexFile);
         for (int i = 0; i < 40; i++) {
             StaticsUtil.columnInfos.add(new ColumnInfo());
         }
@@ -371,7 +371,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         Set<String> requestedColumns = new HashSet<>();
         requestedColumns.add(columnName);
         int i1 = VinDictMap.get(aggregationReq.getVin());
-        List<Index> indices = MapIndex.get(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound());
+        List<Index> indices = MapIndex.get(i1, aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound());
         ArrayList<Row> timeRangeRow = new ArrayList<>();
         switch (aggregator) {
             case AVG:
@@ -510,7 +510,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             long startTime = timeLowerBound + i * interval;
             long endTime = timeLowerBound + (i + 1) * interval;
             // [start,end)
-            List<Index> indices = MapIndex.get(vin, startTime, endTime);
+            List<Index> indices = MapIndex.get(i1, startTime, endTime);
             if (columnType.equals(COLUMN_TYPE_INTEGER)) {
                 if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)) {
                     // first remove useless index

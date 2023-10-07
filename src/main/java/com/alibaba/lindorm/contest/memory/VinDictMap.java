@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.memory;
 
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.structs.Vin;
+import com.alibaba.lindorm.contest.util.Constants;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +14,7 @@ import static com.alibaba.lindorm.contest.util.Constants.TOTAL_VIN_NUMS;
 
 public class VinDictMap {
 
-    private static final byte[][] INDEX_VIN = new byte[30000][17];
+    private static final byte[][] INDEX_VIN = new byte[TOTAL_VIN_NUMS][17];
 
     public static Map<Vin, Integer> getVinDictMap() {
         return VIN_DICT_MAP;
