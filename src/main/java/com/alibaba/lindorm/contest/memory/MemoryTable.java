@@ -377,6 +377,7 @@ public class MemoryTable {
     }
 
     public void writeToFileBeforeShutdown() {
+        long start = System.currentTimeMillis();
         try {
             for (int i = 0; i < values.length; i++) {
                 List<Value> valueList = values[i];
@@ -388,6 +389,7 @@ public class MemoryTable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        System.out.println("writeToFileBeforeShutdown cost " + (System.currentTimeMillis() - start) + " ms");
     }
 
 

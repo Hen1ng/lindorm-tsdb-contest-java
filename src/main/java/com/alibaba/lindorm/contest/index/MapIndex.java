@@ -113,6 +113,7 @@ public class MapIndex {
     }
 
     public static void saveMaPToFileCompress(File file) throws IOException {
+        long start = System.currentTimeMillis();
         FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
         // 先压缩vin
 
@@ -165,7 +166,7 @@ public class MapIndex {
 //                e.printStackTrace();
 //            }
         }
-        System.out.println("INDEX FILE LEN : " + indexFileLength);
+        System.out.println("INDEX FILE LEN : " + indexFileLength + "cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
 //    public static void saveMapToFile(File file) {

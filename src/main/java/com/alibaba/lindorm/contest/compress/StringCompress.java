@@ -14,7 +14,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class StringCompress {
-    public static GzipCompress gzipCompress = new GzipCompress();
     public static String[] dataString0;
     public static String[] dataString1;
 
@@ -70,13 +69,13 @@ public class StringCompress {
         int index = 0;
         while (start < length){
             List<ByteBuffer> byteBuffers = stringList.subList(start, start + valueSize);
-            Map<String,Integer> set = new HashMap<>();
+            Map<String,Integer> set = new HashMap<>(2);
             int count = 0;
             int totalLength = 0;
             boolean isUseMap = true;
             for (ByteBuffer byteBuffer : byteBuffers) {
                 totalLength += byteBuffer.remaining();
-                if(!set.containsKey(new String(byteBuffer.array()))){
+                if(isUseMap && !set.containsKey(new String(byteBuffer.array()))){
                     set.put(new String(byteBuffer.array()),count);
                     count++;
                 }
@@ -135,7 +134,7 @@ public class StringCompress {
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = Zstd.compress(allocate.array(),12);
+        byte[] compress = Zstd.compress(allocate.array(),3);
 //        compress = gzipCompress.compress(compress);
         ByteBuffer res = ByteBuffer.allocate(4+compress.length);
         res.putInt(2+total);
@@ -312,7 +311,7 @@ public class StringCompress {
             shorts[i] = stringLengthBuffer.getShort();
         }
         byte[] bytes2 = IntCompress.compressShort(shorts);
-        System.out.println("compress rate : " + (1.0*compress.length+bytes2.length)/totalLength);
+        System.out.println("compress rate : " + (1.0*compress.length+bytes2.length)/(totalLength + 160 * 9 * 2));
 
         System.out.println(Zstd.defaultCompressionLevel());
         // 使用compress1函数压缩

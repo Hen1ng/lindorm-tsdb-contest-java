@@ -162,42 +162,12 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
-//        for (String s : SchemaUtil.maps.keySet()) {
-//            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
-//        }
         try {
             if (RestartUtil.IS_FIRST_START) {
-                final ExecutorService executorService1 = Executors.newFixedThreadPool(8);
-                final Future<Void> submit = executorService1.submit(() -> {
-                    SchemaUtil.saveMapToFile(schemaFile);
-                    return null;
-                });
+                SchemaUtil.saveMapToFile(schemaFile);
                 memoryTable.writeToFileBeforeShutdown();
-
-                final Future<Void> submit1 = executorService1.submit(() -> {
-                    Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
-                    Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
-                    Constants.stringColumnHashMapCompress.saveToFile(dataPath.getPath());
-                    return null;
-                });
-                final Future<Void> submit2 = executorService1.submit(() -> {
-//                    MapIndex.saveMapToFile(indexFile);
-                    MapIndex.saveMaPToFileCompress(indexFile);
-                    return null;
-                });
-                final Future<Void> submit3 = executorService1.submit(() -> {
-                    VinDictMap.saveMapToFile(vinDictFile);
-                    return null;
-                });
-                final Future<Void> submit4 = executorService1.submit(() -> {
-                    filePosition.save(fileService.getTsFiles());
-                    return null;
-                });
-                submit1.get();
-                submit2.get();
-                submit3.get();
-                submit4.get();
-                submit.get();
+                MapIndex.saveMaPToFileCompress(indexFile);
+                VinDictMap.saveMapToFile(vinDictFile);
 
             }
             for (TSFile tsFile : fileService.getTsFiles()) {

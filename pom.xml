@@ -50,6 +50,13 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
         </dependency>
+        <dependency>
+            <groupId>com.aayushatharva.brotli4j</groupId>
+            <artifactId>brotli4j</artifactId>
+            <version>1.12.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/brotli4j-1.12.0.jar</systemPath>
+        </dependency>
     </dependencies>
 
 

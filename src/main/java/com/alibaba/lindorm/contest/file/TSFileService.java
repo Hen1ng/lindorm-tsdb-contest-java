@@ -326,7 +326,7 @@ public class TSFileService {
         try {
             AggBucket aggBucket = new AggBucket();
             long start = System.currentTimeMillis();
-            writeTimes.getAndIncrement();
+            final long writeTimes = this.writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
             ByteBuffer intBuffer;
@@ -407,7 +407,19 @@ public class TSFileService {
 //                position += array.length;
 //            }
             final byte[] compress = StringCompress.compress1(stringList,lineNum);
-
+//            if (writeTimes == 10000) {
+//                System.out.println("--------------------------------------------------------------------");
+//                for (ByteBuffer byteBuffer : stringList) {
+//                    if (byteBuffer.capacity() == 0) {
+//                        System.out.println("\"\"");
+//                    } else {
+//                        System.out.print(new String(byteBuffer.array()));
+//                    }
+//                    System.out.print(",");
+//
+//                }
+//                System.out.println("--------------------------------------------------------------------");
+//            }
             //压缩double
             final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
             for (double value : doubles) {
@@ -466,7 +478,7 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write append error" + e);
             }
-            if (writeTimes.get() % 1000000 == 0) {
+            if (this.writeTimes.get() % 1000000 == 0) {
                 System.out.println("write cost: " + (System.currentTimeMillis() - start) + " ms, write size: " + total);
             }
         } catch (Exception e) {
