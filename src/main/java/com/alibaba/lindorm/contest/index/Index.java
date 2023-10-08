@@ -5,6 +5,7 @@ import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.file.TSFileService;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
@@ -15,6 +16,7 @@ public class Index {
     private long minTimestamp;
 
     private AggBucket aggBucket;
+    private List<Long> timestampList;
 
     public int getValueSize() {
         return valueSize;
@@ -143,4 +145,11 @@ public class Index {
 
     }
 
+    public void setTimestampList(List<Long> timestampList) {
+        this.timestampList = timestampList;
+    }
+
+    public List<Long> getTimestampList() {
+        return timestampList;
+    }
 }

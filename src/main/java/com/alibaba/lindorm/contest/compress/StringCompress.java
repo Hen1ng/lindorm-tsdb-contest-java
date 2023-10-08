@@ -14,6 +14,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class StringCompress {
+
+    public static final ThreadLocal<BitSet> BIT_SET_THREAD_LOCAL = ThreadLocal.withInitial(() -> BitSet.valueOf(new byte[2]));
+    public static final ThreadLocal< Map<String, Integer>> HASH_MAP_THREAD_LOCAL = ThreadLocal.withInitial(() -> new HashMap<>(2));
     public static String[] dataString0;
     public static String[] dataString1;
 
@@ -59,57 +62,68 @@ public class StringCompress {
         return ((valueSize+7)/8);
     }
 
-    public static byte[] compress1(List<ByteBuffer> stringList,int valueSize){
+    public static byte[] compress1(List<ByteBuffer> stringList, int valueSize) {
         int length = stringList.size();
         int start = 0;
         int total = 0;
         ArrayList<byte[]> arrayList = new ArrayList<>();
-        BitSet compressBitSet = BitSet.valueOf(new byte[2]);
+        BitSet compressBitSet = BIT_SET_THREAD_LOCAL.get();
+        compressBitSet.clear();
         compressBitSet.set(15);
         int index = 0;
-        while (start < length){
-            List<ByteBuffer> byteBuffers = stringList.subList(start, start + valueSize);
-            Map<String,Integer> set = new HashMap<>(2);
+        while (start < length) {
+            Map<String, Integer> set = HASH_MAP_THREAD_LOCAL.get();
+            set.clear();
             int count = 0;
             int totalLength = 0;
             boolean isUseMap = true;
-            for (ByteBuffer byteBuffer : byteBuffers) {
+            for (int i = start; i < start + valueSize; i++) {
+                final ByteBuffer byteBuffer = stringList.get(i);
                 totalLength += byteBuffer.remaining();
-                if(isUseMap && !set.containsKey(new String(byteBuffer.array()))){
-                    set.put(new String(byteBuffer.array()),count);
+                if (isUseMap && !set.containsKey(new String(byteBuffer.array()))) {
+                    set.put(new String(byteBuffer.array()), count);
                     count++;
                 }
-                if(set.size()>2){
+                if (set.size() > 2) {
                     isUseMap = false;
                 }
             }
-            if(isUseMap){
+            if (!isUseMap) {
+                ByteBuffer allocate = ByteBuffer.allocate(totalLength);
+                for (int i = start; i < start + valueSize; i++) {
+                    final ByteBuffer byteBuffer = stringList.get(i);
+                    allocate.put(byteBuffer.array());
+                }
+                total += allocate.array().length;
+                arrayList.add(allocate.array());
+            } else {
                 // putDict
                 StaticsUtil.MAP_COMPRESS_TIME.addAndGet(1);
                 int dictLength = 0;
                 for (String bytes : set.keySet()) {
-                    dictLength +=bytes.length();
+                    dictLength += bytes.length();
                 }
-                ByteBuffer compress = ByteBuffer.allocate(dictLength + 2*2 + UpperBoundByte(valueSize));
+                ByteBuffer compress = ByteBuffer.allocate(dictLength + 2 * 2 + UpperBoundByte(valueSize));
                 compressBitSet.set(index);
-                for(int i=0;i<2;i++){
+                for (int i = 0; i < 2; i++) {
                     boolean isExist = false;
                     for (String bytes : set.keySet()) {
-                        if(set.get(bytes) == i) {
+                        if (set.get(bytes) == i) {
                             compress.putShort((short) bytes.length());
                             compress.put(bytes.getBytes());
                             isExist = true;
                             break;
                         }
                     }
-                    if(!isExist)compress.putShort((short) 0);
+                    if (!isExist) compress.putShort((short) 0);
                 }
                 // 写字典 id -> string
                 // 写string -> id
                 BitSet bitSet = new BitSet(UpperBoundByte(valueSize));
-                for(int i=0;i<byteBuffers.size();i++){
-                    Integer i1 = set.get(new String(byteBuffers.get(i).array()));
-                    if(i1==1){
+                for (int i = start; i < start + valueSize; i++) {
+                    final ByteBuffer byteBuffer = stringList.get(i);
+                    Integer i1 = set.get(new String(byteBuffer.array()));
+                    if (i1 == 1) {
                         bitSet.set(i);
                     }
                 }
@@ -117,78 +131,69 @@ public class StringCompress {
                 compress.put(byteArray);
                 total += compress.array().length;
                 arrayList.add(compress.array());
-            }else{
-                ByteBuffer allocate = ByteBuffer.allocate( totalLength);
-                for (ByteBuffer byteBuffer : byteBuffers) {
-                    allocate.put(byteBuffer.array());
-                }
-                total += allocate.array().length;
-                arrayList.add(allocate.array());
+
             }
             index++;
-            start+=valueSize;
+            start += valueSize;
         }
-        ByteBuffer allocate = ByteBuffer.allocate(2+total);
-//        System.out.println(Arrays.toString(compressBitSet.toString().getBytes()));
+        ByteBuffer allocate = ByteBuffer.allocate(2 + total);
         allocate.put(compressBitSet.toByteArray());
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = Zstd.compress(allocate.array(),3);
-//        compress = gzipCompress.compress(compress);
-        ByteBuffer res = ByteBuffer.allocate(4+compress.length);
-        res.putInt(2+total);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
+        ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
+        res.putInt(2 + total);
         res.put(compress);
         return res.array();
     }
 
-    public static ArrayList<ByteBuffer> decompress1(byte[] bytes,ByteBuffer stringLengthBuffer,int valueSize,int totalLength){
-//        bytes = gzipCompress.deCompress(bytes);
+    public static ArrayList<ByteBuffer> decompress1(byte[] bytes, ByteBuffer stringLengthBuffer, int valueSize, int totalLength) {
         stringLengthBuffer.flip();
         byte[] decompress1 = Zstd.decompress(bytes, totalLength);
         ByteBuffer wrap = ByteBuffer.wrap(decompress1);
         ArrayList<ByteBuffer> byteBuffers = new ArrayList<>();
         byte[] compressType = new byte[2];
-        wrap.get(compressType,0,2);
+        wrap.get(compressType, 0, 2);
         BitSet compressTypeBitSet = BitSet.valueOf(compressType);
         int index = 0;
-        while (wrap.hasRemaining()){
+        while (wrap.hasRemaining()) {
             boolean b = compressTypeBitSet.get(index);
-            if(b == USING_MAP_COMPRESS){
+            if (b != USING_MAP_COMPRESS) {
+                for (int i = 0; i < valueSize; i++) {
+                    int size = stringLengthBuffer.getShort();
+                    byte[] bytes1 = new byte[size];
+                    wrap.get(bytes1, 0, size);
+                    ByteBuffer wrap1 = ByteBuffer.wrap(bytes1);
+                    byteBuffers.add(wrap1);
+                }
+            } else {
                 ArrayList<byte[]> arrayList = new ArrayList<>();
-                for(int i=0;i<2;i++){
+                for (int i = 0; i < 2; i++) {
                     short anInt1 = wrap.getShort();
                     byte[] dict = new byte[anInt1];
-                    wrap.get(dict,0,dict.length);
+                    wrap.get(dict, 0, dict.length);
                     arrayList.add(dict);
                 }
                 byte[] values = new byte[UpperBoundByte(valueSize)];
-                wrap.get(values,0,UpperBoundByte(valueSize));
+                wrap.get(values, 0, UpperBoundByte(valueSize));
                 BitSet bitSet = BitSet.valueOf(values);
-                for(int i=0;i<valueSize;i++){
+                for (int i = 0; i < valueSize; i++) {
                     stringLengthBuffer.getShort();
-//                    byteBuffers.add(ByteBuffer.wrap(arrayList.get(0)));
                     boolean bi = bitSet.get(i);
-                    if(bi){
+                    if (bi) {
                         byte[] bytes1 = arrayList.get(1);
                         byteBuffers.add(ByteBuffer.wrap(bytes1));
-                    }else{
+                    } else {
                         byte[] bytes1 = arrayList.get(0);
                         byteBuffers.add(ByteBuffer.wrap(bytes1));
                     }
                 }
-            }else{
-                for(int i=0;i<valueSize;i++){
-                    int size = stringLengthBuffer.getShort();
-                    byte[] bytes1 = new byte[size];
-                    wrap.get(bytes1,0,size);
-                    ByteBuffer wrap1 = ByteBuffer.wrap(bytes1);
-                    byteBuffers.add(wrap1);
-                }
+
             }
             index++;
         }
-       return byteBuffers;
+        return byteBuffers;
     }
 
 

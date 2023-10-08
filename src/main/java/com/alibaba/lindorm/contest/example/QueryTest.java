@@ -73,7 +73,7 @@ public class QueryTest {
                     columns.put(key, new ColumnValue.StringColumn(buffer));
                 }
             }
-            boolean write = true;
+            boolean write = false;
             if (write) {
                 Schema schema = new Schema(columnTypeMap);
                 tsdbEngineSample.connect();
@@ -84,7 +84,7 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 1000000; j++) {
+                        for (int j = 0; j < 1000; j++) {
                             List<Row> rowList = new ArrayList<>();
                             for (int i1 = 0; i1 < 10; i1++) {
                                 Vin vin = vins[random.nextInt(5000)];
@@ -112,7 +112,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "2wWFlr8rcnnxdv7hM";
+                String v = "kIhqV53aa5BnFwDgg";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));

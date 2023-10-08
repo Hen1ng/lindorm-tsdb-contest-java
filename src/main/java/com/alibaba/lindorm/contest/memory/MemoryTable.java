@@ -11,10 +11,7 @@ import com.alibaba.lindorm.contest.util.list.SortedList;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
@@ -449,28 +446,29 @@ public class MemoryTable {
                 final Value value = new Value(timestamp, row.getColumns());
                 valueSortedList.add(value);
             }
-//            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
-//            start = System.currentTimeMillis();
-//            ExecutorService executorService = Executors.newFixedThreadPool(200);
-//            final CountDownLatch countDownLatch = new CountDownLatch(MapIndex.INDEX_MAP.size());
-//            for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
-//                executorService.submit(() -> {
-//                    final List<Index> indexList = MapIndex.getByVin(vin);
-//                    for (Index index : indexList) {
-//                        final Integer integer = VinDictMap.get(vin);
-//                        final ByteBuffer timestampList = tsFileService.getTimestampList(index, integer);
-//                        final int valueSize = index.getValueSize();
-//                        List<Long> timestamps = new ArrayList<>(valueSize);
-//                        for (int i = 0; i < valueSize; i++) {
-//                            timestamps.add(timestampList.getLong());
-//                        }
-//                        index.setTimestampList(timestamps);
-//                    }
-//                    countDownLatch.countDown();
-//                });
-//            }
-//            countDownLatch.await();
-//            System.out.println("load timestamp to memory finish cost:" + (System.currentTimeMillis() - start) + " ms");
+            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
+            start = System.currentTimeMillis();
+            ExecutorService executorService = Executors.newFixedThreadPool(200);
+            List<Future> futures = new ArrayList<>();
+            for (int i = 0; i < INDEX_ARRAY.length; i++) {
+                int finalI = i;
+                final List<Index> indexList = MapIndex.INDEX_ARRAY[i];
+                if (indexList.isEmpty()) {
+                    continue;
+                }
+                final Future<Void> submit = executorService.submit(() -> {
+                    for (Index index : indexList) {
+                        final List<Long> timestampList = tsFileService.getTimestampList(index, finalI);
+                        index.setTimestampList(timestampList);
+                    }
+                    return null;
+                });
+                futures.add(submit);
+            }
+            for (Future future : futures) {
+                future.get();
+            }
+            System.out.println("load timestamp to memory finish cost:" + (System.currentTimeMillis() - start) + " ms");
         } catch (Exception e) {
             System.out.println("loadLastTsToMemory error, e" + e);
         }

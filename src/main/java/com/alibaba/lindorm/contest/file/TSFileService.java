@@ -492,21 +492,26 @@ public class TSFileService {
         return tsFiles;
     }
 
-    public ByteBuffer getTimestampList(Index index, int j) {
+    public List<Long> getTimestampList(Index index, int j) {
         final long offset = index.getOffset();
         final int valueSize = index.getValueSize();
         int m = j % Constants.TS_FILE_NUMS;
         final TSFile tsFile = getTsFileByIndex(m);
-        ByteBuffer timestampBuffer;
-        if (valueSize == Constants.CACHE_VINS_LINE_NUMS) {
-            timestampBuffer = TOTAL_LONG_BUFFER.get();
-            timestampBuffer.clear();
-        } else {
-            timestampBuffer = ByteBuffer.allocateDirect(valueSize * 8);
+        ByteBuffer timestampMetaBuffer = ByteBuffer.allocateDirect(10);
+        ByteBuffer stringLengthBuffer = null;
+        tsFile.getFromOffsetByFileChannel(timestampMetaBuffer, offset);
+        timestampMetaBuffer.flip();
+        long longPrevious = timestampMetaBuffer.getLong();
+        int compressLength = timestampMetaBuffer.getShort();
+        ByteBuffer compressLong = ByteBuffer.allocate(compressLength);
+        tsFile.getFromOffsetByFileChannel(compressLong, offset + 10);
+        long[] decompress = LongCompress.decompress(compressLong.array(), longPrevious, valueSize);
+        List<Long> result = new ArrayList<>();
+        for (long aLong : decompress) {
+            result.add(aLong);
         }
-        tsFile.getFromOffsetByFileChannel(timestampBuffer, offset);
-        timestampBuffer.flip();
-        return timestampBuffer;
+        return result;
+
     }
 
 }
