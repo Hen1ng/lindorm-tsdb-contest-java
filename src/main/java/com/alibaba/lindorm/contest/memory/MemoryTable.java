@@ -219,7 +219,7 @@ public class MemoryTable {
             }
             return new Row(vin, value.getTimestamp(), columns);
         } finally {
-            if (queryLastTimes.get() % 30000000 == 0) {
+            if (queryLastTimes.get() % 300000000 == 0) {
                 System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
             }
         }

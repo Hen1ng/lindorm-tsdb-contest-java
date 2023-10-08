@@ -10,6 +10,7 @@ public class StaticsUtil {
     public static AtomicLong LONG_COMPRESS_LENGTH = new AtomicLong(0);
     public static AtomicLong DOUBLE_COMPRESS_LENGTH = new AtomicLong(0);
     public static AtomicLong INT_COMPRESS_LENGTH = new AtomicLong(0);
+    public static AtomicLong MAP_COMPRESS_TIME = new AtomicLong(0);
 
     public static ArrayList<ColumnInfo> columnInfos = new ArrayList<>(40);
 

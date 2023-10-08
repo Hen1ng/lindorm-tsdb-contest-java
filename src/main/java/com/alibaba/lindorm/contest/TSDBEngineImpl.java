@@ -161,6 +161,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 40L * 4L));
         System.out.println("compress indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
+        System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
 //        for (String s : SchemaUtil.maps.keySet()) {
 //            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
 //        }
@@ -242,7 +243,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
             }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 200000 == 0) {
+            if (executeLatestQueryTimes.get() % 20000000 == 0) {
 //                MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
             }
