@@ -11,7 +11,8 @@ import java.util.Map;
 public class StringFileService {
 
     private Map<Integer, StringFile> map;
-    public Pair<Bindex, int[]>  put(List<ByteBuffer> buffers, int valueSize) {
+
+    public Pair<Bindex, int[]> put(List<ByteBuffer> buffers, int valueSize) {
         int i = 0;
         while (i * valueSize < buffers.size()) {
             for (int j = i * valueSize; j < (i + 1) * valueSize; j++) {
@@ -23,7 +24,14 @@ public class StringFileService {
         return null;
     }
 
-    public ByteBuffer get(int columnIndex, long offset, int stringOffset, Bindex bindex) {
+    public byte[] get(int columnIndex, int stringOffset, Bindex bindex) {
+        final StringFile stringFile = map.get(columnIndex);
+        final ByteBuffer allocate = ByteBuffer.allocate(bindex.totalLength);
+        stringFile.getFromOffsetByFileChannel(allocate, bindex.fileOffset);
+        final byte[] array = allocate.array();
+        //todo decompress
+        byte[] bytes = array;
+        //getStringLengthArray
         return null;
     }
 }
