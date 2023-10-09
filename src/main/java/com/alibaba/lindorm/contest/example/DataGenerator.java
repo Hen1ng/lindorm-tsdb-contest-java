@@ -117,7 +117,7 @@ public class DataGenerator {
     public static LatestQueryRequest genLatestQueryRequest(){
         Random random = new Random();
         ArrayList<Vin> vinArrayList = new ArrayList<>();
-        vinArrayList.add(vins[random.nextInt(20)]);
+        vinArrayList.add(vins[0]);
         Set<String> requestColumns = new HashSet<>();
         requestColumns.add("FDJZT");
         requestColumns.add("TYBJBZ");
@@ -245,7 +245,7 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            TimeRangeQuery(tsdbEngine);
+            LastVinQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -290,7 +290,7 @@ public class DataGenerator {
             ArrayList<Row> rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
             for (Row row : rows) {
                 ByteBuffer fdjzt = row.getColumns().get("FDJZT").getStringValue();
-//                System.out.println(new String(fdjzt.array()));
+                System.out.println(new String(fdjzt.array()));
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 
@@ -317,14 +317,14 @@ public class DataGenerator {
     public static void LastVinQuery(TSDBEngineImpl tsdbEngine) throws IOException {
         System.out.println("LastVinQuery Begin =============");
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
-        for(int i=0;i<1000000;i++){
+        for(int i=0;i<1000;i++){
             LatestQueryRequest latestQueryRequest = genLatestQueryRequest();
             ArrayList<Row> rows = tsdbEngine.executeLatestQuery(latestQueryRequest);
             for (Row row : rows) {
                 ByteBuffer fdjzt = row.getColumns().get("FDJZT").getStringValue();
-//                System.out.println(new String(fdjzt.array()));
+                System.out.println(new String(fdjzt.array()));
                 ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
-//                System.out.println(new String(tybjbz.array()));
+                System.out.println(new String(tybjbz.array()));
 
             }
             if(i%100000==0){

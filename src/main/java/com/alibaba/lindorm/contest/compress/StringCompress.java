@@ -34,6 +34,9 @@ public class StringCompress {
     public static String[] dataString8;
 
     public static ArrayList<String[]> data;
+
+    public static ThreadLocal<BitSet> BIT_SET_THREAD_LOCAL = ThreadLocal.withInitial(()->BitSet.valueOf(new byte[2]));
+
     public static byte[] dictionary = "SUCCESS".getBytes();
 
     public static DeflaterCompress deflaterCompress = new DeflaterCompress();
@@ -60,88 +63,105 @@ public class StringCompress {
         return ((valueSize+7)/8);
     }
 
-    public static byte[] compress1(List<ByteBuffer> stringList,int valueSize){
+    public static void setBit(int index, byte[] bytes) {
+        int byteIndex = index / 8; // 每个字节有8位
+        int bitIndex = index % 8;
+
+        // 创建一个字节，其中只有所需的那一位被设置为1
+        byte mask = (byte) (1 << (7 - bitIndex)); // 7 - bitIndex是因为我们从左边的最高位开始计数
+
+        bytes[byteIndex] |= mask; // 使用OR操作来设置所需的那一位
+    }
+    public static CompressResult compress1(List<ByteBuffer> stringList, int valueSize) {
+        ArrayList<Short> stringlength = new ArrayList<>();
         int length = stringList.size();
         int start = 0;
         int total = 0;
         ArrayList<byte[]> arrayList = new ArrayList<>();
-        BitSet compressBitSet = BitSet.valueOf(new byte[2]);
+        BitSet compressBitSet = BIT_SET_THREAD_LOCAL.get();
+        compressBitSet.clear();
         compressBitSet.set(15);
         int index = 0;
-        while (start < length){
-            List<ByteBuffer> byteBuffers = stringList.subList(start, start + valueSize);
-            Map<String,Integer> set = new HashMap<>();
+        while (start < length) {
+            Map<String, Integer> set = new HashMap<>(2);
             int count = 0;
             int totalLength = 0;
             boolean isUseMap = true;
-            for (ByteBuffer byteBuffer : byteBuffers) {
+            for (int i = start; i < start + valueSize; i++) {
+                final ByteBuffer byteBuffer = stringList.get(i);
                 totalLength += byteBuffer.remaining();
-                if(!set.containsKey(new String(byteBuffer.array()))){
-                    set.put(new String(byteBuffer.array()),count);
+                if (isUseMap && !set.containsKey(new String(byteBuffer.array()))) {
+                    set.put(new String(byteBuffer.array()), count);
                     count++;
                 }
-                if(set.size()>2){
+                if (set.size() > 2) {
                     isUseMap = false;
                 }
             }
-            if(isUseMap){
-                // putDict
+            if (!isUseMap) {
+                ByteBuffer allocate = ByteBuffer.allocate(totalLength);
+                for (int i = start; i < start + valueSize; i++) {
+                    final ByteBuffer byteBuffer = stringList.get(i);
+                    stringlength.add((short) byteBuffer.remaining());
+                    allocate.put(byteBuffer.array());
+                }
+                total += allocate.array().length;
+                arrayList.add(allocate.array());
+            } else {
+// putDict
+                compressBitSet.set(index);
                 StaticsUtil.MAP_COMPRESS_TIME.addAndGet(1);
                 int dictLength = 0;
                 for (String bytes : set.keySet()) {
-                    dictLength +=bytes.length();
+                    dictLength += bytes.length();
                 }
-                ByteBuffer compress = ByteBuffer.allocate(dictLength + 2*2 + UpperBoundByte(valueSize));
-                compressBitSet.set(index);
-                for(int i=0;i<2;i++){
+                ByteBuffer compress = ByteBuffer.allocate(dictLength + 2 * 2 + UpperBoundByte(valueSize));
+                for (int i = 0; i < 2; i++) {
                     boolean isExist = false;
                     for (String bytes : set.keySet()) {
-                        if(set.get(bytes) == i) {
+                        if (set.get(bytes) == i) {
                             compress.putShort((short) bytes.length());
                             compress.put(bytes.getBytes());
                             isExist = true;
                             break;
                         }
                     }
-                    if(!isExist)compress.putShort((short) 0);
+                    if (!isExist) compress.putShort((short) 0);
                 }
-                // 写字典 id -> string
-                // 写string -> id
-                BitSet bitSet = new BitSet(UpperBoundByte(valueSize));
-                for(int i=0;i<byteBuffers.size();i++){
-                    Integer i1 = set.get(new String(byteBuffers.get(i).array()));
-                    if(i1==1){
-                        bitSet.set(i);
+// 写字典 id -> string
+// 写string -> id
+                byte[] bitSet = new byte[UpperBoundByte(valueSize)/8];
+                for (int i = start; i < start + valueSize; i++) {
+                    final ByteBuffer byteBuffer = stringList.get(i);
+                    Integer i1 = set.get(new String(byteBuffer.array()));
+                    if (i1 == 1) {
+                        setBit(i,bitSet);
                     }
                 }
-                byte[] byteArray = bitSet.toByteArray();
-                compress.put(byteArray);
+                compress.put(bitSet);
                 total += compress.array().length;
                 arrayList.add(compress.array());
-            }else{
-                ByteBuffer allocate = ByteBuffer.allocate( totalLength);
-                for (ByteBuffer byteBuffer : byteBuffers) {
-                    allocate.put(byteBuffer.array());
-                }
-                total += allocate.array().length;
-                arrayList.add(allocate.array());
+
             }
             index++;
-            start+=valueSize;
+            start += valueSize;
         }
-        ByteBuffer allocate = ByteBuffer.allocate(2+total);
-//        System.out.println(Arrays.toString(compressBitSet.toString().getBytes()));
+        short[] shorts = new short[stringlength.size()];
+        for(int i=0;i<shorts.length;i++){
+            shorts[i] = stringlength.get(i);
+        }
+        ByteBuffer allocate = ByteBuffer.allocate(2 + total);
         allocate.put(compressBitSet.toByteArray());
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = Zstd.compress(allocate.array(),12);
-//        compress = gzipCompress.compress(compress);
-        ByteBuffer res = ByteBuffer.allocate(4+compress.length);
-        res.putInt(2+total);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
+        ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
+        res.putInt(2 + total);
         res.put(compress);
-        return res.array();
+        return new CompressResult(res.array(),shorts);
     }
+
 
     public static ArrayList<ByteBuffer> decompress1(byte[] bytes,ByteBuffer stringLengthBuffer,int valueSize,int totalLength){
 //        bytes = gzipCompress.deCompress(bytes);
@@ -167,7 +187,7 @@ public class StringCompress {
                 wrap.get(values,0,UpperBoundByte(valueSize));
                 BitSet bitSet = BitSet.valueOf(values);
                 for(int i=0;i<valueSize;i++){
-                    stringLengthBuffer.getShort();
+//                    stringLengthBuffer.getShort();
 //                    byteBuffers.add(ByteBuffer.wrap(arrayList.get(0)));
                     boolean bi = bitSet.get(i);
                     if(bi){
@@ -285,18 +305,26 @@ public class StringCompress {
             System.out.println(datum.length);
             for (String string : datum) {
                 totalLength+=string.length();
-                stringLengthBuffer.putShort((short) string.length());
                 stringList.add(ByteBuffer.wrap(string.getBytes()));
             }
         }
         ByteBuffer byteBuffer = ByteBuffer.allocate(totalLength);
-
-        byte[] bytes = byteBuffer.array();
-        byte[] compress = compress1(stringList,160);
+        for (String[] datum : data) {
+            for (String string : datum) {
+                byteBuffer.put(string.getBytes());
+            }
+        }
+        short[] shorts = null;
+        CompressResult compressResult = compress1(stringList,160);
+        byte[] compress = compressResult.compressedData;
+        shorts = compressResult.stringLengthArray;
         ByteBuffer wrap = ByteBuffer.wrap(compress);
         int tl = wrap.getInt();
         byte[] bytes1 = new byte[compress.length-4];
         wrap.get(bytes1);
+        for (short aShort : shorts) {
+            stringLengthBuffer.putShort(aShort);
+        }
         List<ByteBuffer> decompressedList = decompress1(bytes1,stringLengthBuffer,160,tl);
         for (int i = 0; i < stringList.size(); i++) {
             ByteBuffer original = stringList.get(i);
@@ -306,13 +334,16 @@ public class StringCompress {
                 System.out.println("not equal");
             }
         }
-        short[] shorts = new short[160*9];
-        stringLengthBuffer.flip();
-        for(int i=0;i<shorts.length;i++){
-            shorts[i] = stringLengthBuffer.getShort();
-        }
-        byte[] bytes2 = IntCompress.compressShort(shorts);
-        System.out.println("compress rate : " + (1.0*compress.length+bytes2.length)/totalLength);
+        byte[] bytes2 = IntCompress.compressShort(shorts,160);
+        ByteBuffer wrap1 = ByteBuffer.wrap(bytes2);
+        int tl1 = wrap1.getInt();
+        byte[] bytes = new byte[bytes2.length-4];
+        wrap1.get(bytes,0,bytes.length);
+        short[] shorts1 = IntCompress.decompressShort(bytes, 160, tl1);
+        System.out.println(Arrays.equals(shorts1,shorts));
+        System.out.println(bytes2.length+"B");
+        System.out.println("compress rate : " + (1.0*compress.length+bytes2.length)/totalLength );
+//        System.out.println("brotli compress rate : " + (1.0*compress1.length+bytes2.length)/bytes.length +"use time : " + (brotli-start));
 
         System.out.println(Zstd.defaultCompressionLevel());
         // 使用compress1函数压缩

@@ -439,6 +439,7 @@ public class MemoryTable {
                 final Index index = pair.getLeft();
                 final Long timestamp = pair.getRight();
                 Vin vin = new Vin(VinDictMap.get(i));
+                if(index==null)continue;;
                 Row row = tsFileService.getByIndex(vin, timestamp, index, requestedColumns, i);
                 if (row == null) {
                     throw new RuntimeException("loadLastTsToMemory error, row is null");

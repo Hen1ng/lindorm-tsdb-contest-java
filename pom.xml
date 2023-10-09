@@ -50,6 +50,16 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.github.rdblue/brotli-codec -->
+        <dependency>
+            <groupId>com.nixxcode.jvmbrotli</groupId>
+            <artifactId>jvmbrotli</artifactId>
+            <version>0.2.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/jvmbrotli-0.2.0.jar</systemPath>
+            <optional>true</optional>
+        </dependency>
+
     </dependencies>
 
 

@@ -159,6 +159,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 8L));
         System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
         System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 40L * 4L));
+        System.out.println("compress short :" + (StaticsUtil.STRING_SHORT_LENGTH));
+        System.out.println("compress short bytes : " + (StaticsUtil.STRING_BYTE_LENGTH));
         System.out.println("compress indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
