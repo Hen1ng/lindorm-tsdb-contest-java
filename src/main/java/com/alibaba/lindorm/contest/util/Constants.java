@@ -30,22 +30,11 @@ public class Constants {
     // ---------- BIGINT DICT COMPRESS --------------------
 
 
-    public static ConcurrentSkipListSet<Integer> YXMSset;
-    public static ConcurrentSkipListSet<String> ZEROSET = new ConcurrentSkipListSet<>();
-
-    public static IntColumnHashMapCompress intColumnHashMapCompress;
-
-    public static DoubleColumnHashMapCompress doubleColumnHashMapCompress;
-    public static StringColumnHashMapCompress stringColumnHashMapCompress;
 
 
 
     static{
-        YXMSset = new ConcurrentSkipListSet<>();
-//        ZEROSET.add("DW");
-//        ZEROSET.add("QTGZLB");
-//        ZEROSET.add("FDJGZLB");
-//        ZEROSET.add("QDDJGZDMLB");
+//
     }
 
     public static void setIntNums(int intNums) {

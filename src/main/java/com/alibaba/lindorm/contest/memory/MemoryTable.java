@@ -377,6 +377,7 @@ public class MemoryTable {
     }
 
     public void writeToFileBeforeShutdown() {
+        long start = System.currentTimeMillis();
         try {
             for (int i = 0; i < values.length; i++) {
                 List<Value> valueList = values[i];
@@ -388,6 +389,7 @@ public class MemoryTable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        System.out.println("writeToFileBeforeShutdown finish cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
 
@@ -448,7 +450,7 @@ public class MemoryTable {
                 final Value value = new Value(timestamp, row.getColumns());
                 valueSortedList.add(value);
             }
-//            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
+            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
 //            start = System.currentTimeMillis();
 //            ExecutorService executorService = Executors.newFixedThreadPool(200);
 //            final CountDownLatch countDownLatch = new CountDownLatch(MapIndex.INDEX_MAP.size());

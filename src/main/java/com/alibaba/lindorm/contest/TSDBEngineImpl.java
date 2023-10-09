@@ -114,16 +114,8 @@ public class TSDBEngineImpl extends TSDBEngine {
             StaticsUtil.columnInfos.add(new ColumnInfo());
         }
         if (RestartUtil.IS_FIRST_START) {
-            Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
-            Constants.doubleColumnHashMapCompress = new DoubleColumnHashMapCompress(this.dataPath);
-            Constants.stringColumnHashMapCompress = new StringColumnHashMapCompress();
-            Constants.intColumnHashMapCompress.prepare();
-            Constants.doubleColumnHashMapCompress.prepare();
-            Constants.stringColumnHashMapCompress.Prepare();
+
         } else {
-            Constants.intColumnHashMapCompress = IntColumnHashMapCompress.loadFromFile(dataPath.getPath());
-            Constants.doubleColumnHashMapCompress = DoubleColumnHashMapCompress.loadFromFile(dataPath.getPath());
-            Constants.stringColumnHashMapCompress = StringColumnHashMapCompress.loadFromFile(dataPath.getPath());
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
@@ -176,14 +168,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 });
                 memoryTable.writeToFileBeforeShutdown();
 
-                final Future<Void> submit1 = executorService1.submit(() -> {
-                    Constants.intColumnHashMapCompress.saveToFile(dataPath.getPath());
-                    Constants.doubleColumnHashMapCompress.saveToFile(dataPath.getPath());
-                    Constants.stringColumnHashMapCompress.saveToFile(dataPath.getPath());
-                    return null;
-                });
                 final Future<Void> submit2 = executorService1.submit(() -> {
-//                    MapIndex.saveMapToFile(indexFile);
                     MapIndex.saveMaPToFileCompress(indexFile);
                     return null;
                 });
@@ -195,7 +180,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                     filePosition.save(fileService.getTsFiles());
                     return null;
                 });
-                submit1.get();
                 submit2.get();
                 submit3.get();
                 submit4.get();

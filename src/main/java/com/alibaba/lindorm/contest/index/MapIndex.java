@@ -113,6 +113,7 @@ public class MapIndex {
     }
 
     public static void saveMaPToFileCompress(File file) throws IOException {
+        long start = System.currentTimeMillis();
         FileChannel fileChannel = new RandomAccessFile(file, "rw").getChannel();
         // 先压缩vin
 
@@ -150,22 +151,8 @@ public class MapIndex {
             allocate1.put(compress);
             allocate1.flip();
             fileChannel.write(allocate1);
-//            try {
-//                int length = 0;
-//                allocate.flip();
-//                while(allocate.hasRemaining()) {
-//                    length += fileChannel.write(allocate);
-//                }
-//                IndexFileLength += length;
-//                if(length !=  vin.getVin().length +
-//                        4 + 4 * indexBytes.size() + totalBytes){
-//                    System.out.println("write index file error by fileChanel");
-//                }
-//            }catch (Exception e){
-//                e.printStackTrace();
-//            }
         }
-        System.out.println("INDEX FILE LEN : " + indexFileLength);
+        System.out.println("INDEX FILE LEN : " + indexFileLength + " time : " + (System.currentTimeMillis() - start) + " ms");
     }
 
 //    public static void saveMapToFile(File file) {
