@@ -3,6 +3,7 @@ package com.alibaba.lindorm.contest.index;
 
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.util.Constants;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
@@ -10,6 +11,8 @@ import java.util.Random;
 
 public class Index {
 
+    private Bindex bindex;
+    private int[] stringOffset = new int[Constants.STRING_NUMS];
     private long offset;
     private long maxTimestamp;
     private long minTimestamp;

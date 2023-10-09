@@ -108,7 +108,7 @@ public class StringCompress {
                 total += allocate.array().length;
                 arrayList.add(allocate.array());
             } else {
-// putDict
+            // putDict
                 compressBitSet.set(index);
                 StaticsUtil.MAP_COMPRESS_TIME.addAndGet(1);
                 int dictLength = 0;

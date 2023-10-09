@@ -395,6 +395,7 @@ public class TSFileService {
 //                ArrayUtils.copy(array, 0, bytes, position, array.length);
 //                position += array.length;
 //            }
+
             CompressResult compressResult =StringCompress.compress1(stringList,lineNum);
             final byte[] compress = compressResult.compressedData;
             stringLengthArray = compressResult.stringLengthArray;
