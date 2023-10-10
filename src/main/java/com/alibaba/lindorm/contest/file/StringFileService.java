@@ -1,6 +1,7 @@
 package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.index.Bindex;
+import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.Pair;
 import com.alibaba.lindorm.contest.util.SchemaUtil;
@@ -18,7 +19,7 @@ public class StringFileService {
         map.put(columnIndex, new StringFile(filePath, SchemaUtil.getIndexArray()[columnIndex], totalCacheLines));
     }
 
-    public Pair<Bindex, int[]> put(List<ByteBuffer> buffers, int valueSize, boolean flushNow) {
+    public Pair<Bindex, int[]> put(List<ByteBuffer> buffers, int valueSize, boolean flushNow, Index index) {
         int i = 0;
         int[] stringOffset = new int[Constants.STRING_NUMS];
         long[] fileOffset = new long[Constants.STRING_NUMS];

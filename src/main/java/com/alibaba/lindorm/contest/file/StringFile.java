@@ -48,8 +48,6 @@ public class StringFile {
 
     private long append;
 
-    private Bindex[] bindices;
-
     public StringFile(String filePath, String key, int totalByteBufferSize) {
         try {
             String tsFilePath = filePath + "/" + key;
