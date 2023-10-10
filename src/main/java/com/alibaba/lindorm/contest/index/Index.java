@@ -11,18 +11,10 @@ import java.util.Random;
 
 public class Index {
 
-    public void setBindex(Bindex bindex) {
-        this.bindex = bindex;
-    }
+    private int bindexIndex;
 
-    public Bindex getBindex() {
-        return bindex;
-    }
-
-    private Bindex bindex;
-
-    public void setStringOffset(int[] stringOffset) {
-        this.stringOffset = stringOffset;
+    public int[] getStringOffset() {
+        return stringOffset;
     }
 
     private int[] stringOffset;

@@ -5,8 +5,6 @@ import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.StringCompress;
 import com.alibaba.lindorm.contest.index.Bindex;
 import com.alibaba.lindorm.contest.index.Index;
-import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +29,8 @@ public class StringFile {
      */
     private List<ByteBuffer> byteBuffers;
 
+    private Bindex bindex;
+
     /**
      * 缓存的byteBuffer的总数量，目前需要是{@link com.alibaba.lindorm.contest.util.Constants#CACHE_VINS_LINE_NUMS}的整数倍
      */
@@ -46,11 +46,7 @@ public class StringFile {
      */
     private int currentByteBufferSize;
 
-    private int whichBatch = -1;
-
     private long append;
-
-    private Index[] indexList;
 
 
     public StringFile(String filePath, String key, int totalByteBufferSize) {
@@ -83,7 +79,7 @@ public class StringFile {
         }
     }
 
-    public WriteResult write(List<ByteBuffer> buffers, int start, int end, boolean flush, int column, Index index) {
+    public int write(List<ByteBuffer> buffers, int start, int end, boolean flush, int column, Index index) {
         this.lock.lock();
         try {
             int batchSize = totalSize;
@@ -92,13 +88,7 @@ public class StringFile {
                 byteBuffers.add(byteBuffer);
                 totalSize += byteBuffer.capacity();
                 currentByteBufferSize += 1;
-                batchSize += byteBuffer.capacity();
             }
-            if (indexList == null) {
-                indexList = new Index[totalByteBufferSize / Constants.CACHE_VINS_LINE_NUMS];
-            }
-            indexList[whichBatch] = index;
-            whichBatch += 1;
             if (currentByteBufferSize >= totalByteBufferSize || flush) {
                 final ByteBuffer allocate = ByteBuffer.allocate(totalSize);
                 List<ByteBuffer> subBuffers = new ArrayList<>(currentByteBufferSize);
@@ -110,21 +100,20 @@ public class StringFile {
                 final short[] stringLengthArray = compressResult.stringLengthArray;
                 byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, subBuffers.size());
                 int totalLength = compressedData.length + stringLengthArrayCompress.length;
+                totalLength += 6;
                 final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(totalLength);
+                byteBuffer.putShort((short) stringLengthArrayCompress.length);
                 byteBuffer.put(stringLengthArrayCompress);
+                byteBuffer.putInt(compressedData.length);
                 byteBuffer.put(compressedData);
                 this.append = append(allocate);
-                for (int i = 0; i < whichBatch; i++) {
-                    indexList[i].getBindex().totalLength[column] = totalLength;
-                }
                 byteBuffers.clear();
                 totalSize = 0;
                 totalByteBufferSize = 0;
                 currentByteBufferSize = 0;
-                whichBatch = -1;
-                indexList = null;
                 return new WriteResult(append, batchSize, totalLength);
             }
+
             return new WriteResult(append, batchSize, -1);
         } catch (Exception e) {
             e.printStackTrace();
