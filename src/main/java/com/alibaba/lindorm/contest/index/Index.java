@@ -11,7 +11,20 @@ import java.util.Random;
 
 public class Index {
 
+    public void setBindex(Bindex bindex) {
+        this.bindex = bindex;
+    }
+
+    public Bindex getBindex() {
+        return bindex;
+    }
+
     private Bindex bindex;
+
+    public void setStringOffset(int[] stringOffset) {
+        this.stringOffset = stringOffset;
+    }
+
     private int[] stringOffset;
     private long offset;
     private long maxTimestamp;

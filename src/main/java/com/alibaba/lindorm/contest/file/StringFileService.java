@@ -3,7 +3,6 @@ package com.alibaba.lindorm.contest.file;
 import com.alibaba.lindorm.contest.index.Bindex;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.Pair;
 import com.alibaba.lindorm.contest.util.SchemaUtil;
 
 import java.nio.ByteBuffer;
@@ -19,23 +18,27 @@ public class StringFileService {
         map.put(columnIndex, new StringFile(filePath, SchemaUtil.getIndexArray()[columnIndex], totalCacheLines));
     }
 
-    public Pair<Bindex, int[]> put(List<ByteBuffer> buffers, int valueSize, boolean flushNow, Index index) {
+    public void put(List<ByteBuffer> buffers, int valueSize, boolean flushNow, Index index) {
+        //那一列
         int i = 0;
         int[] stringOffset = new int[Constants.STRING_NUMS];
         long[] fileOffset = new long[Constants.STRING_NUMS];
         int[] totalLength = new int[Constants.STRING_NUMS];
+        final Bindex bindex = new Bindex(totalLength, fileOffset);
+        index.setBindex(bindex);
+        index.setStringOffset(stringOffset);
         while (i * valueSize < buffers.size()) {
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
-            int columnIndex = i + Constants.FLOAT_NUMS + Constants.INT_NUMS;
+            int columnIndex = i + Constants.INT_NUMS + Constants.FLOAT_NUMS;
             final StringFile stringFile = map.get(columnIndex);
-            Pair<Long, Integer> write = stringFile.write(buffers, start, end, flushNow, i);
-            fileOffset[i] = write.getLeft();
-            stringOffset[i] = write.getRight();
+            final StringFile.WriteResult write = stringFile.write(buffers, start, end, flushNow, i, index);
+            fileOffset[i] = write.fileOffset;
+            totalLength[i] = write.totalLength;
+            stringOffset[i] = write.batchSize;
             i++;
         }
-        final Bindex bindex = new Bindex(totalLength, fileOffset);
-        return Pair.of(bindex, stringOffset);
+
     }
 
     public byte[] get(int columnIndex, int stringOffset, Bindex bindex) {
