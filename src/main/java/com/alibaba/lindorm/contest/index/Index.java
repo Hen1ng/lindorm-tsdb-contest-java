@@ -11,8 +11,8 @@ import java.util.Random;
 
 public class Index {
 
-    private Bindex[] bindex = new Bindex[10];
-    private int[] stringOffset = new int[Constants.STRING_NUMS];
+    private Bindex bindex;
+    private int[] stringOffset;
     private long offset;
     private long maxTimestamp;
     private long minTimestamp;
