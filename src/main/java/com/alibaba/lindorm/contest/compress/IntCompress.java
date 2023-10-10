@@ -178,7 +178,8 @@ public class IntCompress {
 //                position += 8;
 //            }
 //            return resultBuffer.array();
-            return Zstd.compress(resultBuffer.array(), 12);
+            return resultBuffer.array();
+//            return Zstd.compress(resultBuffer.array(), 12);
 //            GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //            return gzipCompress.compress(result);
 //            return result;
@@ -191,8 +192,8 @@ public class IntCompress {
     public static long[] decompress2(byte[] bytes1, int valueSize) {
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        byte[] bytes = gzipCompress.deCompress(bytes1);
-
-        byte[] bytes = Zstd.decompress(bytes1,valueSize*8);
+        byte[]bytes = bytes1;
+//        byte[] bytes = Zstd.decompress(bytes1,valueSize*8);
         long[] output = new long[bytes.length / 8];
         int position = 0;
         ByteBuffer wrap = ByteBuffer.wrap(bytes);

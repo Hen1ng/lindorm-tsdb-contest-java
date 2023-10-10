@@ -117,7 +117,7 @@ public class DataGenerator {
     public static LatestQueryRequest genLatestQueryRequest(){
         Random random = new Random();
         ArrayList<Vin> vinArrayList = new ArrayList<>();
-        vinArrayList.add(vins[0]);
+        vinArrayList.add(vins[random.nextInt(10)]);
         Set<String> requestColumns = new HashSet<>();
         requestColumns.add("FDJZT");
         requestColumns.add("TYBJBZ");
