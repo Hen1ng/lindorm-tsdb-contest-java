@@ -4,7 +4,9 @@ import com.alibaba.lindorm.contest.compress.CompressResult;
 import com.alibaba.lindorm.contest.compress.IntCompress;
 import com.alibaba.lindorm.contest.compress.StringCompress;
 import com.alibaba.lindorm.contest.index.Bindex;
+import com.alibaba.lindorm.contest.index.BindexFactory;
 import com.alibaba.lindorm.contest.index.Index;
+import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,6 +50,8 @@ public class StringFile {
 
     private long append;
 
+    private int bindexPosition = 0;
+
 
     public StringFile(String filePath, String key, int totalByteBufferSize) {
         try {
@@ -79,9 +83,14 @@ public class StringFile {
         }
     }
 
-    public int write(List<ByteBuffer> buffers, int start, int end, boolean flush, int column, Index index) {
+    public void write(List<ByteBuffer> buffers, int start, int end, boolean flush, int column, Index index) {
         this.lock.lock();
         try {
+            if (bindex == null) {
+                Pair<Integer, Bindex> bindex1 = BindexFactory.getNewBindex();
+                bindexPosition = bindex1.getLeft();
+                bindex = bindex1.getRight();
+            }
             int batchSize = totalSize;
             for (int i = start; i < end; i++) {
                 ByteBuffer byteBuffer = buffers.get(i);
@@ -100,28 +109,57 @@ public class StringFile {
                 final short[] stringLengthArray = compressResult.stringLengthArray;
                 byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, subBuffers.size());
                 int totalLength = compressedData.length + stringLengthArrayCompress.length;
-                totalLength += 6;
+                totalLength += 16;
                 final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(totalLength);
-                byteBuffer.putShort((short) stringLengthArrayCompress.length);
+                byteBuffer.putInt(stringLengthArrayCompress.length);
                 byteBuffer.put(stringLengthArrayCompress);
+                byteBuffer.putInt(stringLengthArray.length * 2);
                 byteBuffer.putInt(compressedData.length);
                 byteBuffer.put(compressedData);
+                byteBuffer.putInt(totalSize);
                 this.append = append(allocate);
+                bindex.totalLength[column] = totalLength;
+                final Bindex bindex1 = bindex.deepCopy();
+                bindex.fileOffset[column] = append;
+                index.getStringOffset()[column] = batchSize;
+                //tod setString offset
+                index.setBindexIndex(bindexPosition);
+                BindexFactory.updateByPosition(bindexPosition, bindex1);
                 byteBuffers.clear();
                 totalSize = 0;
                 totalByteBufferSize = 0;
                 currentByteBufferSize = 0;
-                return new WriteResult(append, batchSize, totalLength);
+                bindex = null;
+                return;
             }
-
-            return new WriteResult(append, batchSize, -1);
+            bindex.fileOffset[column] = append;
+            bindex.totalLength[column] = -1;
+            index.getStringOffset()[column] = batchSize;
+            index.setBindexIndex(bindexPosition);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
         } finally {
             this.lock.unlock();
         }
-        return null;
+    }
+
+    public List<ByteBuffer> getFromBuffer(int stringOffset, int valueSize) {
+        this.lock.lock();
+        List<ByteBuffer> buffers = new ArrayList<>(valueSize);
+        int i = 0;
+        try {
+            for (ByteBuffer byteBuffer : this.byteBuffers) {
+                if (i >= stringOffset && i < stringOffset + valueSize) {
+                    buffers.add(ByteBuffer.wrap(byteBuffer.array()));
+                }
+                i += byteBuffer.capacity();
+
+            }
+        } finally {
+            this.lock.unlock();
+        }
+        return buffers;
     }
 
 

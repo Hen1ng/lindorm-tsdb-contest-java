@@ -9,4 +9,20 @@ public class Bindex {
         this.fileOffset = fileOffset;
         this.totalLength = totalLength;
     }
+
+    public Bindex() {
+
+    }
+
+    public Bindex deepCopy() {
+        long[] fileOffset1 = new long[fileOffset.length];
+        int[] totalLength1 = new int[this.totalLength.length];
+        for (int i = 0; i < fileOffset.length; i++) {
+            fileOffset1[i] = fileOffset[i];
+        }
+        for (int i = 0; i < fileOffset.length; i++) {
+            fileOffset1[i] = fileOffset[i];
+        }
+        return new Bindex(totalLength1, fileOffset1);
+    }
 }
