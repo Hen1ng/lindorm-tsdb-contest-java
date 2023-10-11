@@ -10,6 +10,9 @@ import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.github.luben.zstd.Zstd;
+import com.nixxcode.jvmbrotli.enc.BrotliEncoderChannel;
+import org.apache.commons.compress.compressors.brotli.BrotliCompressorInputStream;
+import org.apache.commons.compress.compressors.brotli.BrotliUtils;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -73,9 +76,9 @@ public class TSFileService {
             long longPrevious = dataBuffer.getLong();
             int compressLength = dataBuffer.getShort();
             byte[] longBytes = new byte[compressLength];
-            dataBuffer.get(longBytes);
+            dataBuffer.get(longBytes,0,longBytes.length);
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
-            int intAndDoubleLength = dataBuffer.getShort();
+            int intAndDoubleLength = dataBuffer.getInt();
 //            int doubleCompressInt = dataBuffer.getShort(10 + compressLength + intAndDoubleLength + 2);
             int i = 0;//多少行
             long[] ints = null;
@@ -93,9 +96,9 @@ public class TSFileService {
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
                                 if (ints == null) {
-                                    final byte[] allocate1 = new byte[intAndDoubleLength - 2];
-                                    dataBuffer.position(10 + compressLength + 2);
-                                    short totalLength = dataBuffer.getShort();
+                                    final byte[] allocate1 = new byte[intAndDoubleLength - 4];
+                                    dataBuffer.position(10 + compressLength + 4);
+                                    int totalLength = dataBuffer.getInt();
                                     dataBuffer.get(allocate1, 0, allocate1.length);
                                     byte[] intAndDoubleBytes = Zstd.decompress(allocate1, totalLength);
                                     ByteBuffer wrap = ByteBuffer.wrap(intAndDoubleBytes);
@@ -107,7 +110,7 @@ public class TSFileService {
                                     for (int i1 = 0; i1 < doubles.length; i1++) {
                                         doubles[i1] = wrap1.getDouble();
                                     }
-                                    short intByteLength = wrap.getShort();
+                                    int intByteLength = wrap.getInt();
                                     byte[] intBytes = new byte[intByteLength];
                                     wrap.get(intBytes, 0, intBytes.length);
                                     ints = IntCompress.decompress2(intBytes, index.getValueSize() * Constants.INT_NUMS);
@@ -121,9 +124,9 @@ public class TSFileService {
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
                                 if (doubles == null) {
-                                    final byte[] allocate1 = new byte[intAndDoubleLength - 2];
-                                    dataBuffer.position(10 + compressLength + 2);
-                                    short totalLength = dataBuffer.getShort();
+                                    final byte[] allocate1 = new byte[intAndDoubleLength - 4];
+                                    dataBuffer.position(10 + compressLength + 4);
+                                    int totalLength = dataBuffer.getInt();
                                     dataBuffer.get(allocate1, 0, allocate1.length);
                                     byte[] intAndDoubleBytes = Zstd.decompress(allocate1, totalLength);
                                     ByteBuffer wrap = ByteBuffer.wrap(intAndDoubleBytes);
@@ -135,7 +138,7 @@ public class TSFileService {
                                     for (int i1 = 0; i1 < doubles.length; i1++) {
                                         doubles[i1] = wrap1.getDouble();
                                     }
-                                    short intByteLength = wrap.getShort();
+                                    int intByteLength = wrap.getInt();
                                     byte[] intBytes = new byte[intByteLength];
                                     wrap.get(intBytes, 0, intBytes.length);
                                     ints = IntCompress.decompress2(intBytes, index.getValueSize() * Constants.INT_NUMS);
@@ -148,10 +151,10 @@ public class TSFileService {
                         } else {
                             if (stringLengthBuffer == null) {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
-                                        + 2 + 2 + (intAndDoubleLength-2));
+                                        + 4 + 4 + (intAndDoubleLength-4));
                                 final byte[] bytes = new byte[everyStringLength - 4];
                                 dataBuffer.position(10 + compressLength
-                                        + 2 + 2 + (intAndDoubleLength-2)
+                                        + 4 + 4 + (intAndDoubleLength-4)
                                         + 2);
                                 int totalLength = dataBuffer.getInt();
                                 dataBuffer.get(bytes, 0, bytes.length);
@@ -165,12 +168,12 @@ public class TSFileService {
                             if (stringBytes == null) {
                                 int stringLength = length - (
                                         10 + compressLength
-                                                + (intAndDoubleLength-2) + 2 + 2
+                                                + (intAndDoubleLength-4) + 4 + 4
                                                 + everyStringLength + 2
                                 );
                                 byte[] bytes = new byte[stringLength - 4];
                                 dataBuffer.position(10 + compressLength
-                                        + (intAndDoubleLength-2) + 2 + 2
+                                        + (intAndDoubleLength-4) + 4 + 4
                                         + everyStringLength + 2
                                 );
                                 int totalLength = dataBuffer.getInt();
@@ -216,7 +219,7 @@ public class TSFileService {
             byte[] longBytes = new byte[compressLength];
             dataBuffer.get(longBytes);
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
-            int intAndDoubleLength = dataBuffer.getShort();
+            int intAndDoubleLength = dataBuffer.getInt();
 //            int doubleCompressInt = dataBuffer.getShort(10 + compressLength + intAndDoubleLength + 2);
             int i = 0;//多少行
             long[] ints = null;
@@ -226,7 +229,7 @@ public class TSFileService {
             ByteBuffer stringLengthBuffer = null;
             short totalStringLength = 0;
             for (long aLong : decompress) {
-                if (aLong == timestamp) {
+                if (aLong ==timestamp) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {
                         final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
@@ -234,9 +237,9 @@ public class TSFileService {
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
                                 if (ints == null) {
-                                    final byte[] allocate1 = new byte[intAndDoubleLength - 2];
-//                                    dataBuffer.position(10 + compressLength + 2);
-                                    short totalLength = dataBuffer.getShort();
+                                    final byte[] allocate1 = new byte[intAndDoubleLength - 4];
+                                    dataBuffer.position(10 + compressLength + 4);
+                                    int totalLength = dataBuffer.getInt();
                                     dataBuffer.get(allocate1, 0, allocate1.length);
                                     byte[] intAndDoubleBytes = Zstd.decompress(allocate1, totalLength);
                                     ByteBuffer wrap = ByteBuffer.wrap(intAndDoubleBytes);
@@ -248,7 +251,7 @@ public class TSFileService {
                                     for (int i1 = 0; i1 < doubles.length; i1++) {
                                         doubles[i1] = wrap1.getDouble();
                                     }
-                                    short intByteLength = wrap.getShort();
+                                    int intByteLength = wrap.getInt();
                                     byte[] intBytes = new byte[intByteLength];
                                     wrap.get(intBytes, 0, intBytes.length);
                                     ints = IntCompress.decompress2(intBytes, index.getValueSize() * Constants.INT_NUMS);
@@ -262,10 +265,10 @@ public class TSFileService {
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
                                 if (doubles == null) {
-                                    final byte[] allocate1 = new byte[intAndDoubleLength - 2];
-                                    dataBuffer.position(10 + compressLength + 2);
-                                    short totalLength = dataBuffer.getShort();
-                                    dataBuffer.get(allocate1);
+                                    final byte[] allocate1 = new byte[intAndDoubleLength - 4];
+                                    dataBuffer.position(10 + compressLength + 4);
+                                    int totalLength = dataBuffer.getInt();
+                                    dataBuffer.get(allocate1, 0, allocate1.length);
                                     byte[] intAndDoubleBytes = Zstd.decompress(allocate1, totalLength);
                                     ByteBuffer wrap = ByteBuffer.wrap(intAndDoubleBytes);
                                     short doubleByteLength = wrap.getShort();
@@ -276,7 +279,7 @@ public class TSFileService {
                                     for (int i1 = 0; i1 < doubles.length; i1++) {
                                         doubles[i1] = wrap1.getDouble();
                                     }
-                                    short intByteLength = wrap.getShort();
+                                    int intByteLength = wrap.getInt();
                                     byte[] intBytes = new byte[intByteLength];
                                     wrap.get(intBytes, 0, intBytes.length);
                                     ints = IntCompress.decompress2(intBytes, index.getValueSize() * Constants.INT_NUMS);
@@ -289,10 +292,10 @@ public class TSFileService {
                         } else {
                             if (stringLengthBuffer == null) {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
-                                        + (intAndDoubleLength-2) + 2 + 2);
+                                        + 4 + 4 + (intAndDoubleLength-4));
                                 final byte[] bytes = new byte[everyStringLength - 4];
                                 dataBuffer.position(10 + compressLength
-                                        + (intAndDoubleLength-2) + 2 + 2
+                                        + 4 + 4 + (intAndDoubleLength-4)
                                         + 2);
                                 int totalLength = dataBuffer.getInt();
                                 dataBuffer.get(bytes, 0, bytes.length);
@@ -306,12 +309,12 @@ public class TSFileService {
                             if (stringBytes == null) {
                                 int stringLength = length - (
                                         10 + compressLength
-                                                + (intAndDoubleLength-2) + 2 + 2
+                                                + (intAndDoubleLength-4) + 4 + 4
                                                 + everyStringLength + 2
                                 );
                                 byte[] bytes = new byte[stringLength - 4];
                                 dataBuffer.position(10 + compressLength
-                                        + (intAndDoubleLength-2) + 2 + 2
+                                        + (intAndDoubleLength-4) + 4 + 4
                                         + everyStringLength + 2
                                 );
                                 int totalLength = dataBuffer.getInt();
@@ -327,7 +330,7 @@ public class TSFileService {
                             }
                         }
                     }
-                    rowArrayList.add(new Row(vin, aLong, columns));
+                    return new Row(vin, aLong, columns);
                 }
                 i++;
             }
@@ -443,18 +446,17 @@ public class TSFileService {
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
-
             //压缩int
             byte[] compress2 = IntCompress.compress2(ints);
-            ByteBuffer intAndDouble = ByteBuffer.allocate(2 + 2 + compressDouble.length + compress2.length);
+            ByteBuffer intAndDouble = ByteBuffer.allocate(2 + 4 + compressDouble.length + compress2.length);
             intAndDouble.putShort((short) compressDouble.length);
             intAndDouble.put(compressDouble);
-            intAndDouble.putShort((short) compress2.length);
+            intAndDouble.putInt(compress2.length);
             intAndDouble.put(compress2);
-            byte[] compress3 = Zstd.compress(intAndDouble.array(), 12);
+            byte[] compress3 = Zstd.compress(intAndDouble.array(), 15);
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, lineNum);
             int total = 8 + 2 + compress1.length //timestamp
-                    + 2 + 2 + compress3.length // int and double
+                    + 4 + 4 + compress3.length // int and double
                     + stringLengthArrayCompress.length + 2 //string长度记录
                     + compress.length; //string存储string
             final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
@@ -471,8 +473,8 @@ public class TSFileService {
                 byteBuffer.putShort((short) compress1.length);
                 byteBuffer.put(compress1);
                 //int and double
-                byteBuffer.putShort((short) (compress3.length + 2));
-                byteBuffer.putShort((short) intAndDouble.array().length);
+                byteBuffer.putInt(compress3.length + 4);
+                byteBuffer.putInt( intAndDouble.array().length);
                 byteBuffer.put(compress3);
 //                byteBuffer.putShort((short) compress2.length);
 //                byteBuffer.put(compress2);

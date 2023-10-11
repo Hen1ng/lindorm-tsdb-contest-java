@@ -117,7 +117,7 @@ public class DataGenerator {
     public static LatestQueryRequest genLatestQueryRequest(){
         Random random = new Random();
         ArrayList<Vin> vinArrayList = new ArrayList<>();
-        vinArrayList.add(vins[random.nextInt(10)]);
+        vinArrayList.add(vins[0]);
         Set<String> requestColumns = new HashSet<>();
         requestColumns.add("FDJZT");
         requestColumns.add("TYBJBZ");
@@ -246,6 +246,7 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
             LastVinQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
