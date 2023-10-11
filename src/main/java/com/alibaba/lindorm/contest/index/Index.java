@@ -11,15 +11,15 @@ import java.util.Random;
 
 public class Index {
 
-    public int getBindexIndex() {
+    public int[] getBindexIndex() {
         return bindexIndex;
     }
 
-    public void setBindexIndex(int bindexIndex) {
+    public void setBindexIndex(int[] bindexIndex) {
         this.bindexIndex = bindexIndex;
     }
 
-    private int bindexIndex;
+    private int[] bindexIndex = new int[Constants.STRING_NUMS];
 
     public int[] getStringOffset() {
         return stringOffset;

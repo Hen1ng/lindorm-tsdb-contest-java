@@ -44,14 +44,12 @@ public class StringFileService {
 
     public List<ByteBuffer> get(int columnIndex, Index index) {
         final StringFile stringFile = map.get(columnIndex);
-        final Bindex bindex = BindexFactory.getByPosition(index.getBindexIndex());
-        final int[] totalLengths = bindex.totalLength;
-        final long[] fileOffsets = bindex.fileOffset;
+        final Bindex bindex = BindexFactory.getByPosition(index.getBindexIndex()[columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS]);
+        final int totalLength = bindex.totalLength;
+        final long fileOffset = bindex.fileOffset;
         final int[] stringOffsets = index.getStringOffset();
         int arrayIndex = columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS;
-        final long fileOffset = fileOffsets[arrayIndex];
         final int stringOffset = stringOffsets[arrayIndex];
-        final int totalLength = totalLengths[arrayIndex];
         //get from memory
         if (totalLength == -1) {
             final List<ByteBuffer> fromBuffer = stringFile.getFromBuffer(stringOffset, index.getValueSize());

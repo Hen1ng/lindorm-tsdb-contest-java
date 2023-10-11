@@ -17,13 +17,13 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class StringFile {
     private File file;
 
     private FileChannel fileChannel;
-    private ReentrantLock lock;
+    private ReentrantReadWriteLock lock;
 
     private AtomicLong position;
 
@@ -65,7 +65,7 @@ public class StringFile {
             }
             this.totalByteBufferSize = totalByteBufferSize;
             this.byteBuffers = new LinkedList<>();
-            this.lock = new ReentrantLock();
+            this.lock = new ReentrantReadWriteLock();
             this.position = new AtomicLong(0);
             this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
         } catch (Exception e) {
@@ -87,10 +87,10 @@ public class StringFile {
     }
 
     public void write(List<ByteBuffer> buffers, int start, int end, boolean flush, int column, Index index) {
-        this.lock.lock();
+        this.lock.writeLock().lock();
         try {
             if (bindex == null) {
-                Pair<Integer, Bindex> bindex1 = BindexFactory.getNewBindex();
+                Pair<Integer, Bindex> bindex1 = BindexFactory.getAndCreateBindex();
                 bindexPosition = bindex1.getLeft();
                 bindex = bindex1.getRight();
             }
@@ -120,11 +120,11 @@ public class StringFile {
                 byteBuffer.putInt(totalSize);
                 byteBuffer.flip();
                 this.append = append(byteBuffer);
-                bindex.totalLength[column] = totalLength;
-                bindex.fileOffset[column] = append;
+                bindex.totalLength = totalLength;
+                bindex.fileOffset = append;
                 final Bindex bindex1 = bindex.deepCopy();
                 index.getStringOffset()[column] = batchSize;
-                index.setBindexIndex(bindexPosition);
+                index.getBindexIndex()[column] = bindexPosition;
                 BindexFactory.updateByPosition(bindexPosition, bindex1);
                 byteBuffers.clear();
                 totalSize = 0;
@@ -136,20 +136,20 @@ public class StringFile {
                 return;
             }
             batchSize = totalSize;
-            bindex.fileOffset[column] = append;
-            bindex.totalLength[column] = -1;
+            bindex.fileOffset = append;
+            bindex.totalLength = -1;
             index.getStringOffset()[column] = batchSize;
-            index.setBindexIndex(bindexPosition);
+            index.getBindexIndex()[column] = bindexPosition;
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
         } finally {
-            this.lock.unlock();
+            this.lock.writeLock().unlock();
         }
     }
 
     public List<ByteBuffer> getFromBuffer(int stringOffset, int valueSize) {
-        this.lock.lock();
+        this.lock.readLock().lock();
         List<ByteBuffer> buffers = new ArrayList<>(valueSize);
         int i = 0;
         try {
@@ -161,7 +161,7 @@ public class StringFile {
 
             }
         } finally {
-            this.lock.unlock();
+            this.lock.readLock().unlock();
         }
         return buffers;
     }
