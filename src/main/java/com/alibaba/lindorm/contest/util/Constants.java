@@ -14,6 +14,8 @@ public class Constants {
     public static final long WARM_FILE_SIZE = 1024 * 1024 * 1024;
     public static final int LOAD_FILE_TO_MEMORY_NUM = 0;
 
+    public static final int COMPRESS_BATCH_SIZE = 50;
+
     public static final int CACHE_VINS_LINE_NUMS = 170;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;

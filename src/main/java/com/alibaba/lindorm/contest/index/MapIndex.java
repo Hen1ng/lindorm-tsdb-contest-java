@@ -6,6 +6,7 @@ import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.Pair;
+import com.github.luben.zstd.Zstd;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -118,36 +119,47 @@ public class MapIndex {
         // 先压缩vin
 
         long indexFileLength = 0;
-        for (int i = 0; i < INDEX_ARRAY.length; i++) {
-            List<Index> indices = INDEX_ARRAY[i];
-            if (indices.isEmpty()) {
-                continue;
-            }
-            final byte[] vin = VinDictMap.get(i);
-            List<byte[]> indexBytes = new ArrayList<>();
-            int totalBytes = 0;
-            for (Index index : indices) {
-                byte[] bytes = index.bytes();
-                indexBytes.add(bytes);
-                totalBytes += bytes.length;
-            }
-            // vin length + vin
-            // index length + index's length + index bytes
-            ByteBuffer allocate = ByteBuffer.allocate(vin.length + 4 +
-                    4 * indexBytes.size() + totalBytes);
+        for (int i = 0; i < INDEX_ARRAY.length; i+=Constants.COMPRESS_BATCH_SIZE) {
+            List<ByteBuffer> byteBuffers = new ArrayList<>();
+            int totalLength = 0;
+            for(int j=i;j<i+Constants.COMPRESS_BATCH_SIZE;j++) {
+                List<byte[]> indexBytes = new ArrayList<>();
+                List<Index> indices = INDEX_ARRAY[j];
+                if (indices.isEmpty()) {
+                    continue;
+                }
+                final byte[] vin = VinDictMap.get(j);
+                int totalBytes = 0;
+                for (Index index : indices) {
+                    byte[] bytes = index.bytes();
+                    indexBytes.add(bytes);
+                    totalBytes += bytes.length;
+                }
+                // vin length + vin
+                // index length + index's length + index bytes
+                ByteBuffer allocate = ByteBuffer.allocate(vin.length + 4 +
+                        4 * indexBytes.size() + totalBytes);
 
-            allocate.put(vin);
-            allocate.putInt(indices.size());
-            for (byte[] indexByte : indexBytes) {
-                allocate.putInt(indexByte.length);
-                allocate.put(indexByte);
+                allocate.put(vin);
+                allocate.putInt(indices.size());
+                for (byte[] indexByte : indexBytes) {
+                    allocate.putInt(indexByte.length);
+                    allocate.put(indexByte);
+                }
+                byteBuffers.add(allocate);
+                totalLength+=allocate.array().length;
             }
-            final byte[] array = allocate.array();
-            final GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-            final byte[] compress = gzipCompress.compress(array);
-            final ByteBuffer allocate1 = ByteBuffer.allocate(compress.length + 4);
+            ByteBuffer allocate = ByteBuffer.allocate(totalLength);
+            for (ByteBuffer byteBuffer : byteBuffers) {
+                byteBuffer.flip();
+                allocate.put(byteBuffer);
+            }
+            byte[] array = allocate.array();
+            final byte[] compress = Zstd.compress(array);
+            final ByteBuffer allocate1 = ByteBuffer.allocate(compress.length + 4 + 4);
             indexFileLength += compress.length + 4;
-            allocate1.putInt(compress.length);
+            allocate1.putInt(compress.length+4);
+            allocate1.putInt(array.length);
             allocate1.put(compress);
             allocate1.flip();
             fileChannel.write(allocate1);
@@ -185,24 +197,28 @@ public class MapIndex {
             int compressLength = intBuffer.getInt();
             ByteBuffer dataBuffer = ByteBuffer.allocate(compressLength);
             fileChannel.read(dataBuffer);
-            final byte[] array = dataBuffer.array();
-            final GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-            final byte[] bytes = gzipCompress.deCompress(array);
+            dataBuffer.flip();
+            int anInt1 = dataBuffer.getInt();
+            byte[] bytes2 = new byte[compressLength - 4];
+            dataBuffer.get(bytes2,0,bytes2.length);
+            byte[] bytes = Zstd.decompress(bytes2, anInt1);
             final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-            byte[] vinArray = new byte[17];
-            byteBuffer.get(vinArray);
-            Vin vin = new Vin(vinArray);
-            final int indexSize = byteBuffer.getInt();
-            List<Index> indices = new ArrayList<>();
-            for (int i = 0; i < indexSize; i++) {
-                final int anInt = byteBuffer.getInt();
-                byte[] bytes1 = new byte[anInt];
-                byteBuffer.get(bytes1);
-                Index index = Index.uncompress(bytes1);
-                indices.add(index);
+            while (byteBuffer.hasRemaining()){
+                byte[] vinArray = new byte[17];
+                byteBuffer.get(vinArray,0,vinArray.length);
+                Vin vin = new Vin(vinArray);
+                final int indexSize = byteBuffer.getInt();
+                List<Index> indices = new ArrayList<>();
+                for (int i = 0; i < indexSize; i++) {
+                    final int anInt = byteBuffer.getInt();
+                    byte[] bytes1 = new byte[anInt];
+                    byteBuffer.get(bytes1);
+                    Index index = Index.uncompress(bytes1);
+                    indices.add(index);
+                }
+                final Integer i = VinDictMap.get(vin);
+                INDEX_ARRAY[i] = indices;
             }
-            final Integer i = VinDictMap.get(vin);
-            INDEX_ARRAY[i] = indices;
             intBuffer.flip();
         }
         for(int i=0;i<INDEX_ARRAY.length;i++){
