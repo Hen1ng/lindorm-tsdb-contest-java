@@ -138,7 +138,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("createTable tableName:" + tableName);
         SchemaUtil.setSchema(schema);
         for (int i = 50; i < 60; i++) {
-            stringFileService.addColumn(i, this.dataPath.getPath() + "double" + i, 5 * Constants.CACHE_VINS_LINE_NUMS);
+            stringFileService.addColumn(i, this.dataPath.getPath() + "/" + "string" + i, 5 * Constants.CACHE_VINS_LINE_NUMS);
         }
     }
 
