@@ -198,7 +198,7 @@ public class DataGenerator {
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
                 int batchSize = 10;
-                for(int v = 0;v<1;v++) {
+                for(int v = 0;v<10;v++) {
                     for (int i = 0; i < 3600; i++) {
                         ArrayList<Row> rows = new ArrayList<>();
                         for (int j = 0; j < 10; j++) {
@@ -232,21 +232,21 @@ public class DataGenerator {
             executorService.shutdown();
             try {
                 // 等待线程池终止，但最多等待5秒
-                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                    System.out.println("Some tasks were not terminated yet!");
-                    executorService.shutdownNow();  // 尝试强制关闭所有正在执行的任务
-                } else {
-                    System.out.println("============write Done===========");
-                }
-            } catch (InterruptedException e) {
+//                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+//                    System.out.println("Some tasks were not terminated yet!");
+//                    executorService.shutdownNow();  // 尝试强制关闭所有正在执行的任务
+//                } else {
+//                    System.out.println("============write Done===========");
+//                }
+            } catch (Exception e) {
                 e.printStackTrace();
                 executorService.shutdownNow();  // 如果当前线程被中断，也尝试强制关闭线程池
             }
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            LastVinQuery(tsdbEngine);
-            tsdbEngine.shutdown();
+//            LastVinQuery(tsdbEngine);
+//            tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
             // Save generated data to a file for later comparison

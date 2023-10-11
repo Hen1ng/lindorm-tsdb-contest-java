@@ -53,7 +53,7 @@ public class StringFile {
 
     private int bindexPosition = 0;
 
-    private int batchSize = 0;
+    private int arrayPosition = 0;
 
 
     public StringFile(String filePath, int totalByteBufferSize) {
@@ -123,22 +123,22 @@ public class StringFile {
                 bindex.totalLength = totalLength;
                 bindex.fileOffset = append;
                 final Bindex bindex1 = bindex.deepCopy();
-                index.getStringOffset()[column] = batchSize;
+                index.getStringOffset()[column] = arrayPosition;
                 index.getBindexIndex()[column] = bindexPosition;
                 BindexFactory.updateByPosition(bindexPosition, bindex1);
                 byteBuffers.clear();
                 totalSize = 0;
-                batchSize = 0;
+                arrayPosition = 0;
                 totalByteBufferSize = 0;
                 currentByteBufferNum = 0;
                 bindex = null;
                 bindexPosition = -1;
                 return;
             }
-            batchSize = totalSize;
             bindex.fileOffset = append;
             bindex.totalLength = -1;
-            index.getStringOffset()[column] = batchSize;
+            index.getStringOffset()[column] = arrayPosition;
+            arrayPosition = totalSize;
             index.getBindexIndex()[column] = bindexPosition;
         } catch (Exception e) {
             e.printStackTrace();
@@ -169,7 +169,6 @@ public class StringFile {
 
     public long append(ByteBuffer byteBuffer) throws IOException {
         long currentPos = this.position.get();
-        byteBuffer.flip();
         int remaining = byteBuffer.remaining();
         fileChannel.write(byteBuffer, currentPos);
         return this.position.getAndAdd(remaining);
