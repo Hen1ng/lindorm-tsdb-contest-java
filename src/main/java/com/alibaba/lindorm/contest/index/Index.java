@@ -25,7 +25,7 @@ public class Index {
         return stringOffset;
     }
 
-    private int[] stringOffset;
+    private int[] stringOffset = new int[Constants.STRING_NUMS];
     private long offset;
     private long maxTimestamp;
     private long minTimestamp;

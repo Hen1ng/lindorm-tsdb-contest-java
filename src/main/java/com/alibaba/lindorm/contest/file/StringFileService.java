@@ -19,7 +19,7 @@ public class StringFileService {
     private Map<Integer, StringFile> map = new ConcurrentHashMap<>(10);
 
     public void addColumn(Integer columnIndex, String filePath, int totalCacheLines) {
-        map.put(columnIndex, new StringFile(filePath, SchemaUtil.getIndexArray()[columnIndex], totalCacheLines));
+        map.put(columnIndex, new StringFile(filePath, totalCacheLines));
     }
 
     /**
@@ -67,11 +67,11 @@ public class StringFileService {
         final byte[] bytes = new byte[shortLength];
 
         allocate.get(bytes);
-        IntCompress.decompressShort()
-        final int stringLength = allocate.getInt();
-        final byte[] bytes1 = new byte[stringLength];
-
-        StringCompress.decompress1(bytes1, );
+//        IntCompress.decompressShort()
+//        final int stringLength = allocate.getInt();
+//        final byte[] bytes1 = new byte[stringLength];
+//
+//        StringCompress.decompress1(bytes1, );
         return null;
     }
 }

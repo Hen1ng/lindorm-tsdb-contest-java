@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class QueryTest {
-    static int threadNum = 1;
+    static int threadNum = 16;
     static ExecutorService executorService = Executors.newFixedThreadPool(15);
     static AtomicLong writeTimes = new AtomicLong(0);
     static CountDownLatch countDownLatch = new CountDownLatch(threadNum);
@@ -73,7 +73,7 @@ public class QueryTest {
                     columns.put(key, new ColumnValue.StringColumn(buffer));
                 }
             }
-            boolean write = false;
+            boolean write = true;
             if (write) {
                 Schema schema = new Schema(columnTypeMap);
                 tsdbEngineSample.connect();
@@ -84,7 +84,7 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 10; j++) {
+                        for (int j = 0; j < 100; j++) {
                             List<Row> rowList = new ArrayList<>();
                             for (int i1 = 0; i1 < 10; i1++) {
                                 Vin vin = vins[0];

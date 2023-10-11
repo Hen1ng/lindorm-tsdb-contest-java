@@ -10,10 +10,7 @@ package com.alibaba.lindorm.contest;
 import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
 import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
 import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
-import com.alibaba.lindorm.contest.file.DoubleFileService;
-import com.alibaba.lindorm.contest.file.FilePosition;
-import com.alibaba.lindorm.contest.file.TSFile;
-import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.file.*;
 import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.BigBucket;
 import com.alibaba.lindorm.contest.index.Index;
@@ -53,7 +50,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     private File bigIntMapFile;
     private FilePosition filePosition;
 
-    private DoubleFileService doubleFileService;
+    private StringFileService stringFileService;
 
 
     /**
@@ -74,7 +71,8 @@ public class TSDBEngineImpl extends TSDBEngine {
             if (!dataPath.exists()) {
                 dataPath.createNewFile();
             }
-            this.fileService = new TSFileService(dataPath.getPath());
+            this.stringFileService = new StringFileService();
+            this.fileService = new TSFileService(dataPath.getPath(), stringFileService);
             if (!indexFile.exists()) {
                 indexFile.createNewFile();
             }
@@ -106,12 +104,16 @@ public class TSDBEngineImpl extends TSDBEngine {
     public void connect() throws IOException {
         System.out.println("connect start...");
         long start = System.currentTimeMillis();
-//        MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
         MapIndex.loadMapFromFileunCompress(indexFile);
         for (int i = 0; i < 40; i++) {
             StaticsUtil.columnInfos.add(new ColumnInfo());
+        }
+        if (SchemaUtil.getSchema() != null) {
+            for (int i = 50; i < 60; i++) {
+                stringFileService.addColumn(i, this.dataPath.getPath() + "/" + "string" + i, 5 * Constants.CACHE_VINS_LINE_NUMS);
+            }
         }
         if (RestartUtil.IS_FIRST_START) {
             Constants.intColumnHashMapCompress = new IntColumnHashMapCompress(this.dataPath);
@@ -135,6 +137,9 @@ public class TSDBEngineImpl extends TSDBEngine {
     public void createTable(String tableName, Schema schema) throws IOException {
         System.out.println("createTable tableName:" + tableName);
         SchemaUtil.setSchema(schema);
+        for (int i = 50; i < 60; i++) {
+            stringFileService.addColumn(i, this.dataPath.getPath() + "double" + i, 5 * Constants.CACHE_VINS_LINE_NUMS);
+        }
     }
 
     @Override

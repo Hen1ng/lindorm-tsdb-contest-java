@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class BindexFactory {
 
     private static ReentrantReadWriteLock reentrantReadWriteLock = new ReentrantReadWriteLock();
-    private static Bindex[] bindices;
+    private static Bindex[] bindices = new Bindex[180000000 / 2 / Constants.CACHE_VINS_LINE_NUMS];;
 
     private static AtomicInteger position = new AtomicInteger(0);
 
@@ -26,6 +26,9 @@ public class BindexFactory {
         reentrantReadWriteLock.readLock().lock();
         try {
             final int andIncrement = position.getAndIncrement();
+            long[] fileOffset1 = new long[10];
+            int[] totalLength1 = new int[10];
+            bindices[andIncrement] = new Bindex(totalLength1, fileOffset1);
             return Pair.of(andIncrement, bindices[andIncrement]);
         } finally {
             reentrantReadWriteLock.readLock().unlock();

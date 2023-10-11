@@ -20,8 +20,8 @@ public class Bindex {
         for (int i = 0; i < fileOffset.length; i++) {
             fileOffset1[i] = fileOffset[i];
         }
-        for (int i = 0; i < fileOffset.length; i++) {
-            fileOffset1[i] = fileOffset[i];
+        for (int i = 0; i < totalLength1.length; i++) {
+            totalLength1[i] = totalLength[i];
         }
         return new Bindex(totalLength1, fileOffset1);
     }

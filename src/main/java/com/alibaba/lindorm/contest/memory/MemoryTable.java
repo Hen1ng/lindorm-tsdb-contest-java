@@ -99,7 +99,7 @@ public class MemoryTable {
                 Integer finalIndex = index;
                 Integer finalBufferIndex = bufferIndex;
                 fixThreadPool.execute( () -> {
-                    tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex);
+                    tsFileService.write(vin,bufferValues[finalBufferIndex],Constants.CACHE_VINS_LINE_NUMS, finalIndex, false);
                     freeBufferByIndex(vin,finalBufferIndex);
                 });
             }
@@ -124,7 +124,7 @@ public class MemoryTable {
             final List<Value> valueSortedList = values[index];
             valueSortedList.add(new Value(ts, row.getColumns()));
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
-                tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
+                tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index, false);
             }
         } finally {
             spinLockArray[lock].writeLock().unlock();
@@ -382,7 +382,7 @@ public class MemoryTable {
                 List<Value> valueList = values[i];
                 if (valueList.size() >= 1) {
                     final Vin vin = new Vin(VinDictMap.get(i));
-                    tsFileService.write(vin, valueList, valueList.size(), i);
+                    tsFileService.write(vin, valueList, valueList.size(), i, true);
                 }
             }
         } catch (Exception e) {
@@ -410,7 +410,7 @@ public class MemoryTable {
                     for (List<Value> valueList : sortedLists) {
                         if (!valueList.isEmpty()) {
                             final Vin vin = new Vin(VinDictMap.get(i));
-                            tsFileService.write(vin, valueList, valueList.size(), i);
+                            tsFileService.write(vin, valueList, valueList.size(), i, true);
                         }
                     }
                     return null;

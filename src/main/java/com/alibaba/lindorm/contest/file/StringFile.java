@@ -10,6 +10,7 @@ import com.alibaba.lindorm.contest.util.Pair;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -46,16 +47,18 @@ public class StringFile {
     /**
      * 当前list里面的byteBuffer的数量
      */
-    private int currentByteBufferSize;
+    private int currentByteBufferNum;
 
     private long append;
 
     private int bindexPosition = 0;
 
+    private int batchSize = 0;
 
-    public StringFile(String filePath, String key, int totalByteBufferSize) {
+
+    public StringFile(String filePath, int totalByteBufferSize) {
         try {
-            String tsFilePath = filePath + "/" + key;
+            String tsFilePath = filePath;
             this.file = new File(tsFilePath);
             if (!file.exists()) {
                 file.createNewFile();
@@ -64,7 +67,7 @@ public class StringFile {
             this.byteBuffers = new LinkedList<>();
             this.lock = new ReentrantLock();
             this.position = new AtomicLong(0);
-            this.fileChannel = FileChannel.open(file.toPath());
+            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -91,23 +94,21 @@ public class StringFile {
                 bindexPosition = bindex1.getLeft();
                 bindex = bindex1.getRight();
             }
-            int batchSize = totalSize;
             for (int i = start; i < end; i++) {
                 ByteBuffer byteBuffer = buffers.get(i);
                 byteBuffers.add(byteBuffer);
                 totalSize += byteBuffer.capacity();
-                currentByteBufferSize += 1;
+                currentByteBufferNum += 1;
             }
-            if (currentByteBufferSize >= totalByteBufferSize || flush) {
-                final ByteBuffer allocate = ByteBuffer.allocate(totalSize);
-                List<ByteBuffer> subBuffers = new ArrayList<>(currentByteBufferSize);
-                for (int i = 0; i < currentByteBufferSize; i++) {
+            if (currentByteBufferNum >= totalByteBufferSize || flush) {
+                List<ByteBuffer> subBuffers = new ArrayList<>(currentByteBufferNum);
+                for (int i = 0; i < currentByteBufferNum; i++) {
                     subBuffers.add(buffers.get(i));
                 }
                 final CompressResult compressResult = StringCompress.compress1(subBuffers, subBuffers.size());
                 final byte[] compressedData = compressResult.compressedData;
                 final short[] stringLengthArray = compressResult.stringLengthArray;
-                byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, subBuffers.size());
+                byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, index.getValueSize());
                 int totalLength = compressedData.length + stringLengthArrayCompress.length;
                 totalLength += 16;
                 final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(totalLength);
@@ -117,21 +118,24 @@ public class StringFile {
                 byteBuffer.putInt(compressedData.length);
                 byteBuffer.put(compressedData);
                 byteBuffer.putInt(totalSize);
-                this.append = append(allocate);
+                byteBuffer.flip();
+                this.append = append(byteBuffer);
                 bindex.totalLength[column] = totalLength;
-                final Bindex bindex1 = bindex.deepCopy();
                 bindex.fileOffset[column] = append;
+                final Bindex bindex1 = bindex.deepCopy();
                 index.getStringOffset()[column] = batchSize;
-                //tod setString offset
                 index.setBindexIndex(bindexPosition);
                 BindexFactory.updateByPosition(bindexPosition, bindex1);
                 byteBuffers.clear();
                 totalSize = 0;
+                batchSize = 0;
                 totalByteBufferSize = 0;
-                currentByteBufferSize = 0;
+                currentByteBufferNum = 0;
                 bindex = null;
+                bindexPosition = -1;
                 return;
             }
+            batchSize = totalSize;
             bindex.fileOffset[column] = append;
             bindex.totalLength[column] = -1;
             index.getStringOffset()[column] = batchSize;

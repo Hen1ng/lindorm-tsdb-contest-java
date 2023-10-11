@@ -31,8 +31,11 @@ public class TSFileService {
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
 
-    public TSFileService(String file) {
+    private StringFileService stringFileService;
+
+    public TSFileService(String file, StringFileService stringFileService) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
+        this.stringFileService = stringFileService;
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
@@ -311,7 +314,7 @@ public class TSFileService {
      * @param valueList
      * @param lineNum
      */
-    public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
+    public void write(Vin vin, List<Value> valueList, int lineNum, int j, boolean flushNow) {
         try {
             AggBucket aggBucket = new AggBucket();
             long start = System.currentTimeMillis();
@@ -395,10 +398,9 @@ public class TSFileService {
 //                ArrayUtils.copy(array, 0, bytes, position, array.length);
 //                position += array.length;
 //            }
-
-            CompressResult compressResult =StringCompress.compress1(stringList,lineNum);
-            final byte[] compress = compressResult.compressedData;
-            stringLengthArray = compressResult.stringLengthArray;
+//            CompressResult compressResult =StringCompress.compress1(stringList,lineNum);
+//            final byte[] compress = compressResult.compressedData;
+//            stringLengthArray = compressResult.stringLengthArray;
 
             //压缩double
             final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
@@ -413,18 +415,18 @@ public class TSFileService {
 
             //压缩int
             byte[] compress2 = IntCompress.compress2(ints);
-            byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray,lineNum);
+//            byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray,lineNum);
             int total = 8 + 2 + compress1.length //timestamp
                     + compress2.length + 2 //int
-                    + (2 + compressDouble.length) //double
-                    + stringLengthArrayCompress.length + 2 //string长度记录
-                    + compress.length; //string存储string
+                    + (2 + compressDouble.length); //double
+//                    + stringLengthArrayCompress.length + 2; //string长度记录
+//                    + compress.length; //string存储string
             final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
             try {
-                StaticsUtil.STRING_BYTE_LENGTH.getAndAdd(stringLengthArrayCompress.length);
-                StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length* 2L);
+//                StaticsUtil.STRING_BYTE_LENGTH.getAndAdd(stringLengthArrayCompress.length);
+//                StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length* 2L);
                 StaticsUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength);
-                StaticsUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length + stringLengthArrayCompress.length + 2);
+//                StaticsUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length + stringLengthArrayCompress.length + 2);
                 StaticsUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(2 + compressDouble.length);
                 StaticsUtil.LONG_COMPRESS_LENGTH.getAndAdd(8 + 2 + compress1.length);
                 StaticsUtil.INT_COMPRESS_LENGTH.getAndAdd(compress2.length + 2);
@@ -439,10 +441,10 @@ public class TSFileService {
                 byteBuffer.putShort((short) compressDouble.length);
                 byteBuffer.put(compressDouble);
                 //string
-                stringLengthBuffer.flip();
-                byteBuffer.putShort((short) stringLengthArrayCompress.length);
-                byteBuffer.put(stringLengthArrayCompress);
-                byteBuffer.put(compress);
+//                stringLengthBuffer.flip();
+//                byteBuffer.putShort((short) stringLengthArrayCompress.length);
+//                byteBuffer.put(stringLengthArrayCompress);
+//                byteBuffer.put(compress);
             } catch (Exception e) {
                 System.out.println("write bytebuffer error" + e);
             }
@@ -456,6 +458,7 @@ public class TSFileService {
                         , lineNum
                         , aggBucket);
                 MapIndex.put(j, index);
+                stringFileService.put(stringList, valueList.size(), flushNow, index);
                 valueList.clear();
             } catch (Exception e) {
                 System.out.println("write append error" + e);
