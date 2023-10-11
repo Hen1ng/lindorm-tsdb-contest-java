@@ -25,6 +25,10 @@ public class Index {
         return stringOffset;
     }
 
+    public void setStringOffset(int[] stringOffset) {
+        this.stringOffset = stringOffset;
+    }
+
     private int[] stringOffset = new int[Constants.STRING_NUMS];
     private long offset;
     private long maxTimestamp;
@@ -77,7 +81,7 @@ public class Index {
 
     public byte[] bytes(){
         byte[] bytes = aggBucket.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 2);
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 2 + 20 * 4);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -85,6 +89,12 @@ public class Index {
         allocate.putLong(minTimestamp);
         allocate.putInt(valueSize);
         allocate.putInt(length);
+        for (int index : bindexIndex) {
+            allocate.putInt(index);
+        }
+        for (int i : stringOffset) {
+            allocate.putInt(i);
+        }
         return allocate.array();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        return gzipCompress.compress(allocate.array());
@@ -102,7 +112,16 @@ public class Index {
         long minTimeStamp = wrap.getLong();
         int valueSize = wrap.getInt();
         int length = wrap.getInt();
-        return new Index(
+        int[] bindexPosition = new int[Constants.STRING_NUMS];
+        for (int i = 0; i < bindexPosition.length; i++) {
+            bindexPosition[i] = wrap.getInt();
+        }
+
+        int[] stringOffset = new int[Constants.STRING_NUMS];
+        for (int i = 0; i < stringOffset.length; i++) {
+            stringOffset[i] = wrap.getInt();
+        }
+        final Index index = new Index(
                 offset,
                 maxTimeStamp,
                 minTimeStamp,
@@ -110,6 +129,9 @@ public class Index {
                 valueSize,
                 aggBucket
         );
+        index.setBindexIndex(bindexPosition);
+        index.setStringOffset(stringOffset);
+        return index;
     }
     @Override
     public String toString() {
