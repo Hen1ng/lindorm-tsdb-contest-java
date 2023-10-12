@@ -11,6 +11,7 @@ import java.util.List;
 
 public class DoubleCompress {
 
+
     public static byte[] encode2(double[] values, int valueSize) {
         List<ByteBuffer> buffers = new ArrayList<>();
         final int count = values.length / valueSize;
