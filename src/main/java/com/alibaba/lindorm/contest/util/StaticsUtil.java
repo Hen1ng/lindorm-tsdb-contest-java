@@ -15,6 +15,15 @@ public class StaticsUtil {
     public static AtomicLong STRING_BYTE_LENGTH = new AtomicLong(0);
 
     public static AtomicLong STRING_SHORT_LENGTH = new AtomicLong(0);
+    public static AtomicLong[] STRING_EVERY_COLUMN_LENGTH = new AtomicLong[Constants.STRING_NUMS];
+    public static AtomicLong[] STRING_EVERY_COLUMN_COMPRESS_LENGTH = new AtomicLong[Constants.STRING_NUMS];
+
+    static {
+        for (int i = 0; i < STRING_EVERY_COLUMN_LENGTH.length; i++) {
+            STRING_EVERY_COLUMN_LENGTH[i] = new AtomicLong(0);
+            STRING_EVERY_COLUMN_COMPRESS_LENGTH[i] = new AtomicLong(0);
+        }
+    }
 
     public static ArrayList<ColumnInfo> columnInfos = new ArrayList<>(40);
 

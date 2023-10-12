@@ -307,6 +307,22 @@ public class TSFileService {
         return null;
     }
 
+    private static synchronized void printString(List<ByteBuffer> byteBufferList) {
+        System.out.println("----------------------------------------------------------------------------------------------------------------------------------------");
+        System.out.println();
+        for (ByteBuffer byteBuffer : byteBufferList) {
+            if (byteBuffer.capacity() == 0) {
+                System.out.println("empty");
+            } else {
+                System.out.print( new String(byteBuffer.array()));
+            }
+            System.out.print("hahaha");
+
+        }
+        System.out.println();
+        System.out.println("----------------------------------------------------------------------------------------------------------------------------------------");
+    }
+
 
     /**
      * @param vin
@@ -398,6 +414,9 @@ public class TSFileService {
 //                position += array.length;
 //            }
             CompressResult compressResult =StringCompress.compress1(stringList,lineNum);
+            if (writeTimes.get() == 200000) {
+                printString(stringList);
+            }
             final byte[] compress = compressResult.compressedData;
             stringLengthArray = compressResult.stringLengthArray;
 
