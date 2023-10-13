@@ -112,12 +112,13 @@ public class TSFileService {
                                             + intCompressLength + 2
                                             + 2);
                                     dataBuffer.get(allocate1);
-                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
-                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                    doubles = new double[bytes.length / 8];
-                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-                                        doubles[i1] = wrap.getDouble();
-                                    }
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+//                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
+//                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+//                                    doubles = new double[bytes.length / 8];
+//                                    for (int i1 = 0; i1 < doubles.length; i1++) {
+//                                        doubles[i1] = wrap.getDouble();
+//                                    }
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -236,12 +237,13 @@ public class TSFileService {
                                             + intCompressLength + 2
                                             + 2);
                                     dataBuffer.get(allocate1);
-                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
-                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-                                    doubles = new double[bytes.length / 8];
-                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-                                        doubles[i1] = wrap.getDouble();
-                                    }
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+//                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
+//                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+//                                    doubles = new double[bytes.length / 8];
+//                                    for (int i1 = 0; i1 < doubles.length; i1++) {
+//                                        doubles[i1] = wrap.getDouble();
+//                                    }
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -400,12 +402,13 @@ public class TSFileService {
             stringLengthArray = compressResult.stringLengthArray;
 
             //压缩double
-            final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
-            for (double value : doubles) {
-                allocate.putDouble(value);
-            }
-            final byte[] array = allocate.array();
-            final byte[] compressDouble = Zstd.compress(array, 12);
+//            final ByteBuffer allocate = ByteBuffer.allocate(doubles.length * 8);
+//            for (double value : doubles) {
+//                allocate.putDouble(value);
+//            }
+//            final byte[] array = allocate.array();
+//            final byte[] compressDouble = Zstd.compress(array, 12);
+            final byte[] compressDouble = DoubleCompress.encode2(doubles, valueList.size());
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
