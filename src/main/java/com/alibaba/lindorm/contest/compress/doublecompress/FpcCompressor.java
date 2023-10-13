@@ -18,6 +18,11 @@ public class FpcCompressor {
     FcmPredictor predictor1 = new FcmPredictor(logOfTableSize);
     DfcmPredictor predictor2 = new DfcmPredictor(logOfTableSize);
 
+    public void clear () {
+        predictor1.clear();
+        predictor2.clear();
+    }
+
     public void compress(ByteBuffer buff, double[] doubles, int start, int end) {
         for (int i = start; i < end; i += 2) {
             if (i == end - 1) {

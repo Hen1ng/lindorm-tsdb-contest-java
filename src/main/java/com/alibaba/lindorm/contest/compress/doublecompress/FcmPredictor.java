@@ -10,13 +10,20 @@
  ******************************************************************************/
 package com.alibaba.lindorm.contest.compress.doublecompress;
 
+import java.util.Arrays;
+
 public class FcmPredictor {
 
     private long[] table;
     private int fcm_hash;
 
+    public void clear() {
+        Arrays.fill(table, 0);
+        fcm_hash = 0;
+    }
+
     public FcmPredictor(int logOfTableSize) {
-        table = new long[1 << logOfTableSize];
+        table = new long[1024];
     }
 
     public long getPrediction() {

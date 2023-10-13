@@ -10,14 +10,22 @@
  ******************************************************************************/
 package com.alibaba.lindorm.contest.compress.doublecompress;
 
+import java.util.Arrays;
+
 public class DfcmPredictor {
 
     private long[] table;
     private int dfcm_hash;
     private long lastValue;
 
+    public void clear() {
+        Arrays.fill(table, 0);
+        dfcm_hash = 0;
+        lastValue = 0;
+    }
+
     public DfcmPredictor(int logOfTableSize) {
-        table = new long[1 << logOfTableSize];
+        table = new long[1024];
     }
 
     public long getPrediction() {

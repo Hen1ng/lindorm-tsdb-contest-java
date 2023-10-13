@@ -198,7 +198,7 @@ public class DataGenerator {
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
                 int batchSize = 10;
-                for(int v = 0;v<100;v++) {
+                for(int v = 0;v<2;v++) {
                     for (int i = 0; i < 3600; i++) {
                         ArrayList<Row> rows = new ArrayList<>();
                         for (int j = 0; j < 10; j++) {
