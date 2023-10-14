@@ -414,6 +414,7 @@ public class StringCompress {
         List<ByteBuffer> byteBuffers4 = stringList.subList(690, 690 + 230);
         int length4 = 0;
         for (ByteBuffer byteBuffer : byteBuffers4) {
+            System.out.println(new String(byteBuffer.array()));
             length4 += byteBuffer.remaining();
         }
         ByteBuffer allocate4 = ByteBuffer.allocate(length4);
