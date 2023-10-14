@@ -21,6 +21,7 @@ public class DoubleCompress {
     public static final ThreadLocal<ByteBuffer> DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * 8));
     public static final ThreadLocal<FpcCompressor> FPC_COMPRESSOR_THREAD_LOCAL = ThreadLocal.withInitial(FpcCompressor::new);
     public static final ThreadLocal<double[]> DESC_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.CACHE_VINS_LINE_NUMS]);
+    public static final ThreadLocal<double[]> TOTAL_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.FLOAT_NUMS * Constants.CACHE_VINS_LINE_NUMS]);
 
     public static ByteBuffer encode3(double[] values, int start, int end) {
         FpcCompressor fpc = new FpcCompressor();
@@ -53,7 +54,7 @@ public class DoubleCompress {
             byteBuffer.put(buffer);
         }
         final byte[] array = byteBuffer.array();
-        final byte[] compress = Zstd.compress(array);
+        final byte[] compress = Zstd.compress(array, 12);
         final ByteBuffer allocate = ByteBuffer.allocate(compress.length + 4);
         allocate.putInt(array.length);
         allocate.put(compress);
@@ -61,7 +62,13 @@ public class DoubleCompress {
     }
 
     public static double[] decode2(ByteBuffer byteBuffer, int doubleNum, int valueSize) {
-        double[] doubles = new double[doubleNum];
+        double[] doubles;
+        if (valueSize == Constants.CACHE_VINS_LINE_NUMS) {
+            doubles = TOTAL_THREAD_LOCAL.get();
+            Arrays.fill(doubles, 0);
+        } else {
+            doubles = new double[doubleNum];
+        }
         final int compressLength = byteBuffer.getInt();
         byte[] array1 = new byte[byteBuffer.capacity() - 4];
         byteBuffer.get(array1);

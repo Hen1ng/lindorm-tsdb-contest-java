@@ -156,32 +156,21 @@ public class IntCompress {
 //        System.out.println("compress rate : " + 1.0d * compress.length / (data.length * 4));
     }
 
+    public static final ThreadLocal<long[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
     public static byte[] compress2(long[] ints) {
         try {
             final long[] gapArray = toGapArray(ints);
             for (int i = 0; i < gapArray.length; i++) {
                 gapArray[i] = ZigZagUtil.encodeLong(gapArray[i]);
             }
-            long[] output = new long[ints.length];
+            long[] output = INT_ARRAY_BUFFER.get();
+            Arrays.fill(output, 0);
             final int compress = Simple8.compress(gapArray, output);
-            ByteBuffer resultBuffer = ByteBuffer.allocate(compress*8);
-            long[] outputArray = new long[compress];
-            System.arraycopy(output,0,outputArray,0,compress);
-            LongBuffer longBuffer = resultBuffer.asLongBuffer();
-            longBuffer.put(outputArray);
-//            byte[] result = new byte[compress * 8];
-//            int position = 0;
-//            for (int i = 0; i < compress; i++) {
-//                final long l = output[i];
-//                final byte[] bytes = BytesUtil.long2Bytes(l);
-//                ArrayUtils.copy(bytes, 0, result, position, 8);
-//                position += 8;
-//            }
-//            return resultBuffer.array();
+            ByteBuffer resultBuffer = ByteBuffer.allocate(compress * 8);
+            for (int i = 0; i < compress; i++) {
+                resultBuffer.putLong(output[i]);
+            }
             return Zstd.compress(resultBuffer.array(), 12);
-//            GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-//            return gzipCompress.compress(result);
-//            return result;
         } catch (Exception e) {
             System.out.println("compress2 error, e" + e);
         }
@@ -189,9 +178,6 @@ public class IntCompress {
     }
 
     public static long[] decompress2(byte[] bytes1, int valueSize) {
-//        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-//        byte[] bytes = gzipCompress.deCompress(bytes1);
-
         byte[] bytes = Zstd.decompress(bytes1,valueSize*8);
         long[] output = new long[bytes.length / 8];
         int position = 0;
@@ -231,7 +217,6 @@ public class IntCompress {
         BitSet bitSet = SHORT_ARRTY_TYPE_THREAD_LOCAL.get();
         bitSet.clear();
         bitSet.set(15);
-//        ints = Simple9Codes.innerEncode(ints);
         int diffNum = 0;
         for(int i=0;i<shorts.length/valueSize;i++){
             boolean flag = true;

@@ -132,13 +132,6 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public void shutdown() {
         long start = System.currentTimeMillis();
-        try {
-            memoryTable.fixThreadPool.shutdown();
-            memoryTable.fixThreadPool.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        System.out.println("fixThreadPool completed shutdown");
         System.out.println("upsertTimes:" + upsertTimes.get());
         System.out.println("total string length:" + StaticsUtil.STRING_TOTAL_LENGTH.get());
         System.out.println("compress string length:" + StaticsUtil.STRING_COMPRESS_LENGTH.get());

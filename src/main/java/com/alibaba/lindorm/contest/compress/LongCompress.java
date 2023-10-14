@@ -2,13 +2,17 @@ package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.util.ArrayUtils;
 import com.alibaba.lindorm.contest.util.BytesUtil;
+import com.alibaba.lindorm.contest.util.Constants;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class LongCompress {
 
+    public static final ThreadLocal<long[]> LONG_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS]);
     public static byte[] compress(long[] longs) {
-        long[] output = new long[longs.length];
+        long[] output = LONG_ARRAY_BUFFER.get();
+        Arrays.fill(output, 0);
         long[] deltaArray = new long[longs.length - 1];
         for (int i = 0; i < longs.length - 1; i++) {
             deltaArray[i] = (longs[i] - longs[i + 1]) / 1000;
