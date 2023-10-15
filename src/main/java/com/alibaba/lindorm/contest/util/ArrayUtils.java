@@ -25,4 +25,14 @@ public class ArrayUtils {
 
         }
     }
+
+    public static synchronized void printInt(long[] ints) {
+        System.out.println("----------------------------------------------------------------");
+        for (long aDouble : ints) {
+            System.out.print(aDouble);
+            System.out.print(",");
+
+        }
+        System.out.println("----------------------------------------------------------------");
+    }
 }

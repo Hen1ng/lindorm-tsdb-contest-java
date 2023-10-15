@@ -170,7 +170,7 @@ public class IntCompress {
             for (int i = 0; i < compress; i++) {
                 resultBuffer.putLong(output[i]);
             }
-            return Zstd.compress(resultBuffer.array(), 12);
+            return ZstdInner.compress(resultBuffer.array(), 12);
         } catch (Exception e) {
             System.out.println("compress2 error, e" + e);
         }
@@ -178,7 +178,7 @@ public class IntCompress {
     }
 
     public static long[] decompress2(byte[] bytes1, int valueSize) {
-        byte[] bytes = Zstd.decompress(bytes1,valueSize*8);
+        byte[] bytes = ZstdInner.decompress(bytes1,valueSize*8);
         long[] output = new long[bytes.length / 8];
         int position = 0;
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
@@ -245,7 +245,7 @@ public class IntCompress {
                 }
             }
         }
-        byte[] compress = Zstd.compress(allocate.array(), 12);
+        byte[] compress = ZstdInner.compress(allocate.array(), 12);
         ByteBuffer allocate1 = ByteBuffer.allocate(4 + compress.length);
         allocate1.putInt(allocate.array().length);
         allocate1.put(compress);
@@ -285,7 +285,7 @@ public class IntCompress {
     }
 
     public static short[] decompressShort(byte[] bytes,int valueSize,int totalLength) {
-        final byte[] bytes1 = Zstd.decompress(bytes,totalLength);
+        final byte[] bytes1 = ZstdInner.decompress(bytes,totalLength);
         final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
         byte length = wrap.get();
         byte[] bytes2 = new byte[2];

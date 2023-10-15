@@ -402,6 +402,10 @@ public class TSFileService {
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
 
+//            if (writeTimes.get() == 10000) {
+//                ArrayUtils.printInt(ints);
+//            }
+
             //压缩int
             byte[] compress2 = IntCompress.compress2(ints);
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray,lineNum);

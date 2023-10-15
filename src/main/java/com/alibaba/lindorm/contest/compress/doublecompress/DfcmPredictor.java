@@ -10,9 +10,13 @@
  ******************************************************************************/
 package com.alibaba.lindorm.contest.compress.doublecompress;
 
+import com.alibaba.lindorm.contest.util.Constants;
+
 import java.util.Arrays;
 
 public class DfcmPredictor {
+
+    public static final ThreadLocal<long[]> LONG_ARRAY_THREAD_LOCAL = ThreadLocal.withInitial(() -> new long[1024]);
 
     private long[] table;
     private int dfcm_hash;
@@ -25,7 +29,8 @@ public class DfcmPredictor {
     }
 
     public DfcmPredictor(int logOfTableSize) {
-        table = new long[1024];
+        table = LONG_ARRAY_THREAD_LOCAL.get();
+        Arrays.fill(table, 0);
     }
 
     public long getPrediction() {

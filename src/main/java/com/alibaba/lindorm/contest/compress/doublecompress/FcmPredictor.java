@@ -14,6 +14,7 @@ import java.util.Arrays;
 
 public class FcmPredictor {
 
+    public static final ThreadLocal<long[]> LONG_ARRAY_THREAD_LOCAL = ThreadLocal.withInitial(() -> new long[1024]);
     private long[] table;
     private int fcm_hash;
 
@@ -23,7 +24,8 @@ public class FcmPredictor {
     }
 
     public FcmPredictor(int logOfTableSize) {
-        table = new long[1024];
+        table = LONG_ARRAY_THREAD_LOCAL.get();
+        Arrays.fill(table, 0);
     }
 
     public long getPrediction() {

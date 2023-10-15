@@ -16,7 +16,7 @@ public class Constants {
 
     public static final int COMPRESS_BATCH_SIZE = 50;
 
-    public static final int CACHE_VINS_LINE_NUMS = 200;
+    public static final int CACHE_VINS_LINE_NUMS = 210;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;
