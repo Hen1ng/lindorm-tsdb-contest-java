@@ -4,7 +4,7 @@ public class Pair<L, R> {
     private L left;
     private R right;
 
-    private Pair(L left, R right) {
+    public Pair(L left, R right) {
         this.left = left;
         this.right = right;
     }

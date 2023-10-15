@@ -64,14 +64,14 @@ public class DataGenerator {
         rowFactory.timeStamp = System.currentTimeMillis();
         Map<String, ColumnValue> columns = new HashMap<>();
         for (int i = 0; i < INT_NUM; i++) {
-            rowFactory.ints[i] = random.nextInt();
+            rowFactory.ints[i] = random.nextInt(1000);
         }
         for (int i = INT_NUM; i < INT_NUM+DOUBLE_NUM; i++) {
             rowFactory.doubles[i - INT_NUM] = randomDouble[random.nextInt(100)];
         }
         for (int i = INT_NUM+DOUBLE_NUM; i < INT_NUM+DOUBLE_NUM+STRING_NUM; i++) {
             int length = 10;
-            String str = generateRandomString(length);
+            String str = random.nextInt(4) + "asd";
             rowFactory.byteBuffers[i - INT_NUM-DOUBLE_NUM] = str;
         }
         return rowFactory;
@@ -96,7 +96,7 @@ public class DataGenerator {
         Set<String> requestedColumns = new HashSet<>(Arrays.asList(columnsName));
         Vin vin = vins[random.nextInt(1)];
         Set<String> request = new HashSet<>();
-        request.add("FDJZT");
+        request.add("QZZS");
         int time = random.nextInt(36000-300);
         long timeLower = timeStamp[time];
         long timeUpper = timeStamp[time+300];
@@ -198,7 +198,7 @@ public class DataGenerator {
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
                 int batchSize = 10;
-                for(int v = 0;v<50;v++) {
+                for(int v = 0;v<1;v++) {
                     for (int i = 0; i < 3600; i++) {
                         ArrayList<Row> rows = new ArrayList<>();
                         for (int j = 0; j < 10; j++) {
@@ -245,7 +245,7 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            LastVinQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -260,7 +260,6 @@ public class DataGenerator {
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
         for(int i=0;i<1000000;i++){
             TimeRangeAggregationRequest timeRangeAggregationRequest = genTimeRangeAggregationRequest();
-
             tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
             if(i%100000==0){
                 MemoryUtil.printJVMHeapMemory();
@@ -289,8 +288,8 @@ public class DataGenerator {
             TimeRangeQueryRequest latestQueryRequest = genTimeRangeQueryRequest();
             ArrayList<Row> rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
             for (Row row : rows) {
-                ByteBuffer fdjzt = row.getColumns().get("FDJZT").getStringValue();
-                System.out.println(new String(fdjzt.array()));
+                int qzzs = row.getColumns().get("QZZS").getIntegerValue();
+                System.out.println(qzzs);
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 

@@ -12,7 +12,7 @@ public class ZstdInner {
     public static ThreadLocal<ZstdDecompressCtx> ZSTD_DECOMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(ZstdDecompressCtx::new);
     public static ThreadLocal<byte[]> BYTE_THREAD_LOCAL = ThreadLocal.withInitial(() -> new byte[Constants.INT_NUMS * Constants.CACHE_VINS_LINE_NUMS * 8]);
     public static byte[] compress(byte[] var0, int level) {
-        final ZstdCompressCtx zstdCompressCtx = ZSTD_COMPRESS_THREAD_LOCAL.get();
+        final ZstdCompressCtx zstdCompressCtx =new ZstdCompressCtx();
         zstdCompressCtx.setLevel(level);
         byte[] var4 = BYTE_THREAD_LOCAL.get();
         Arrays.fill(var4, (byte) 0);

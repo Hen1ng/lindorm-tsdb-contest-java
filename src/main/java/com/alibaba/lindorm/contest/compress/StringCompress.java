@@ -164,7 +164,8 @@ public class StringCompress {
                 int BitSize = valueSize;
                 if (dictSize == 1) BitSize = 0;
                 if (dictSize == 4) BitSize *= 2;
-                ByteBuffer compress = ByteBuffer.allocate(dictLength + 2 * dictSize + UpperBoundByte(BitSize));
+                ByteBuffer compress = ByteBuffer.allocate(1+dictLength + 2 * dictSize + UpperBoundByte(BitSize));
+                compress.put((byte) dictSize);
                 for (int i = 0; i < dictSize; i++) {
                     boolean isExist = false;
                     for (String bytes : set.keySet()) {

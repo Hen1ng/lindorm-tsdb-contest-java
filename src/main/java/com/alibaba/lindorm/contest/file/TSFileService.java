@@ -25,7 +25,7 @@ public class TSFileService {
     public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
-    public static final ThreadLocal<long[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
+    public static final ThreadLocal<int[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new int[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
     public static final ThreadLocal<double[]> DOUBLE_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new double[Constants.CACHE_VINS_LINE_NUMS * Constants.FLOAT_NUMS]);
     public static final ThreadLocal<long[]> LONG_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS ]);
 
@@ -79,7 +79,7 @@ public class TSFileService {
             int intCompressLength = dataBuffer.getShort();
             int doubleCompressInt = dataBuffer.getShort(10 + compressLength + intCompressLength + 2);
             int i = 0;//多少行
-            long[] ints = null;
+            int[] ints = null;
             double[] doubles = null;
             List<ByteBuffer> stringBytes = null;
             Short everyStringLength = null;
@@ -97,7 +97,7 @@ public class TSFileService {
                                     final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(10 + compressLength + 2);
                                     dataBuffer.get(allocate1);
-                                    ints = IntCompress.decompress2(allocate1, index.getValueSize() * Constants.INT_NUMS);
+                                    ints = IntCompress.decompress4(allocate1, index.getValueSize());
                                 }
                                 int off = columnIndex * valueSize + i;
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
@@ -204,7 +204,7 @@ public class TSFileService {
             int intCompressLength = dataBuffer.getShort();
             int doubleCompressInt = dataBuffer.getShort(10 + compressLength + intCompressLength + 2);
             int i = 0;//多少行
-            long[] ints = null;
+            int[] ints = null;
             double[] doubles = null;
             List<ByteBuffer> stringBytes = null;
             Short everyStringLength = null;
@@ -222,7 +222,7 @@ public class TSFileService {
                                     final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(10 + compressLength + 2);
                                     dataBuffer.get(allocate1);
-                                    ints = IntCompress.decompress2(allocate1, index.getValueSize() * Constants.INT_NUMS);
+                                    ints = IntCompress.decompress4(allocate1, index.getValueSize());
                                 }
                                 int off = columnIndex * valueSize + i;
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
@@ -328,7 +328,7 @@ public class TSFileService {
             List<ByteBuffer> stringList;
             double[] doubles;
             long[] longs ;
-            long[] ints;
+            int[] ints;
             int longPosition = 0;
             int doublePosition = 0;
             int intPosition = 0;
@@ -354,7 +354,7 @@ public class TSFileService {
                 stringLengthBuffer.clear();
                 stringList.clear();
             } else {
-                ints = new long[lineNum * Constants.INT_NUMS];
+                ints = new int[lineNum * Constants.INT_NUMS];
                 doubles = new double[lineNum * Constants.FLOAT_NUMS];
                 longs = new long[lineNum];
                 //存储每个字符串的长度
@@ -407,7 +407,7 @@ public class TSFileService {
 //            }
 
             //压缩int
-            byte[] compress2 = IntCompress.compress2(ints);
+            byte[] compress2 = IntCompress.compress4(ints,lineNum);
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray,lineNum);
             int total = 8 + 2 + compress1.length //timestamp
                     + compress2.length + 2 //int
