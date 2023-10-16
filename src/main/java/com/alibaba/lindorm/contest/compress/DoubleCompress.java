@@ -13,9 +13,7 @@ import com.github.luben.zstd.Zstd;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class DoubleCompress {
     public static final ThreadLocal<ByteBuffer> DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * 8));
@@ -38,6 +36,31 @@ public class DoubleCompress {
         return dest;
     }
 
+    public static Map<Integer, double[]> getByLineNum(ByteBuffer byteBuffer, int valueSize, List<Integer> columnIndexList) {
+        final Map<Integer, double[]> map = new HashMap<>(columnIndexList.size());
+        final int compressLength = byteBuffer.getInt();
+        byte[] array1 = new byte[byteBuffer.capacity() - 4];
+        byteBuffer.get(array1);
+        final byte[] decompress = Zstd.decompress(array1, compressLength);
+        final ByteBuffer wrap = ByteBuffer.wrap(decompress);
+        int total = 0;
+        int line = 40;
+        while (wrap.hasRemaining()) {
+            final short aShort = wrap.getShort();
+            total += 2;
+            if (columnIndexList.contains(line)) {
+                byte[] array = new byte[aShort];
+                wrap.position(total);
+                wrap.get(array);
+                map.put(line, decode3(ByteBuffer.wrap(array), valueSize)) ;
+            }
+            total += aShort;
+            line++;
+            wrap.position(total);
+        }
+        return map;
+    }
+
 
     public static byte[] encode2(double[] values, int valueSize) {
         List<ByteBuffer> buffers = new ArrayList<>();
@@ -54,7 +77,7 @@ public class DoubleCompress {
             byteBuffer.put(buffer);
         }
         final byte[] array = byteBuffer.array();
-        final byte[] compress = ZstdInner.compress(array, 13);
+        final byte[] compress = Zstd.compress(array, 13);
         final ByteBuffer allocate = ByteBuffer.allocate(compress.length + 4);
         allocate.putInt(array.length);
         allocate.put(compress);
@@ -72,7 +95,7 @@ public class DoubleCompress {
         final int compressLength = byteBuffer.getInt();
         byte[] array1 = new byte[byteBuffer.capacity() - 4];
         byteBuffer.get(array1);
-        final byte[] decompress = ZstdInner.decompress(array1, compressLength);
+        final byte[] decompress = Zstd.decompress(array1, compressLength);
         final ByteBuffer wrap = ByteBuffer.wrap(decompress);
         int start = 0;
         while (wrap.hasRemaining()) {
@@ -176,9 +199,17 @@ public class DoubleCompress {
 //        final byte[] compress = gzipCompress.compress(array);
 //        byteBuffer.flip();
         final ByteBuffer byteBuffer = ByteBuffer.wrap(array);
-        final double[] decode = decode2(byteBuffer, 1500, 150);
+        List<Integer> lists = new ArrayList<>();
+        lists.add(41);
+        lists.add(42);
+        lists.add(43);
+        lists.add(44);
+        lists.add(45);
+        lists.add(46);
+        lists.add(49);
+        final Map<Integer, double[]> byLineNum = getByLineNum(byteBuffer, 150, lists);
         final double[] decode1 = decode2( ByteBuffer.wrap(array), 1500, 150);
-        final boolean equals1 = Arrays.equals(values, decode);
+//        final boolean equals1 = Arrays.equals(values, decode);
 //
 //        final byte[] compress2 = ZstdCompress.compress(array, 25);
 //        System.out.println(byteBuffer);

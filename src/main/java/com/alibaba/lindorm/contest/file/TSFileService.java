@@ -84,6 +84,15 @@ public class TSFileService {
             List<ByteBuffer> stringBytes = null;
             Short everyStringLength = null;
             ByteBuffer stringLengthBuffer = null;
+            Map<Integer, double[]> doubleMap = null;
+            List<Integer> doubleColumnIndex = new ArrayList<>();
+            for (String requestedColumn : requestedColumns) {
+                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
+                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    doubleColumnIndex.add(columnIndex);
+                }
+            }
             short totalStringLength = 0;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
@@ -107,13 +116,14 @@ public class TSFileService {
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
-                                if (doubles == null) {
+                                if (doubleMap == null) {
                                     final byte[] allocate1 = new byte[doubleCompressInt];
                                     dataBuffer.position(10 + compressLength
                                             + intCompressLength + 2
                                             + 2);
                                     dataBuffer.get(allocate1);
-                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+                                    doubleMap = DoubleCompress.getByLineNum(ByteBuffer.wrap(allocate1), valueSize, doubleColumnIndex);
+//                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
 //                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
 //                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
 //                                    doubles = new double[bytes.length / 8];
@@ -121,8 +131,9 @@ public class TSFileService {
 //                                        doubles[i1] = wrap.getDouble();
 //                                    }
                                 }
-                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
-                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
+                                final double[] doubles1 = doubleMap.get(columnIndex);
+//                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
+                                columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles1[i]));
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
