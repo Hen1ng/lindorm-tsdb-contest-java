@@ -248,7 +248,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            AggQuery(tsdbEngine);
+//            AggQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -264,7 +265,10 @@ public class DataGenerator {
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
         for (int i = 0; i < 1000000; i++) {
             TimeRangeAggregationRequest timeRangeAggregationRequest = genTimeRangeAggregationRequest();
-            tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            for (Row row : rows) {
+                System.out.println(row.getTimestamp());
+            }
             if (i % 100000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }

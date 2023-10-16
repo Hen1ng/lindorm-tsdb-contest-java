@@ -32,6 +32,7 @@ public class TSFileService {
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
 
+
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
@@ -85,12 +86,18 @@ public class TSFileService {
             Short everyStringLength = null;
             ByteBuffer stringLengthBuffer = null;
             Map<Integer, double[]> doubleMap = null;
+            Map<Integer, int[]> intMap = null;
             List<Integer> doubleColumnIndex = new ArrayList<>();
+            List<Integer> intColumnIndex = new ArrayList<>();
+
             for (String requestedColumn : requestedColumns) {
                 final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
                 final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                 if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                     doubleColumnIndex.add(columnIndex);
+                }
+                else if(columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)){
+                    intColumnIndex.add(columnIndex);
                 }
             }
             short totalStringLength = 0;
@@ -102,14 +109,14 @@ public class TSFileService {
                         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
-                                if (ints == null) {
+                                if (intMap == null) {
                                     final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(10 + compressLength + 2);
                                     dataBuffer.get(allocate1);
-                                    ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                    intMap = IntCompress.getByLineNum(allocate1,index.getValueSize(),intColumnIndex);
                                 }
-                                int off = columnIndex * valueSize + i;
-                                columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
+                                final int[] ints1 = intMap.get(columnIndex);
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints1[i]));
 
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
