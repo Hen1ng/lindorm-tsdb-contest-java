@@ -13,7 +13,12 @@ import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class TSFileService {
@@ -28,16 +33,90 @@ public class TSFileService {
     public static final ThreadLocal<int[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new int[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
     public static final ThreadLocal<double[]> DOUBLE_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new double[Constants.CACHE_VINS_LINE_NUMS * Constants.FLOAT_NUMS]);
     public static final ThreadLocal<long[]> LONG_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS ]);
+    public static ExecutorService writeThreadPool;
+
+    public static Queue<WriteEntry> writeEntryQueue;
+    public static AtomicInteger activeTasks = new AtomicInteger(0);
+
+
+    private static Map<WriteEntryKey,WriteEntry> writeEntryMap;
+    private static int MAX_WIRTE_BUFFER_SIZE = 5000;
+    private static ReentrantLock writeEntryQueueLock;
+
+    private static Condition isQueueEmpty;
+
+    private static Condition isQueueFull;
+    private static WriteEntry entry;
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
-
 
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
+        }
+        writeThreadPool = Executors.newFixedThreadPool(4);
+        writeEntryMap = new HashMap<>();
+        writeEntryQueue = new LinkedList<>();
+        writeEntryQueueLock = new ReentrantLock();
+        isQueueEmpty = writeEntryQueueLock.newCondition();
+        isQueueFull  = writeEntryQueueLock.newCondition();
+        for(int i=0;i<4;i++){
+            writeThreadPool.execute(()->{
+                try {
+                    runWriteThread();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+    }
+
+    public static void pushEntryInQueue(WriteEntry entry) throws InterruptedException {
+        try {
+            writeEntryQueueLock.lock();
+            while (writeEntryQueue.size() == MAX_WIRTE_BUFFER_SIZE) isQueueFull.await();
+            writeEntryMap.put(new WriteEntryKey(entry.getJ(),entry.getIndex().getMaxTimestamp()),entry);
+            writeEntryQueue.add(entry);
+            activeTasks.incrementAndGet();
+            isQueueEmpty.signal();
+        }finally {
+            writeEntryQueueLock.unlock();
+        }
+    }
+    public static void runWriteThread() throws InterruptedException {
+        while (true) {
+            try {
+                writeEntryQueueLock.lock();
+                while (writeEntryQueue.isEmpty()) {
+                    isQueueEmpty.await();
+                }
+                entry = writeEntryQueue.poll();
+                writeEntryMap.remove(new WriteEntryKey(entry.getJ(), entry.getIndex().getMaxTimestamp()));
+                TSFile tsFile = entry.getTsFile();
+                final long append = tsFile.append(entry.getByteBuffer());
+                entry.getIndex().setOffset(append);
+                isQueueFull.signal();
+            } finally {
+                activeTasks.decrementAndGet();
+                writeEntryQueueLock.unlock();
+            }
+        }
+
+    }
+
+    public static ByteBuffer getFromWriteBuffer(int fileIndex,long maxTimeStamp){
+        try {
+            writeEntryQueueLock.lock();
+            WriteEntryKey writeEntryKey = new WriteEntryKey(fileIndex, maxTimeStamp);
+            if (!writeEntryMap.containsKey(writeEntryKey)) {
+                return null;
+            }
+            return writeEntryMap.get(writeEntryKey).getByteBuffer();
+        }finally {
+            writeEntryQueueLock.unlock();
         }
     }
 
@@ -68,9 +147,20 @@ public class TSFileService {
             final int valueSize = index.getValueSize();
             final int length = index.getLength();
             int m = j % Constants.TS_FILE_NUMS;
-            final TSFile tsFile = getTsFileByIndex(m);
-            ByteBuffer dataBuffer = ByteBuffer.allocate(length);
-            tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+            ByteBuffer dataBuffer = null;
+            if(index.getOffset() == -1){
+                // 乐观锁
+                dataBuffer = getFromWriteBuffer(j,index.getMaxTimestamp());
+                if(dataBuffer==null){
+                    final TSFile tsFile = getTsFileByIndex(m);
+                    dataBuffer = ByteBuffer.allocate(length);
+                    tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+                }
+            }else {
+                final TSFile tsFile = getTsFileByIndex(m);
+                dataBuffer = ByteBuffer.allocate(length);
+                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+            }
             dataBuffer.flip();
             long longPrevious = dataBuffer.getLong();
             int compressLength = dataBuffer.getShort();
