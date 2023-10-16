@@ -54,7 +54,7 @@ public class MemoryTable {
 
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
-        this.values = new SortedList[size];
+        this.values = new ArrayList[size];
         this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
@@ -67,7 +67,8 @@ public class MemoryTable {
 //        this.fixThreadPool = Executors.newFixedThreadPool(8);
 //        this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
-            values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
+            values[i] = new ArrayList<>();
+//            values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
 //        for(int i=0;i<Constants.TOTAL_BUFFER_NUMS;i++){
 //            bufferValues[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
@@ -124,6 +125,7 @@ public class MemoryTable {
             final List<Value> valueSortedList = values[index];
             valueSortedList.add(new Value(ts, row.getColumns()));
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
+                Collections.sort(valueSortedList, (v1, v2) -> Long.compare(v2.getTimestamp(), v1.getTimestamp()));
                 tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
             }
         } finally {
@@ -348,6 +350,7 @@ public class MemoryTable {
         try {
             for (int i = 0; i < values.length; i++) {
                 List<Value> valueList = values[i];
+                Collections.sort(valueList, (v1, v2) -> Long.compare(v2.getTimestamp(), v1.getTimestamp()));
                 if (valueList.size() >= 1) {
                     final Vin vin = new Vin(VinDictMap.get(i));
                     tsFileService.write(vin, valueList, valueList.size(), i);
