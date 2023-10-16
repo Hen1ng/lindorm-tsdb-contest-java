@@ -22,6 +22,10 @@ public class Index {
 
     private int valueSize;
 
+    public void setOffset(long offset) {
+        this.offset = offset;
+    }
+
     public AggBucket getAggBucket() {
         return aggBucket;
     }

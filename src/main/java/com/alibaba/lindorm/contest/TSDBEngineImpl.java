@@ -131,6 +131,14 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void shutdown() {
+        while (TSFileService.activeTasks.get() > 0 ){
+            try {
+                System.out.println(TSFileService.activeTasks.get());
+                Thread.sleep(100); // 每隔100ms检查一次
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         long start = System.currentTimeMillis();
         System.out.println("upsertTimes:" + upsertTimes.get());
         System.out.println("total string length:" + StaticsUtil.STRING_TOTAL_LENGTH.get());

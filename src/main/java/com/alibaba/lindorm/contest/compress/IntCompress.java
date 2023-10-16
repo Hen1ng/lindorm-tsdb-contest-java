@@ -329,6 +329,86 @@ public class IntCompress {
         buffer.put(compress);
         return buffer.array();
     }
+    public static Map<Integer, int[]> getByLineNum(byte[] bytes, int valueSize,List<Integer> columnIndexList){
+        final Map<Integer, int[]> map = new HashMap<>(columnIndexList.size());
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        int anInt = wrap.getInt();
+        byte[] bytes1 = new byte[bytes.length-4];
+        wrap.get(bytes1,0,bytes1.length);
+        byte[] decompress = Zstd.decompress(bytes1, anInt);
+        ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
+        byte[] compressType = new byte[5];
+        int[] result = new int[valueSize * 40];
+        wrap1.get(compressType,0,compressType.length);
+        for(int i=0;i<40;i++){
+            boolean bit = getBit(i, compressType);
+            if(bit){
+                if(!columnIndexList.contains(i)){
+                    int offset = 0;
+                    byte dictSize = wrap1.get();
+                    int bitSize = valueSize;
+                    switch (dictSize){
+                        case 1:
+                            offset+=4;
+                            break;
+                        case 2:
+                            offset+=2*4+UpperBoundByte(bitSize);
+                            break;
+                        case 4:
+                            offset+=4*4+UpperBoundByte(bitSize*2);
+                    }
+                    wrap1.position(wrap1.position()+offset);
+                    continue;
+                }
+                int[] ints =new int[valueSize];
+                // use map
+                byte dictSize = wrap1.get();
+                List<Integer> dict = new ArrayList<>();
+                for(int j=0;j<dictSize;j++){
+                    int anInt1 = wrap1.getInt();
+                    dict.add(anInt1);
+                }
+                int bitSize = valueSize;
+                if(dictSize == 1){
+                    for(int j=0;j<valueSize;j++){
+                        ints[j] = dict.get(0);
+                    }
+                }else if(dictSize == 2){
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize)];
+                    wrap1.get(indexBit,0,indexBit.length);
+                    for(int j=0;j<valueSize;j++){
+                        boolean bit1 = getBit(j, indexBit);
+                        ints[j] = bit1? dict.get(1) : dict.get(0);
+                    }
+                }else if(dictSize == 4){
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize*2)];
+                    wrap1.get(indexBit,0,indexBit.length);
+                    for(int j=0;j<valueSize;j++){
+                        int ix = getTwoBit(indexBit,j);
+                        ints[j] = dict.get(ix);
+                    }
+                }
+                map.put(i,ints);
+            }else{
+                if(!columnIndexList.contains(i)){
+                    int length = wrap1.getInt();
+                    wrap1.position(wrap1.position()+length);
+                    continue;
+                }
+                int[] ints = new int[valueSize];
+                // not use map
+                int length = wrap1.getInt();
+                byte[] bytes2 = new byte[length];
+                wrap1.get(bytes2,0,bytes2.length);
+                long[] longs = decompress2WithoutZstd(bytes2, valueSize);
+                for(int j=0;j<valueSize;j++){
+                    ints[j] = (int) longs[j];
+                }
+                map.put(i,ints);
+            }
+        }
+        return map;
+    }
     public static int[] decompress4(byte[] bytes,int valueSize){
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
         int anInt = wrap.getInt();

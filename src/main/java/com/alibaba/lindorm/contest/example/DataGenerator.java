@@ -199,11 +199,11 @@ public class DataGenerator {
             }, 60000, 60000);
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
-                int batchSize = 10;
+                int batchSize = 500;
                 for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 1; v++) {
+                        for (int v = 0; v < 50; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -248,7 +248,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            AggQuery(tsdbEngine);
+//            AggQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -264,7 +265,10 @@ public class DataGenerator {
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
         for (int i = 0; i < 1000000; i++) {
             TimeRangeAggregationRequest timeRangeAggregationRequest = genTimeRangeAggregationRequest();
-            tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            for (Row row : rows) {
+                System.out.println(row.getTimestamp());
+            }
             if (i % 100000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }
