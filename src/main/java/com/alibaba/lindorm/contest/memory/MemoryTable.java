@@ -41,7 +41,7 @@ public class MemoryTable {
     private ConcurrentHashMap<Vin, Queue<Integer>> vinToBufferIndex;
 
     private Queue<Integer> freeList;
-    private final List<Value>[] bufferValues;
+    private List<Value>[] bufferValues;
     private final List<Value>[] values;
 
     private final int size;
@@ -55,7 +55,7 @@ public class MemoryTable {
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
         this.values = new ArrayList[size];
-        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
+//        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
         for (int i = 0; i < 60000; i++) {
@@ -67,7 +67,7 @@ public class MemoryTable {
 //        this.fixThreadPool = Executors.newFixedThreadPool(8);
 //        this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
-            values[i] = new ArrayList<>();
+            values[i] = new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS);
 //            values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
 //        for(int i=0;i<Constants.TOTAL_BUFFER_NUMS;i++){
