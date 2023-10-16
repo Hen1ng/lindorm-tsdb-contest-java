@@ -11,6 +11,13 @@ public class StaticsUtil {
     public static AtomicLong DOUBLE_COMPRESS_LENGTH = new AtomicLong(0);
     public static AtomicLong INT_COMPRESS_LENGTH = new AtomicLong(0);
     public static AtomicLong MAP_COMPRESS_TIME = new AtomicLong(0);
+    public static AtomicLong DOWNSAMPLE_USE_TIME = new AtomicLong(0);
+    public static AtomicLong DOWNSAMPLE_FETCH_DATA_USE_TIME = new AtomicLong(0);
+    public static AtomicLong AGG_TIME = new AtomicLong(0);
+
+
+    public static AtomicLong AGG_USE_TIME = new AtomicLong(0);
+    public static AtomicLong AGG_FETCH_DATA_TIME = new AtomicLong(0);
 
     public static AtomicLong STRING_BYTE_LENGTH = new AtomicLong(0);
 

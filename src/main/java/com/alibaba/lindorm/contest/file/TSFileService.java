@@ -110,10 +110,8 @@ public class TSFileService {
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
                                 if (intMap == null) {
-                                    final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(10 + compressLength + 2);
-                                    dataBuffer.get(allocate1);
-                                    intMap = IntCompress.getByLineNum(allocate1,index.getValueSize(),intColumnIndex);
+                                    intMap = IntCompress.getByLineNum(dataBuffer,index.getValueSize(),intColumnIndex,intCompressLength);
                                 }
                                 final int[] ints1 = intMap.get(columnIndex);
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints1[i]));

@@ -329,11 +329,11 @@ public class IntCompress {
         buffer.put(compress);
         return buffer.array();
     }
-    public static Map<Integer, int[]> getByLineNum(byte[] bytes, int valueSize,List<Integer> columnIndexList){
+    public static Map<Integer, int[]> getByLineNum(ByteBuffer byteBuffer, int valueSize,List<Integer> columnIndexList,int compressLength){
         final Map<Integer, int[]> map = new HashMap<>(columnIndexList.size());
-        ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        ByteBuffer wrap = byteBuffer;
         int anInt = wrap.getInt();
-        byte[] bytes1 = new byte[bytes.length-4];
+        byte[] bytes1 = new byte[compressLength-4];
         wrap.get(bytes1,0,bytes1.length);
         byte[] decompress = Zstd.decompress(bytes1, anInt);
         ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
