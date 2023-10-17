@@ -301,10 +301,11 @@ public class IntCompress {
                 totalLength+=allocate.array().length;
                 arrayList.add(allocate);
             } else {
-                long[] longs = new long[valueSize];
+                long[] longs2 = new long[valueSize];
                 for(int j=start;j<start+valueSize;j++){
-                    longs[j-start] = ints[j];
+                    longs2[j-start] = ints[j];
                 }
+                long[] longs = toGapArray(longs2);
                 byte[] bytes = compress2WithoutZstd(longs);
                 ByteBuffer allocate = ByteBuffer.allocate(4+bytes.length);
                 allocate.putInt(bytes.length);
@@ -401,8 +402,9 @@ public class IntCompress {
                 byte[] bytes2 = new byte[length];
                 wrap1.get(bytes2,0,bytes2.length);
                 long[] longs = decompress2WithoutZstd(bytes2, valueSize);
-                for(int j=0;j<valueSize;j++){
-                    ints[j] = (int) longs[j];
+                ints[0] = (int) longs[0];
+                for (int j = 1; j < longs.length; j++) {
+                    ints[j] = (int) (ints[j-1]+longs[j]);
                 }
                 map.put(i,ints);
             }

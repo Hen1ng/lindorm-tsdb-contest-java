@@ -57,7 +57,7 @@ public class TSFileService {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
         }
-        writeThreadPool = Executors.newFixedThreadPool(4);
+        writeThreadPool = Executors.newFixedThreadPool(2);
         writeEntryMap = new HashMap<>();
         writeEntryQueue = new LinkedList<>();
         writeEntryQueueLock = new ReentrantLock();

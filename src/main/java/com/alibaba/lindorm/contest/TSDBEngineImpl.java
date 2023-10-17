@@ -131,7 +131,7 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void shutdown() {
-        while (TSFileService.activeTasks.get() > 0 ){
+        while (TSFileService.activeTasks.get() > 0) {
             try {
                 System.out.println(TSFileService.activeTasks.get());
                 Thread.sleep(100); // 每隔100ms检查一次
@@ -203,6 +203,9 @@ public class TSDBEngineImpl extends TSDBEngine {
     public void write(WriteRequest wReq) throws IOException {
         if (upsertTimes.incrementAndGet() == 1) {
             System.out.println("start upsert, ts:" + System.currentTimeMillis());
+        }
+        if (upsertTimes.get() % 1000000 == 0) {
+            System.out.println("activeTask : " + TSFileService.activeTasks.get());
         }
 //        writeThreadSet.add(Thread.currentThread().getName());
         try {
@@ -350,7 +353,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     }
 
     public ArrayList<Row> executeAggregateQueryByBucket(TimeRangeAggregationRequest aggregationReq) throws IOException {
-        if(StaticsUtil.AGG_TIME.getAndAdd(1) % 80000 == 0){
+        if (StaticsUtil.AGG_TIME.getAndAdd(1) % 80000 == 0) {
             System.out.println("executeAggregateQueryByBucket times : " + StaticsUtil.AGG_TIME);
             System.out.println("executeAggregateQueryByBucket Fetch Data times : " + StaticsUtil.AGG_FETCH_TIME);
             System.out.println("executeAggregateQueryByBucket use time : " + StaticsUtil.AGG_USE_TIME.get());
@@ -791,7 +794,8 @@ public class TSDBEngineImpl extends TSDBEngine {
                                     timeRangeRow.addAll(fileService.getByIndexV2(vin, startTime, endTime, index, requestedColumns, i1));
                                     long ed = System.currentTimeMillis();
                                     StaticsUtil.DOWNSAMPLE_FETCH_DATA_TIME.addAndGet(1);
-                                    StaticsUtil.DOWNSAMPLE_FETCH_DATA_USE_TIME.addAndGet(ed - st);                                }
+                                    StaticsUtil.DOWNSAMPLE_FETCH_DATA_USE_TIME.addAndGet(ed - st);
+                                }
                             }
                             for (Row row : timeRangeRow) {
                                 if (row.getTimestamp() < startTime || row.getTimestamp() > endTime - 1) {
