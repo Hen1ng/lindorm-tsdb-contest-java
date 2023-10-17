@@ -112,12 +112,12 @@ public class DoubleCompress {
             byteBuffer.putShort((short) buffer.capacity());
             byteBuffer.put(buffer);
         }
-        final byte[] array = byteBuffer.array();
-        final byte[] compress = Zstd.compress(array, 13);
-        final ByteBuffer allocate = ByteBuffer.allocate(compress.length + 4);
-        allocate.putInt(array.length);
-        allocate.put(compress);
-        return allocate.array();
+        return byteBuffer.array();
+//        final byte[] compress = Zstd.compress(array, 13);
+//        final ByteBuffer allocate = ByteBuffer.allocate(compress.length + 4);
+//        allocate.putInt(array.length);
+//        allocate.put(compress);
+//        return allocate.array();
     }
 
     public static double[] decode2(ByteBuffer byteBuffer, int doubleNum, int valueSize) {

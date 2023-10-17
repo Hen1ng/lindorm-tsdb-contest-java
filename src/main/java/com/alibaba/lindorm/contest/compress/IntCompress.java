@@ -324,11 +324,12 @@ public class IntCompress {
         for (ByteBuffer byteBuffer : arrayList) {
             allocate.put(byteBuffer.array());
         }
-        byte[] compress = Zstd.compress(allocate.array(), 12);
-        ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
-        buffer.putInt(allocate.array().length);
-        buffer.put(compress);
-        return buffer.array();
+        return allocate.array();
+//        byte[] compress = Zstd.compress(allocate.array(), 12);
+//        ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
+//        buffer.putInt(allocate.array().length);
+//        buffer.put(compress);
+//        return buffer.array();
     }
     public static Map<Integer, int[]> getByLineNum(ByteBuffer byteBuffer, int valueSize,List<Integer> columnIndexList,int compressLength){
         final Map<Integer, int[]> map = new HashMap<>(columnIndexList.size());
@@ -621,11 +622,12 @@ public class IntCompress {
                 }
             }
         }
-        byte[] compress = ZstdInner.compress(allocate.array(), 12);
-        ByteBuffer allocate1 = ByteBuffer.allocate(4 + compress.length);
-        allocate1.putInt(allocate.array().length);
-        allocate1.put(compress);
-        return allocate1.array();
+        return allocate.array();
+//        byte[] compress = ZstdInner.compress(allocate.array(), 12);
+//        ByteBuffer allocate1 = ByteBuffer.allocate(4 + compress.length);
+//        allocate1.putInt(allocate.array().length);
+//        allocate1.put(compress);
+//        return allocate1.array();
     }
 
     public static byte[] compressZstd(int[] ints) {

@@ -221,11 +221,11 @@ public class StringCompress {
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = Zstd.compress(allocate.array(), 3);
-        ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
-        res.putInt(2 + total);
-        res.put(compress);
-        return new CompressResult(res.array(), shorts);
+//        byte[] compress = Zstd.compress(allocate.array(), 3);
+//        ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
+//        res.putInt(2 + total);
+//        res.put(compress);
+        return new CompressResult(allocate.array(), shorts);
     }
 
 
@@ -306,6 +306,7 @@ public class StringCompress {
     }
 
     static {
+        long start = System.currentTimeMillis();
         dataString1 = new String[]{"e", "\\", "a", "a", "8", "O", "C", "y", "m", "W", "K", " &", "#", "e", "\\", "4", "\\", "'", "[", "q", "m", "G", "C", "\\", "i", "K", "i", "'", "q", "'", "i", "O", "&", "m", "#", "m", "a", "a", "q", "u", "8", "S", "0", "O", "'", "m", ".", "u", "S", "u", "S", "e", "S", "4", "G", ".", "K", "\\", "u", "W", "y", "u", "e", "&", "K", "-", ".", "S", "i", "&", "8", "&", "C", "0", "&", "'", "-", "0", "4", "i", "y", "0", "O", "8", "m", ".", "m", "a", "'", "4", "G", "[", "i", "'", "C", "8", "-", "C", ".", "#", "y", "\\", "O", "S", "-", "4", ".", "q", "i", "W", "8", "W", "-", "q", "a", "i", "e", "a", "a", "\\", "#", "8", "K", "e", "-", "i", "e", "a", "u", "G", "0", "a", "W", "a", "0", "0", "y", "K", "m", "i", "u", "m", "[", ".", "a", "a", "G", "i", "'", "4", "u", "e", "u", "q", "u", "#", "C", "i", "4", "-", "-1",
                 "0", "0", "1", "0", "0", "0", "0", "1", "-1", "0", "-1", "1", "1", "0", "0", "-1", "-1", "1", "0", "0", "1", "1", "0", "1", "0", "-1", "-1", "-1", "-1", "0", "-1", "0", "0", "-1", "0", "-1", "1", "-1", "1", "1", "0", "1", "1", "-1", "-1", "-1", "0", "1", "0", "0", "-1", "1", "0", "0", "0", "-1", "1", "1", "1", "0", "-1", "-1", "-1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "1", "-1", "0", "-1", "0", "-1", "-1", "0", "1", "1", "-1", "1", "1", "-1", "-1", "0", "-1", "1", "-1", "0", "-1", "-1", "-1", "0", "-1", "-1", "1", "0", "1", "1", "-1", "1", "1", "1", "-1", "1", "0", "1", "0", "1", "0", "0", "-1", "1", "1", "-1", "-1", "0", "-1", "1", "1", "0", "-1", "1", "0", "1", "-1", "-1", "1", "0", "1", "1", "1", "1", "0", "0", "-1", "0", "1", "-1", "0", "-1", "-1", "1", "0", "1", "-1", "1", "1", "0", "0", "-1", "1", "1", "-1"};
         dataString0 = new String[160];
@@ -349,6 +350,7 @@ public class StringCompress {
         data.add(dataString6);
         data.add(dataString7);
         data.add(dataString8);
+        System.out.println("cost time: " + (System.currentTimeMillis() - start) + " ms");
     }
 
     //    public static void main(String[] args) {
