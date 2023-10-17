@@ -457,8 +457,9 @@ public class IntCompress {
                 byte[] bytes2 = new byte[length];
                 wrap1.get(bytes2,0,bytes2.length);
                 long[] longs = decompress2WithoutZstd(bytes2, valueSize);
-                for(int j=0;j<valueSize;j++){
-                    result[i*valueSize+j] = (int) longs[j];
+                result[i*valueSize] = (int) longs[0];
+                for (int j = 1; j < longs.length; j++) {
+                    result[i*valueSize+j] = (int) (result[i*valueSize+j-1]+longs[j]);
                 }
             }
         }

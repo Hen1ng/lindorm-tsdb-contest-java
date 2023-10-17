@@ -68,7 +68,7 @@ public class DataGenerator {
             rowFactory.ints[i] = random.nextInt(1000);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
-            rowFactory.doubles[i - INT_NUM] = randomDouble[random.nextInt(100)];
+            rowFactory.doubles[i - INT_NUM] = random.nextInt(10);
         }
         for (int i = INT_NUM + DOUBLE_NUM; i < INT_NUM + DOUBLE_NUM + STRING_NUM; i++) {
             int length = 10;
@@ -248,7 +248,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            AggQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
+//            AggQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
