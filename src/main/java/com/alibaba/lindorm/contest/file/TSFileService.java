@@ -154,7 +154,7 @@ public class TSFileService {
                 if(dataBuffer==null){
                     final TSFile tsFile = getTsFileByIndex(m);
                     dataBuffer = ByteBuffer.allocate(length);
-                    tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+                    tsFile.getFromOffsetByFileChannel(dataBuffer, index.getOffset());
                 }
             }else {
                 final TSFile tsFile = getTsFileByIndex(m);
@@ -421,9 +421,10 @@ public class TSFileService {
      * @param lineNum
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
+        StaticsUtil.COMPRESS_TIMES.getAndAdd(1);
         try {
-            AggBucket aggBucket = new AggBucket();
             long start = System.currentTimeMillis();
+            AggBucket aggBucket = new AggBucket();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
@@ -548,20 +549,21 @@ public class TSFileService {
                 System.out.println("write bytebuffer error" + e);
             }
             try {
-                TSFile tsFile = getTsFileByIndex(m);
-                final long append = tsFile.append(byteBuffer);
-                final Index index = new Index(append
+                final Index index = new Index(-1
                         , maxTimestamp
                         , minTimestamp
                         , total
                         , lineNum
                         , aggBucket);
                 MapIndex.put(j, index);
+                pushEntryInQueue(new WriteEntry(getTsFileByIndex(m),byteBuffer,index));
+//                TSFile tsFile = getTsFileByIndex(m);
+//                final long append = tsFile.append(byteBuffer);
                 valueList.clear();
             } catch (Exception e) {
                 System.out.println("write append error" + e);
             }
-            if (writeTimes.get() % 1000000 == 0) {
+            if (writeTimes.get() % 100000 == 0) {
                 System.out.println("write cost: " + (System.currentTimeMillis() - start) + " ms, write size: " + total);
             }
         } catch (Exception e) {

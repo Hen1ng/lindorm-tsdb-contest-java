@@ -165,9 +165,10 @@ public class DataGenerator {
         for (int i = 0; i < VIN_NUMS; i++) {
             vins[i] = new Vin(generateRandomString(17).getBytes());
         }
+        Random random1 = new Random();
         randomDouble = new double[100];
         for (int i = 0; i < randomDouble.length; i++) {
-            randomDouble[i] = Math.random();
+            randomDouble[i] = random1.nextInt(4);
         }
         File dataDir = new File("data_dir_test");
 
@@ -248,8 +249,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            AggQuery(tsdbEngine);
-//            TimeRangeQuery(tsdbEngine);
+//            AggQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file

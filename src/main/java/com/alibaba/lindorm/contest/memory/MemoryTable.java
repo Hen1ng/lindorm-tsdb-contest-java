@@ -125,7 +125,7 @@ public class MemoryTable {
             final List<Value> valueSortedList = values[index];
             valueSortedList.add(new Value(ts, row.getColumns()));
             if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
-                Collections.sort(valueSortedList, (v1, v2) -> Long.compare(v2.getTimestamp(), v1.getTimestamp()));
+                valueSortedList.sort((v1, v2) -> Long.compare(v2.getTimestamp(), v1.getTimestamp()));
                 tsFileService.write(vin, valueSortedList, Constants.CACHE_VINS_LINE_NUMS, index);
             }
         } finally {
