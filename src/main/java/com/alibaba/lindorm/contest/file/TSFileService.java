@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.compress.*;
 import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.BucketArrayFactory;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -18,10 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class TSFileService {
 
-    public static final ThreadLocal<ByteBuffer> TOTAL_INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 4));
-    public static final ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
+    public static final ThreadLocal<ByteBuffer> TOTAL_DIRECT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(1024 * 6 * 10));
     public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
@@ -31,6 +31,8 @@ public class TSFileService {
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
+
+    private final BucketArrayFactory bucketArrayFactory = new BucketArrayFactory((180000000 / Constants.CACHE_VINS_LINE_NUMS) + 5000);
 
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
@@ -114,12 +116,6 @@ public class TSFileService {
                                             + 2);
                                     dataBuffer.get(allocate1);
                                     doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
-//                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
-//                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-//                                    doubles = new double[bytes.length / 8];
-//                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-//                                        doubles[i1] = wrap.getDouble();
-//                                    }
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -239,12 +235,6 @@ public class TSFileService {
                                             + 2);
                                     dataBuffer.get(allocate1);
                                     doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
-//                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
-//                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
-//                                    doubles = new double[bytes.length / 8];
-//                                    for (int i1 = 0; i1 < doubles.length; i1++) {
-//                                        doubles[i1] = wrap.getDouble();
-//                                    }
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -316,14 +306,11 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
-            AggBucket aggBucket = new AggBucket();
+            AggBucket aggBucket = bucketArrayFactory.getAggBucket();
             long start = System.currentTimeMillis();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
-            ByteBuffer intBuffer;
-            ByteBuffer doubleBuffer;
-            ByteBuffer longBuffer;
             ByteBuffer stringLengthBuffer;
             List<ByteBuffer> stringList;
             double[] doubles;
@@ -333,9 +320,6 @@ public class TSFileService {
             int doublePosition = 0;
             int intPosition = 0;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
-                intBuffer = TOTAL_INT_BUFFER.get();
-                doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
-                longBuffer = TOTAL_LONG_BUFFER.get();
                 stringLengthBuffer = TOTAL_STRING_LENGTH_BUFFER.get();
                 stringList = STRING_BUFFER_LIST.get();
 
@@ -348,9 +332,6 @@ public class TSFileService {
                 longs = LONG_ARRAY_BUFFER.get();
                 Arrays.fill(longs, 0);
 
-                intBuffer.clear();
-                doubleBuffer.clear();
-                longBuffer.clear();
                 stringLengthBuffer.clear();
                 stringList.clear();
             } else {
@@ -414,7 +395,10 @@ public class TSFileService {
                     + (2 + compressDouble.length) //double
                     + stringLengthArrayCompress.length + 2 //string长度记录
                     + compress.length; //string存储string
-            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
+//            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
+            ByteBuffer byteBuffer = TOTAL_DIRECT_BUFFER.get();
+            byteBuffer.clear();
+            byteBuffer.limit(total);
             try {
                 StaticsUtil.STRING_BYTE_LENGTH.getAndAdd(stringLengthArrayCompress.length);
                 StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length* 2L);
