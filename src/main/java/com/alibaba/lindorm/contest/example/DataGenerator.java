@@ -224,7 +224,7 @@ public class DataGenerator {
                             }
                         });
                     }
-                    System.out.println("write " + i +" s");
+                    System.out.println("write " + i + " s");
                 }
 //                    System.out.println("wirte vin["+vins[v]+"] 36000 rows completed");
                 System.out.println("row insert and  write into 300WrandomRowFactory.dat completed");
@@ -248,8 +248,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            TimeRangeQuery(tsdbEngine);
-//            AggQuery(tsdbEngine);
+//            TimeRangeQuery(tsdbEngine);
+            AggQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -265,7 +265,14 @@ public class DataGenerator {
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
         for (int i = 0; i < 1000000; i++) {
             TimeRangeAggregationRequest timeRangeAggregationRequest = genTimeRangeAggregationRequest();
-            tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            for (Row row : rows) {
+                if (timeRangeAggregationRequest.getAggregator() == Aggregator.AVG) {
+                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
+                } else {
+                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
+                }
+            }
             if (i % 100000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }
