@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 public class Constants {
     public static final int OS_PAGE_SIZE = 1024 * 4;
+    public static final int WRITE_BUFFER_SIZE = 1024 * 16;
 
     public static final int TS_FILE_NUMS = 50;
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;

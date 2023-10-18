@@ -4,6 +4,7 @@ import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.RestartUtil;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -66,6 +67,35 @@ public class TSFile {
             byteBuffer.flip();
             int remaining = byteBuffer.remaining();
             fileChannel.write(byteBuffer, currentPos);
+            return initPosition + this.position.getAndAdd(remaining);
+        } catch (Exception e) {
+            System.out.println("TSFile append error, e" + e + "currentPos" + currentPos);
+        } finally {
+            this.lock.unlock();
+        }
+        System.out.println("TSFile not enough, return -2");
+        return -2;
+    }
+
+    public long appendV2(ByteBuffer byteBuffer) {
+        this.lock.lock();
+        long currentPos = this.position.get();
+        try {
+            byteBuffer.flip();
+            int remaining = byteBuffer.remaining();
+            int limit = byteBuffer.limit();
+            int i = 0;
+            while ((i + 1 ) * Constants.WRITE_BUFFER_SIZE < limit) {
+                byteBuffer.position(i * Constants.WRITE_BUFFER_SIZE);
+                byteBuffer.limit((i + 1 ) * Constants.WRITE_BUFFER_SIZE);
+                fileChannel.write(byteBuffer, currentPos + i * Constants.WRITE_BUFFER_SIZE);
+                i++;
+            }
+            if (i * Constants.WRITE_BUFFER_SIZE < limit) {
+                byteBuffer.position(i * Constants.WRITE_BUFFER_SIZE);
+                byteBuffer.limit(limit);
+                fileChannel.write(byteBuffer, currentPos + i * Constants.WRITE_BUFFER_SIZE);
+            }
             return initPosition + this.position.getAndAdd(remaining);
         } catch (Exception e) {
             System.out.println("TSFile append error, e" + e + "currentPos" + currentPos);
@@ -150,5 +180,16 @@ public class TSFile {
 
     public int getFileName() {
         return fileName;
+    }
+
+    public static void main(String[] args) throws IOException {
+        final File file1 = new File("./data/0.txt");
+        file1.createNewFile();
+        final TSFile tsFile = new TSFile("./data", 0, 0);
+        final ByteBuffer allocate = ByteBuffer.allocate(1024 * 4 * 10);
+        for (int i = 0; i < 1024 * 4 * 10; i++) {
+            allocate.put((byte)1);
+        }
+        tsFile.appendV2(allocate);
     }
 }

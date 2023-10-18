@@ -306,8 +306,8 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
-            AggBucket aggBucket = bucketArrayFactory.getAggBucket();
             long start = System.currentTimeMillis();
+            AggBucket aggBucket = bucketArrayFactory.getAggBucket();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
@@ -372,6 +372,7 @@ public class TSFileService {
                     }
                 }
             }
+            long prepareDataTime = System.currentTimeMillis();
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
             final byte[] compress = compressResult.compressedData;
@@ -396,6 +397,7 @@ public class TSFileService {
                     + stringLengthArrayCompress.length + 2 //string长度记录
                     + compress.length; //string存储string
 //            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
+            long compressTime = System.currentTimeMillis();
             ByteBuffer byteBuffer = TOTAL_DIRECT_BUFFER.get();
             byteBuffer.clear();
             byteBuffer.limit(total);
@@ -425,9 +427,10 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write bytebuffer error" + e);
             }
+            long putTime = System.currentTimeMillis();
             try {
                 TSFile tsFile = getTsFileByIndex(m);
-                final long append = tsFile.append(byteBuffer);
+                final long append = tsFile.appendV2(byteBuffer);
                 final Index index = new Index(append
                         , maxTimestamp
                         , minTimestamp
@@ -439,8 +442,14 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write append error" + e);
             }
-            if (writeTimes.get() % 1000000 == 0) {
-                System.out.println("write cost: " + (System.currentTimeMillis() - start) + " ms, write size: " + total);
+            long append = System.currentTimeMillis();
+            if (writeTimes.get() % 100000 == 0) {
+                System.out.println("write total cost: " + (System.currentTimeMillis() - start) + " ms"
+                        + " write size: " + total
+                        + " prepareData time " + (prepareDataTime - start) + " ms"
+                        + " compress time " + (compressTime - prepareDataTime) + " ms"
+                        + " put time " + (putTime - compressTime) + " ms"
+                        + " append time " + (append - putTime) + " ms");
             }
         } catch (Exception e) {
             e.printStackTrace();
