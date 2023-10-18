@@ -241,8 +241,8 @@ public class IntCompress {
         int batchIndex = 0;
         while (start < length)  {
             int count = 0;
-            Map<Integer,Integer> map = new HashMap<>();
-            Map<Integer,Integer> invMap = new HashMap<>();
+            Map<Integer,Integer> map = new HashMap<>(8);
+            Map<Integer,Integer> invMap = new HashMap<>(8);
             boolean isUseMap = true;
             for (int index = start; index < start + valueSize; index++) {
                 if(isUseMap && !map.containsKey(ints[index])){
