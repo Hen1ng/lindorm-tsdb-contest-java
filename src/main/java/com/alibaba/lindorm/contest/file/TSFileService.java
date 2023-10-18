@@ -9,7 +9,6 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
-import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -24,10 +23,13 @@ public class TSFileService {
     public static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
     public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
+
+    public static final ThreadLocal<ArrayList<ColumnValue>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(ArrayList::new);
+
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
     public static final ThreadLocal<int[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new int[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
     public static final ThreadLocal<double[]> DOUBLE_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new double[Constants.CACHE_VINS_LINE_NUMS * Constants.FLOAT_NUMS]);
-    public static final ThreadLocal<long[]> LONG_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS ]);
+    public static final ThreadLocal<long[]> LONG_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS]);
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
@@ -59,6 +61,168 @@ public class TSFileService {
         return Math.abs(h);
     }
 
+    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
+        if(StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 100000 == 0){
+            System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
+            System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
+            System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME);
+            System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES);
+
+        }
+        long start = System.currentTimeMillis();
+        ArrayList<ColumnValue> rowArrayList = LIST_THREAD_VALUE_LOCAL.get();
+        rowArrayList.clear();
+        try {
+            final long offset = index.getOffset();
+            final int valueSize = index.getValueSize();
+            final int length = index.getLength();
+            int m = j % Constants.TS_FILE_NUMS;
+            final TSFile tsFile = getTsFileByIndex(m);
+            ByteBuffer dataBuffer = ByteBuffer.allocate(length);
+            long startRead = System.currentTimeMillis();
+            tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+            dataBuffer.flip();
+            long longPrevious = dataBuffer.getLong();
+            int compressLength = dataBuffer.getShort();
+            byte[] longBytes = new byte[compressLength];
+            dataBuffer.get(longBytes);
+            long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
+            int intCompressLength = dataBuffer.getShort();
+            int doubleCompressInt = dataBuffer.getShort(10 + compressLength + intCompressLength + 2);
+            int i = 0;//多少行
+            int[] ints = null;
+            double[] doubles = null;
+            List<ByteBuffer> stringBytes = null;
+            Short everyStringLength = null;
+            ByteBuffer stringLengthBuffer = null;
+            Map<Integer, double[]> doubleMap = null;
+            Map<Integer, int[]> intMap = null;
+            List<Integer> doubleColumnIndex = new ArrayList<>();
+            List<Integer> intColumnIndex = new ArrayList<>();
+            long endRead = System.currentTimeMillis();
+            StaticsUtil.READ_DATA_TIME.addAndGet(endRead-startRead);
+            for (String requestedColumn : requestedColumns) {
+                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
+                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    doubleColumnIndex.add(columnIndex);
+                } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                    intColumnIndex.add(columnIndex);
+                }
+            }
+            short totalStringLength = 0;
+            for (long aLong : decompress) {
+                if (aLong >= timeLowerBound && aLong < timeUpperBound) {
+                    long startGetValue = System.currentTimeMillis();
+                    ColumnValue value = null;
+                    for (String requestedColumn : requestedColumns) {
+                        final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
+                        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+                        if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                            long compressStart = System.currentTimeMillis();
+                            try {
+                                if (intMap == null) {
+                                    dataBuffer.position(10 + compressLength + 2);
+                                    intMap = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), intColumnIndex, intCompressLength);
+                                }
+                                final int[] ints1 = intMap.get(columnIndex);
+                                value = new ColumnValue.IntegerColumn(ints1[i]);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                            }
+                            long compressEnd = System.currentTimeMillis();
+                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd-compressStart);
+                        } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                            try {
+                                long compressStart = System.currentTimeMillis();
+                                if (doubles == null) {
+                                    final byte[] allocate1 = new byte[doubleCompressInt];
+                                    dataBuffer.position(10 + compressLength
+                                            + intCompressLength + 2
+                                            + 2);
+                                    dataBuffer.get(allocate1);
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+//                                    final byte[] bytes = Zstd.decompress(allocate1, valueSize * Constants.FLOAT_NUMS * 8);
+//                                    final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+//                                    doubles = new double[bytes.length / 8];
+//                                    for (int i1 = 0; i1 < doubles.length; i1++) {
+//                                        doubles[i1] = wrap.getDouble();
+//                                    }
+                                }
+                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
+                                value = new ColumnValue.DoubleFloatColumn(doubles[position]);
+                                long compressEnd = System.currentTimeMillis();
+                                StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd-compressStart);
+                            } catch (Exception e) {
+                                System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                            }
+                        } else {
+                            long compressStart = System.currentTimeMillis();
+                            if (stringLengthBuffer == null) {
+                                everyStringLength = dataBuffer.getShort(10 + compressLength
+                                        + intCompressLength + 2
+                                        + doubleCompressInt + 2);
+                                final byte[] bytes = new byte[everyStringLength - 4];
+                                dataBuffer.position(10 + compressLength
+                                        + intCompressLength + 2
+                                        + doubleCompressInt + 2
+                                        + 2);
+                                int totalLength = dataBuffer.getInt();
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                final short[] decompress1 = IntCompress.decompressShort(bytes, index.getValueSize(), totalLength);
+                                stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
+                                for (short i1 : decompress1) {
+                                    totalStringLength += i1;
+                                    stringLengthBuffer.putShort(i1);
+                                }
+                            }
+                            if (stringBytes == null) {
+                                int stringLength = length - (
+                                        10 + compressLength
+                                                + intCompressLength + 2
+                                                + doubleCompressInt + 2
+                                                + everyStringLength + 2
+                                );
+                                byte[] bytes = new byte[stringLength - 4];
+                                dataBuffer.position(10 + compressLength
+                                        + intCompressLength + 2
+                                        + doubleCompressInt + 2
+                                        + everyStringLength + 2
+                                );
+                                int totalLength = dataBuffer.getInt();
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer, index.getValueSize(), totalLength);
+                            }
+                            try {
+                                int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
+                                int stringPosition = (stringNum * valueSize + i);
+                                value = new ColumnValue.StringColumn(stringBytes.get(stringPosition));
+                            } catch (Exception e) {
+                                System.out.println("getByIndex time range String error, e:" + e + "index:" + index);
+                            }
+                            long compressEnd = System.currentTimeMillis();
+                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd-compressStart);
+                        }
+                    }
+                    long endGetValue = System.currentTimeMillis();
+                    StaticsUtil.GET_VALUE_TIMES.addAndGet(endGetValue-startGetValue);
+                    if (value != null) {
+                        rowArrayList.add(value);
+                    }
+                }
+                i++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("getByIndexV2 e" + e);
+            System.exit(-1);
+        }
+        long end = System.currentTimeMillis();
+        StaticsUtil.SINGLEVALUE_TOTAL_TIME.getAndAdd(end-start);
+        return rowArrayList;
+    }
+
     public ArrayList<Row> getByIndexV2(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
         ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
         rowArrayList.clear();
@@ -84,25 +248,38 @@ public class TSFileService {
             List<ByteBuffer> stringBytes = null;
             Short everyStringLength = null;
             ByteBuffer stringLengthBuffer = null;
+            Map<Integer, double[]> doubleMap = null;
+            Map<Integer, int[]> intMap = null;
+            List<Integer> doubleColumnIndex = new ArrayList<>();
+            List<Integer> intColumnIndex = new ArrayList<>();
+
+            for (String requestedColumn : requestedColumns) {
+                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
+                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    doubleColumnIndex.add(columnIndex);
+                } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                    intColumnIndex.add(columnIndex);
+                }
+            }
             short totalStringLength = 0;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
-                    Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
+                    Map<String, ColumnValue> columns = new HashMap<>();
                     for (String requestedColumn : requestedColumns) {
                         final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
                         final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
-                                if (ints == null) {
-                                    final byte[] allocate1 = new byte[intCompressLength];
+                                if (intMap == null) {
                                     dataBuffer.position(10 + compressLength + 2);
-                                    dataBuffer.get(allocate1);
-                                    ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                    intMap = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), intColumnIndex, intCompressLength);
                                 }
-                                int off = columnIndex * valueSize + i;
-                                columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
+                                final int[] ints1 = intMap.get(columnIndex);
+                                columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints1[i]));
 
                             } catch (Exception e) {
+                                e.printStackTrace();
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
@@ -131,14 +308,14 @@ public class TSFileService {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2);
-                                final byte[] bytes = new byte[everyStringLength-4];
+                                final byte[] bytes = new byte[everyStringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + 2);
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                final short[] decompress1 = IntCompress.decompressShort(bytes,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                final short[] decompress1 = IntCompress.decompressShort(bytes, index.getValueSize(), totalLength);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
                                 for (short i1 : decompress1) {
                                     totalStringLength += i1;
@@ -152,15 +329,15 @@ public class TSFileService {
                                                 + doubleCompressInt + 2
                                                 + everyStringLength + 2
                                 );
-                                byte[] bytes = new byte[stringLength-4];
+                                byte[] bytes = new byte[stringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + everyStringLength + 2
                                 );
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer, index.getValueSize(), totalLength);
                             }
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -256,14 +433,14 @@ public class TSFileService {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2);
-                                final byte[] bytes = new byte[everyStringLength-4];
+                                final byte[] bytes = new byte[everyStringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + 2);
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                final short[] decompress1 = IntCompress.decompressShort(bytes,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                final short[] decompress1 = IntCompress.decompressShort(bytes, index.getValueSize(), totalLength);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
                                 for (short i1 : decompress1) {
                                     totalStringLength += i1;
@@ -277,15 +454,15 @@ public class TSFileService {
                                                 + doubleCompressInt + 2
                                                 + everyStringLength + 2
                                 );
-                                byte[] bytes = new byte[stringLength-4];
+                                byte[] bytes = new byte[stringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + everyStringLength + 2
                                 );
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer, index.getValueSize(), totalLength);
                             }
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -327,7 +504,7 @@ public class TSFileService {
             ByteBuffer stringLengthBuffer;
             List<ByteBuffer> stringList;
             double[] doubles;
-            long[] longs ;
+            long[] longs;
             int[] ints;
             int longPosition = 0;
             int doublePosition = 0;
@@ -407,8 +584,8 @@ public class TSFileService {
 //            }
 
             //压缩int
-            byte[] compress2 = IntCompress.compress4(ints,lineNum);
-            byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray,lineNum);
+            byte[] compress2 = IntCompress.compress4(ints, lineNum);
+            byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, lineNum);
             int total = 8 + 2 + compress1.length //timestamp
                     + compress2.length + 2 //int
                     + (2 + compressDouble.length) //double
@@ -417,7 +594,7 @@ public class TSFileService {
             final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
             try {
                 StaticsUtil.STRING_BYTE_LENGTH.getAndAdd(stringLengthArrayCompress.length);
-                StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length* 2L);
+                StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length * 2L);
                 StaticsUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength);
                 StaticsUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length + stringLengthArrayCompress.length + 2);
                 StaticsUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(2 + compressDouble.length);

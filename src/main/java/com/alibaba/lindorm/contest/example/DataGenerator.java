@@ -65,7 +65,7 @@ public class DataGenerator {
         rowFactory.timeStamp = System.currentTimeMillis();
         Map<String, ColumnValue> columns = new HashMap<>();
         for (int i = 0; i < INT_NUM; i++) {
-            rowFactory.ints[i] = random.nextInt(1000);
+            rowFactory.ints[i] = random.nextInt(100);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
             rowFactory.doubles[i - INT_NUM] = random.nextInt(10);
@@ -248,8 +248,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            TimeRangeQuery(tsdbEngine);
-//            AggQuery(tsdbEngine);
+//            TimeRangeQuery(tsdbEngine);
+            AggQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -265,7 +265,14 @@ public class DataGenerator {
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
         for (int i = 0; i < 1000000; i++) {
             TimeRangeAggregationRequest timeRangeAggregationRequest = genTimeRangeAggregationRequest();
-            tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+            ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
+//            for (Row row : rows) {
+//                if(timeRangeAggregationRequest.getAggregator() == Aggregator.AVG){
+//                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
+//                }else{
+//                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
+//                }
+//            }
             if (i % 100000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }
