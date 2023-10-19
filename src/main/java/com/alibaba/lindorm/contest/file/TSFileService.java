@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.compress.*;
 import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.BucketArrayFactory;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -9,7 +10,6 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
-import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -21,20 +21,53 @@ public class TSFileService {
     public static final ThreadLocal<ByteBuffer> TOTAL_INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 4));
     public static final ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
-    public static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
-    public static final ThreadLocal<ByteBuffer> TOTAL_DIRECT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(1024 * 6 * 10));
-    public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
+    public static final FastThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER =  new FastThreadLocal<>() {
+        @Override
+        protected ByteBuffer initialValue() {
+          return ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4);
+        }
+    };
+    public static FastThreadLocal<ByteBuffer> TOTAL_DIRECT_BUFFER = new FastThreadLocal<>() {
+        @Override
+        protected ByteBuffer initialValue() {
+            return ByteBuffer.allocateDirect(1024 * 6 * 10);
+        }
+    };
+    public static FastThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = new FastThreadLocal<>() {
+        @Override
+        protected ArrayList<ByteBuffer> initialValue() {
+            return new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS);
+        }
+    };
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
 
     public static final ThreadLocal<ArrayList<ColumnValue>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(ArrayList::new);
 
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
-    public static final ThreadLocal<int[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new int[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
-    public static final ThreadLocal<double[]> DOUBLE_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new double[Constants.CACHE_VINS_LINE_NUMS * Constants.FLOAT_NUMS]);
-    public static final ThreadLocal<long[]> LONG_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS ]);
+    public static FastThreadLocal<int[]> INT_ARRAY_BUFFER = new FastThreadLocal<>() {
+        @Override
+        protected int[] initialValue() {
+            return new int[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS];
+        }
+    };
+    public static FastThreadLocal<double[]> DOUBLE_ARRAY_BUFFER = new FastThreadLocal<>() {
+        @Override
+        protected double[] initialValue() {
+            return new double[Constants.CACHE_VINS_LINE_NUMS * Constants.FLOAT_NUMS];
+        }
+    };
+
+    public static FastThreadLocal<long[]> LONG_ARRAY_BUFFER = new FastThreadLocal<>() {
+        @Override
+        protected long[] initialValue() {
+            return new long[Constants.CACHE_VINS_LINE_NUMS];
+        }
+    };
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
+
+    private final BucketArrayFactory bucketArrayFactory = new BucketArrayFactory((180000000 / Constants.CACHE_VINS_LINE_NUMS) + 5000);
 
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
@@ -80,7 +113,7 @@ public class TSFileService {
             int length = index.getDoubleLength();
             for (String requestedColumn : requestedColumns) {
                 final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                if(columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)){
+                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                     length = index.getIntLength();
                 }
             }
@@ -261,14 +294,14 @@ public class TSFileService {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2);
-                                final byte[] bytes = new byte[everyStringLength-4];
+                                final byte[] bytes = new byte[everyStringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + 2);
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                final short[] decompress1 = IntCompress.decompressShort(bytes,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                final short[] decompress1 = IntCompress.decompressShort(bytes, index.getValueSize(), totalLength);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
                                 for (short i1 : decompress1) {
                                     totalStringLength += i1;
@@ -282,15 +315,15 @@ public class TSFileService {
                                                 + doubleCompressInt + 2
                                                 + everyStringLength + 2
                                 );
-                                byte[] bytes = new byte[stringLength-4];
+                                byte[] bytes = new byte[stringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + everyStringLength + 2
                                 );
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer, index.getValueSize(), totalLength);
                             }
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -386,14 +419,14 @@ public class TSFileService {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2);
-                                final byte[] bytes = new byte[everyStringLength-4];
+                                final byte[] bytes = new byte[everyStringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + 2);
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                final short[] decompress1 = IntCompress.decompressShort(bytes,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                final short[] decompress1 = IntCompress.decompressShort(bytes, index.getValueSize(), totalLength);
                                 stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
                                 for (short i1 : decompress1) {
                                     totalStringLength += i1;
@@ -407,15 +440,15 @@ public class TSFileService {
                                                 + doubleCompressInt + 2
                                                 + everyStringLength + 2
                                 );
-                                byte[] bytes = new byte[stringLength-4];
+                                byte[] bytes = new byte[stringLength - 4];
                                 dataBuffer.position(10 + compressLength
                                         + intCompressLength + 2
                                         + doubleCompressInt + 2
                                         + everyStringLength + 2
                                 );
                                 int totalLength = dataBuffer.getInt();
-                                dataBuffer.get(bytes,0,bytes.length);
-                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer,index.getValueSize(),totalLength);
+                                dataBuffer.get(bytes, 0, bytes.length);
+                                stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer, index.getValueSize(), totalLength);
                             }
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -446,26 +479,20 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
-            AggBucket aggBucket = new AggBucket();
-            long start = System.currentTimeMillis();
+            long start = System.nanoTime();
+            AggBucket aggBucket = bucketArrayFactory.getAggBucket();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
-            ByteBuffer intBuffer;
-            ByteBuffer doubleBuffer;
-            ByteBuffer longBuffer;
             ByteBuffer stringLengthBuffer;
             List<ByteBuffer> stringList;
             double[] doubles;
-            long[] longs ;
+            long[] longs;
             int[] ints;
             int longPosition = 0;
             int doublePosition = 0;
             int intPosition = 0;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
-                intBuffer = TOTAL_INT_BUFFER.get();
-                doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
-                longBuffer = TOTAL_LONG_BUFFER.get();
                 stringLengthBuffer = TOTAL_STRING_LENGTH_BUFFER.get();
                 stringList = STRING_BUFFER_LIST.get();
 
@@ -478,9 +505,6 @@ public class TSFileService {
                 longs = LONG_ARRAY_BUFFER.get();
                 Arrays.fill(longs, 0);
 
-                intBuffer.clear();
-                doubleBuffer.clear();
-                longBuffer.clear();
                 stringLengthBuffer.clear();
                 stringList.clear();
             } else {
@@ -521,7 +545,8 @@ public class TSFileService {
                     }
                 }
             }
-            long prepareDataTime = System.currentTimeMillis();
+            long prepareDataTime = System.nanoTime();
+            StaticsUtil.PREPARE_DATA_TIME.getAndAdd(prepareDataTime - start);
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
             final byte[] compress = compressResult.compressedData;
@@ -538,21 +563,22 @@ public class TSFileService {
 //            }
 
             //压缩int
-            byte[] compress2 = IntCompress.compress4(ints,lineNum);
-            byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray,lineNum);
+            byte[] compress2 = IntCompress.compress4(ints, lineNum);
+            byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, lineNum);
             int total = 8 + 2 + compress1.length //timestamp
                     + compress2.length + 2 //int
                     + (2 + compressDouble.length) //double
                     + stringLengthArrayCompress.length + 2 //string长度记录
                     + compress.length; //string存储string
 //            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
-            long compressTime = System.currentTimeMillis();
+            long compressTime = System.nanoTime();
+            StaticsUtil.COMPRESS_TIME.getAndAdd(compressTime - prepareDataTime);
             ByteBuffer byteBuffer = TOTAL_DIRECT_BUFFER.get();
             byteBuffer.clear();
             byteBuffer.limit(total);
             try {
                 StaticsUtil.STRING_BYTE_LENGTH.getAndAdd(stringLengthArrayCompress.length);
-                StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length* 2L);
+                StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length * 2L);
                 StaticsUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength);
                 StaticsUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length + stringLengthArrayCompress.length + 2);
                 StaticsUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(2 + compressDouble.length);
@@ -576,7 +602,8 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write bytebuffer error" + e);
             }
-            long putTime = System.currentTimeMillis();
+            long putTime = System.nanoTime();
+            StaticsUtil.PUT_TIME.getAndAdd(putTime - compressTime);
             try {
                 TSFile tsFile = getTsFileByIndex(m);
                 final long append = tsFile.append(byteBuffer);
@@ -586,21 +613,23 @@ public class TSFileService {
                         , total
                         , lineNum
                         , aggBucket
-                        , 8+2+compress1.length+2+compress2.length
-                        , 8+2+compress1.length+2+compress2.length+2+compressDouble.length);
+                        , 8 + 2 + compress1.length + 2 + compress2.length
+                        , 8 + 2 + compress1.length + 2 + compress2.length + 2 + compressDouble.length);
                 MapIndex.put(j, index);
                 valueList.clear();
             } catch (Exception e) {
                 System.out.println("write append error" + e);
             }
-            long append = System.currentTimeMillis();
+            long append = System.nanoTime();
+            StaticsUtil.APPEND_TIME.getAndAdd(append - putTime);
+            StaticsUtil.WRITE_TOTAL.getAndAdd(append - start);
             if (writeTimes.get() % 100000 == 0) {
-                System.out.println("write total cost: " + (System.currentTimeMillis() - start) + " ms"
+                System.out.println("write total cost: " + (System.nanoTime() - start) + " ns"
                         + " write size: " + total
-                        + " prepareData time " + (prepareDataTime - start) + " ms"
-                        + " compress time " + (compressTime - prepareDataTime) + " ms"
-                        + " put time " + (putTime - compressTime) + " ms"
-                        + " append time " + (append - putTime) + " ms");
+                        + " prepareData time " + (prepareDataTime - start) + " ns"
+                        + " compress time " + (compressTime - prepareDataTime) + " ns"
+                        + " put time " + (putTime - compressTime) + " ns"
+                        + " append time " + (append - putTime) + " ns");
             }
         } catch (Exception e) {
             e.printStackTrace();

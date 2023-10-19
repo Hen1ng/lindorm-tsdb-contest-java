@@ -148,7 +148,12 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress short bytes : " + (StaticsUtil.STRING_BYTE_LENGTH));
         System.out.println("compress indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
-        System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
+        System.out.println("MAP_COMPRESS_TIME : " + StaticsUtil.MAP_COMPRESS_TIME.get());
+        System.out.println("PREPARE_DATA_TIME : " + StaticsUtil.PREPARE_DATA_TIME.get());
+        System.out.println("COMPRESS_TIME : " + StaticsUtil.COMPRESS_TIME.get());
+        System.out.println("PUT_TIME : " + StaticsUtil.PUT_TIME.get());
+        System.out.println("APPEND_TIME : " + StaticsUtil.APPEND_TIME.get());
+        System.out.println("WRITE_TOTAL : " + StaticsUtil.WRITE_TOTAL.get());
 //        for (String s : SchemaUtil.maps.keySet()) {
 //            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
 //        }
