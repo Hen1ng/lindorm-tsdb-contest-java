@@ -203,7 +203,7 @@ public class DataGenerator {
                 for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 1; v++) {
+                        for (int v = 0; v < 50; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -211,7 +211,7 @@ public class DataGenerator {
                             rows.add(rowFactory.GetRow());
                         }
                     }
-                    if (rows.size() == batchSize) {
+//                    if (rows.size() == batchSize) {
                         executorService.execute(() -> {
                             try {
                                 long start = System.currentTimeMillis();
@@ -223,11 +223,11 @@ public class DataGenerator {
                                 throw new RuntimeException(e);
                             }
                         });
-                    }
-                    System.out.println("write " + i + " s");
+//                    }
+//                    System.out.println("write " + i + " s");
                 }
 //                    System.out.println("wirte vin["+vins[v]+"] 36000 rows completed");
-                System.out.println("row insert and  write into 300WrandomRowFactory.dat completed");
+//                System.out.println("row insert and  write into 300WrandomRowFactory.dat completed");
             } catch (IOException e) {
                 e.printStackTrace();
             }

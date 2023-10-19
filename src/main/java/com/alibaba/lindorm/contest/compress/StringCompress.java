@@ -107,9 +107,9 @@ public class StringCompress {
         // Extract the two bits at the position
         return (values[byteIndex] >> bitIndex) & 3; // 3 in binary is 11. This will mask the two bits we are interested in.
     }
-    public static CompressResult compress1(List<ByteBuffer> stringList, int valueSize) {
+    public static CompressResult compress1(ByteBuffer[] stringList, int valueSize) {
         ArrayList<Short> stringlength = new ArrayList<>();
-        int length = stringList.size();
+        int length = stringList.length;
         int start = 0;
         int total = 0;
         ArrayList<byte[]> arrayList = new ArrayList<>();
@@ -123,7 +123,7 @@ public class StringCompress {
             int totalLength = 0;
             boolean isUseMap = true;
             for (int i = start; i < start + valueSize; i++) {
-                final ByteBuffer byteBuffer = stringList.get(i);
+                final ByteBuffer byteBuffer = stringList[i];
                 totalLength += byteBuffer.remaining();
                 if (isUseMap && !set.containsKey(new String(byteBuffer.array()))) {
                     set.put(new String(byteBuffer.array()), count);
@@ -136,7 +136,7 @@ public class StringCompress {
             if (!isUseMap) {
                 ByteBuffer allocate = ByteBuffer.allocate(totalLength);
                 for (int i = start; i < start + valueSize; i++) {
-                    final ByteBuffer byteBuffer = stringList.get(i);
+                    final ByteBuffer byteBuffer = stringList[i];
                     stringlength.add((short) byteBuffer.remaining());
                     allocate.put(byteBuffer.array());
                 }
@@ -185,7 +185,7 @@ public class StringCompress {
                         BitSet bitSet = BitSet.valueOf(new byte[UpperBoundByte(BitSize)]);
                         int index1 = 0;
                         for (int i = start; i < start + valueSize; i++) {
-                            final ByteBuffer byteBuffer = stringList.get(i);
+                            final ByteBuffer byteBuffer = stringList[i];
                             Integer i1 = set.get(new String(byteBuffer.array()));
                             bitSet.set(index1);
                             index1++;
@@ -195,7 +195,7 @@ public class StringCompress {
                         byte[] bitSet = new byte[UpperBoundByte(BitSize)];
                         int index1 = 0;
                         for (int i = start; i < start + valueSize; i++) {
-                            final ByteBuffer byteBuffer = stringList.get(i);
+                            final ByteBuffer byteBuffer = stringList[i];
                             Integer i1 = set.get(new String(byteBuffer.array()));
 
                             setTwoBit(bitSet, index1, i1);
@@ -515,7 +515,7 @@ public class StringCompress {
         }
         final ByteBuffer allocate = ByteBuffer.allocate(totalLength);
         short[] shorts = null;
-        CompressResult compressResult = compress1(stringList, 230);
+        CompressResult compressResult = compress1(null, 230);
         byte[] compress = compressResult.compressedData;
         shorts = compressResult.stringLengthArray;
         byte[] bytes2 = IntCompress.compressShort(shorts, 230);

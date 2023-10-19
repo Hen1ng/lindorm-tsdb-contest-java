@@ -455,7 +455,7 @@ public class TSFileService {
             ByteBuffer doubleBuffer;
             ByteBuffer longBuffer;
             ByteBuffer stringLengthBuffer;
-            List<ByteBuffer> stringList;
+            ByteBuffer[] stringList = new ByteBuffer[lineNum * Constants.STRING_NUMS];
             double[] doubles;
             long[] longs ;
             int[] ints;
@@ -467,7 +467,7 @@ public class TSFileService {
                 doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
                 longBuffer = TOTAL_LONG_BUFFER.get();
                 stringLengthBuffer = TOTAL_STRING_LENGTH_BUFFER.get();
-                stringList = STRING_BUFFER_LIST.get();
+//                stringList = STRING_BUFFER_LIST.get();
 
                 ints = INT_ARRAY_BUFFER.get();
                 Arrays.fill(ints, 0);
@@ -482,45 +482,50 @@ public class TSFileService {
                 doubleBuffer.clear();
                 longBuffer.clear();
                 stringLengthBuffer.clear();
-                stringList.clear();
+//                stringList.clear();
             } else {
                 ints = new int[lineNum * Constants.INT_NUMS];
                 doubles = new double[lineNum * Constants.FLOAT_NUMS];
                 longs = new long[lineNum];
                 //存储每个字符串的长度
                 stringLengthBuffer = ByteBuffer.allocate(lineNum * Constants.STRING_NUMS * 4);
-                stringList = new ArrayList<>(lineNum * Constants.STRING_NUMS);
+//                stringList = new ArrayList<>(lineNum * Constants.STRING_NUMS);
             }
+
             int totalStringLength = 0;
             long maxTimestamp = Long.MIN_VALUE;
             long minTimestamp = Long.MAX_VALUE;
-            for (int i = 0; i < indexArray.length; i++) {
-                final String key = indexArray[i];
-                for (Value value : valueList) {
-                    long timestamp = value.getTimestamp();
-                    maxTimestamp = Math.max(maxTimestamp, timestamp);
-                    minTimestamp = Math.min(minTimestamp, timestamp);
-                    if (i == 0) {
-                        longs[longPosition++] = value.getTimestamp();
-                    }
-                    Map<String, ColumnValue> columns = value.getColumns();
-                    if (i < Constants.INT_NUMS) {
-                        int integerValue = columns.get(key).getIntegerValue();
-                        aggBucket.updateInt(integerValue, i);
-//                        SchemaUtil.maps.get(key).add(integerValue);
-                        ints[intPosition++] = integerValue;
-                    } else if (i < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
-                        final double doubleFloatValue = columns.get(key).getDoubleFloatValue();
-                        aggBucket.updateDouble(doubleFloatValue, i);
-                        doubles[doublePosition] = doubleFloatValue;
+            int l = 0;
+            final int valueSize = valueList.size();
+            for (Value value : valueList) {
+                long timestamp = value.getTimestamp();
+                Map<String, ColumnValue> columns = value.getColumns();
+                maxTimestamp = Math.max(maxTimestamp, timestamp);
+                minTimestamp = Math.min(minTimestamp, timestamp);
+                int i = 0;
+                for (ColumnValue columnValue : columns.values()) {
+                    final int columnIndex = SchemaUtil.COLUMNS_INDEX_ARRAY[i];
+                    if (columnIndex < Constants.INT_NUMS) {
+                        int integerValue = columnValue.getIntegerValue();
+                        aggBucket.updateInt(integerValue, columnIndex);
+                        ints[columnIndex * valueSize + l ] = integerValue;
+                    } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
+                        final double doubleFloatValue = columnValue.getDoubleFloatValue();
+                        aggBucket.updateDouble(doubleFloatValue, columnIndex);
+                        doubles[ (columnIndex -  Constants.INT_NUMS) * valueSize + l] = doubleFloatValue;
                         doublePosition++;
                     } else {
-                        final ByteBuffer stringValue = columns.get(key).getStringValue();
+                        final ByteBuffer stringValue = columnValue.getStringValue();
                         totalStringLength += stringValue.remaining();
-                        stringList.add(stringValue);
+                        stringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS) * valueSize + l] = stringValue;
+                    }
+                    i++;
+                    if (columnIndex == 0) {
+                        longs[longPosition++] = value.getTimestamp();
                     }
                 }
-            }
+                l++;
+            };
             long prepareDataTime = System.currentTimeMillis();
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
