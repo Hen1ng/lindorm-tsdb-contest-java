@@ -5,6 +5,7 @@ import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.file.TSFileService;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Random;
 
@@ -16,6 +17,10 @@ public class Index {
 
     private int intLength;
     private int doubleLength;
+
+    private long previousTimeStamp;
+
+    private byte[] timeStampBytes;
 
     public int getIntLength() {
         return intLength;
@@ -53,6 +58,22 @@ public class Index {
         return maxTimestamp;
     }
 
+    public long getPreviousTimeStamp() {
+        return previousTimeStamp;
+    }
+
+    public void setPreviousTimeStamp(long previousTimeStamp) {
+        this.previousTimeStamp = previousTimeStamp;
+    }
+
+    public byte[] getTimeStampBytes() {
+        return timeStampBytes;
+    }
+
+    public void setTimeStampBytes(byte[] timeStampBytes) {
+        this.timeStampBytes = timeStampBytes;
+    }
+
     public long getMinTimestamp() {
         return minTimestamp;
     }
@@ -71,6 +92,8 @@ public class Index {
             , AggBucket aggBucket
             , int intLength
             , int doubleLength
+            , long previousTimeStamp
+            , byte[] timeStampBytes
     ) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
@@ -80,11 +103,13 @@ public class Index {
         this.aggBucket = aggBucket;
         this.intLength = intLength;
         this.doubleLength = doubleLength;
+        this.previousTimeStamp = previousTimeStamp;
+        this.timeStampBytes = timeStampBytes;
     }
 
     public byte[] bytes() {
         byte[] bytes = aggBucket.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 5);
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 5+8+2+timeStampBytes.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -94,6 +119,9 @@ public class Index {
         allocate.putInt(length);
         allocate.putInt(intLength);
         allocate.putInt(doubleLength);
+        allocate.putLong(previousTimeStamp);
+        allocate.putShort((short) timeStampBytes.length);
+        allocate.put(timeStampBytes);
         return allocate.array();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        return gzipCompress.compress(allocate.array());
@@ -114,6 +142,10 @@ public class Index {
         int length = wrap.getInt();
         int intLength = wrap.getInt();
         int doubleLength = wrap.getInt();
+        long previousTimeStamp = wrap.getLong();
+        short timeStampBytesLength = wrap.getShort();
+        byte[] bytes1 = new byte[timeStampBytesLength];
+        wrap.get(bytes1,0,bytes1.length);
         return new Index(
                 offset,
                 maxTimeStamp,
@@ -122,7 +154,9 @@ public class Index {
                 valueSize,
                 aggBucket,
                 intLength,
-                doubleLength
+                doubleLength,
+                previousTimeStamp,
+                bytes1
         );
     }
 
@@ -148,7 +182,7 @@ public class Index {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Index index = (Index) o;
-        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp && valueSize == index.valueSize && length == index.length && Objects.equals(aggBucket, index.aggBucket);
+        return offset == index.offset && maxTimestamp == index.maxTimestamp && minTimestamp == index.minTimestamp && intLength == index.intLength && doubleLength == index.doubleLength && previousTimeStamp == index.previousTimeStamp && valueSize == index.valueSize && length == index.length && Arrays.equals(timeStampBytes, index.timeStampBytes) && Objects.equals(aggBucket, index.aggBucket);
     }
 
     @Override
@@ -168,7 +202,9 @@ public class Index {
                 random.nextInt(),
                 aggBucket1,
                 random.nextInt(),
-                random.nextInt());
+                random.nextInt(),
+                random.nextLong(),
+                new byte[0]);
         byte[] bytes = index.bytes();
         Index index1 = uncompress(bytes);
         boolean a = index1.equals(index);

@@ -8,6 +8,7 @@ import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.list.SortedList;
+import com.sun.source.doctree.SinceTree;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -424,13 +425,11 @@ public class MemoryTable {
             System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
 //            start = System.currentTimeMillis();
 //            ExecutorService executorService = Executors.newFixedThreadPool(200);
-//            final CountDownLatch countDownLatch = new CountDownLatch(MapIndex.INDEX_MAP.size());
-//            for (Vin vin : MapIndex.INDEX_MAP.keySet()) {
+//            int i = 0;
+//            for (List<Index> indices : INDEX_ARRAY) {
 //                executorService.submit(() -> {
-//                    final List<Index> indexList = MapIndex.getByVin(vin);
-//                    for (Index index : indexList) {
-//                        final Integer integer = VinDictMap.get(vin);
-//                        final ByteBuffer timestampList = tsFileService.getTimestampList(index, integer);
+//                    for (Index index : indices) {
+//                        final ByteBuffer timestampList = tsFileService.getTimestampList(index, i);
 //                        final int valueSize = index.getValueSize();
 //                        List<Long> timestamps = new ArrayList<>(valueSize);
 //                        for (int i = 0; i < valueSize; i++) {
@@ -438,10 +437,9 @@ public class MemoryTable {
 //                        }
 //                        index.setTimestampList(timestamps);
 //                    }
-//                    countDownLatch.countDown();
 //                });
+//                i++;
 //            }
-//            countDownLatch.await();
 //            System.out.println("load timestamp to memory finish cost:" + (System.currentTimeMillis() - start) + " ms");
         } catch (Exception e) {
             System.out.println("loadLastTsToMemory error, e" + e);
