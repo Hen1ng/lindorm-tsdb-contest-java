@@ -9,10 +9,10 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
-import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -35,6 +35,7 @@ public class TSFileService {
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
+    private final AtomicLong timeRangeTimes = new AtomicLong(0);
 
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
@@ -190,6 +191,8 @@ public class TSFileService {
     }
 
     public ArrayList<Row> getByIndexV2(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
+        long start = System.nanoTime();
+        long start1 = System.nanoTime();
         ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
         rowArrayList.clear();
         try {
@@ -200,6 +203,8 @@ public class TSFileService {
             final TSFile tsFile = getTsFileByIndex(m);
             ByteBuffer dataBuffer = ByteBuffer.allocate(length);
             tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+            long read = System.nanoTime();
+            StaticsUtil.TIME_RANGE_READ_FROM_FILE_TOTAL.getAndAdd(read - start);
             dataBuffer.flip();
             long longPrevious = dataBuffer.getLong();
             int compressLength = dataBuffer.getShort();
@@ -215,6 +220,9 @@ public class TSFileService {
             Short everyStringLength = null;
             ByteBuffer stringLengthBuffer = null;
             short totalStringLength = 0;
+            long compressString = -1;
+            long compressInt = -1;
+            long compressDouble = -1;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
@@ -224,10 +232,13 @@ public class TSFileService {
                         if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
                             try {
                                 if (ints == null) {
+                                    start = System.nanoTime();
                                     final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(10 + compressLength + 2);
                                     dataBuffer.get(allocate1);
                                     ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                    compressInt  = System.nanoTime() - start;
+                                    StaticsUtil.TIME_RANGE_INT_COMPRESS_TOTAL.getAndAdd(compressInt);
                                 }
                                 int off = columnIndex * valueSize + i;
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
@@ -238,6 +249,7 @@ public class TSFileService {
                         } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
                             try {
                                 if (doubles == null) {
+                                    start = System.nanoTime();
                                     final byte[] allocate1 = new byte[doubleCompressInt];
                                     dataBuffer.position(10 + compressLength
                                             + intCompressLength + 2
@@ -250,6 +262,8 @@ public class TSFileService {
 //                                    for (int i1 = 0; i1 < doubles.length; i1++) {
 //                                        doubles[i1] = wrap.getDouble();
 //                                    }
+                                    compressDouble  = System.nanoTime() - start;
+                                    StaticsUtil.TIME_RANGE_DOUBLE_COMPRESS_TOTAL.getAndAdd(compressDouble);
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -257,6 +271,7 @@ public class TSFileService {
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
                         } else {
+                            start = System.nanoTime();
                             if (stringLengthBuffer == null) {
                                 everyStringLength = dataBuffer.getShort(10 + compressLength
                                         + intCompressLength + 2
@@ -291,6 +306,8 @@ public class TSFileService {
                                 int totalLength = dataBuffer.getInt();
                                 dataBuffer.get(bytes,0,bytes.length);
                                 stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer,index.getValueSize(),totalLength);
+                                compressString = System.nanoTime() - start;
+                                StaticsUtil.TIME_RANGE_STRING_COMPRESS_TOTAL.getAndAdd(compressString);
                             }
                             try {
                                 int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
@@ -304,6 +321,17 @@ public class TSFileService {
                     rowArrayList.add(new Row(vin, aLong, columns));
                 }
                 i++;
+            }
+            long total = System.nanoTime() - start1;
+            StaticsUtil.TIME_RANGE_TOTAL.getAndAdd(total);
+            if (timeRangeTimes.getAndIncrement() % 300000 == 0) {
+                StringBuilder columns = new StringBuilder();
+                for (String requestedColumn : requestedColumns) {
+                    final int indexByColumn = SchemaUtil.getIndexByColumn(requestedColumn);
+                    columns.append(indexByColumn).append(",");
+                }
+                System.out.println("getByIndexV2 time range times:" + timeRangeTimes.get() + ", read from file: " + read + ", compressInt: " + compressInt + ", compressDouble: " + compressDouble + ", compressString: " + compressString + " total: " + total + "columns " + columns);
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -446,8 +474,8 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
+            long start = System.nanoTime();
             AggBucket aggBucket = new AggBucket();
-            long start = System.currentTimeMillis();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
@@ -459,7 +487,7 @@ public class TSFileService {
             double[] doubles;
             long[] longs ;
             int[] ints;
-            int longPosition = 0;
+            AtomicInteger longPosition = new AtomicInteger();
             int doublePosition = 0;
             int intPosition = 0;
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
@@ -491,8 +519,10 @@ public class TSFileService {
                 stringLengthBuffer = ByteBuffer.allocate(lineNum * Constants.STRING_NUMS * 4);
 //                stringList = new ArrayList<>(lineNum * Constants.STRING_NUMS);
             }
+            long prepareDataTime = System.nanoTime();
+            StaticsUtil.PREPARE_DATA_TIME.getAndAdd(prepareDataTime - start);
 
-            int totalStringLength = 0;
+            AtomicInteger totalStringLength = new AtomicInteger(0);
             long maxTimestamp = Long.MIN_VALUE;
             long minTimestamp = Long.MAX_VALUE;
             int l = 0;
@@ -502,31 +532,32 @@ public class TSFileService {
                 Map<String, ColumnValue> columns = value.getColumns();
                 maxTimestamp = Math.max(maxTimestamp, timestamp);
                 minTimestamp = Math.min(minTimestamp, timestamp);
-                int i = 0;
-                for (ColumnValue columnValue : columns.values()) {
-                    final int columnIndex = SchemaUtil.COLUMNS_INDEX_ARRAY[i];
+                AtomicInteger i = new AtomicInteger();
+                int finalL = l;
+                columns.forEach((k, columnValue) -> {
+                    final int columnIndex = SchemaUtil.COLUMNS_INDEX_ARRAY[i.getAndIncrement()];
                     if (columnIndex < Constants.INT_NUMS) {
                         int integerValue = columnValue.getIntegerValue();
                         aggBucket.updateInt(integerValue, columnIndex);
-                        ints[columnIndex * valueSize + l ] = integerValue;
+                        ints[columnIndex * valueSize + finalL] = integerValue;
                     } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         final double doubleFloatValue = columnValue.getDoubleFloatValue();
                         aggBucket.updateDouble(doubleFloatValue, columnIndex);
-                        doubles[ (columnIndex -  Constants.INT_NUMS) * valueSize + l] = doubleFloatValue;
-                        doublePosition++;
+                        doubles[ (columnIndex -  Constants.INT_NUMS) * valueSize + finalL] = doubleFloatValue;
                     } else {
                         final ByteBuffer stringValue = columnValue.getStringValue();
-                        totalStringLength += stringValue.remaining();
-                        stringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS) * valueSize + l] = stringValue;
+                        totalStringLength.getAndAdd(stringValue.remaining());
+                        stringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS) * valueSize + finalL] = stringValue;
                     }
-                    i++;
                     if (columnIndex == 0) {
-                        longs[longPosition++] = value.getTimestamp();
+                        longs[longPosition.getAndIncrement()] = value.getTimestamp();
                     }
-                }
+                });
                 l++;
-            };
-            long prepareDataTime = System.currentTimeMillis();
+            }
+            long forLoop = System.nanoTime();
+            StaticsUtil.FOR_LOOP_TIME.getAndAdd(forLoop - prepareDataTime);
+
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
             final byte[] compress = compressResult.compressedData;
@@ -550,15 +581,15 @@ public class TSFileService {
                     + (2 + compressDouble.length) //double
                     + stringLengthArrayCompress.length + 2 //string长度记录
                     + compress.length; //string存储string
-//            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
-            long compressTime = System.currentTimeMillis();
+            long compressTime = System.nanoTime();
+            StaticsUtil.COMPRESS_TIME.getAndAdd(compressTime - forLoop);
             ByteBuffer byteBuffer = TOTAL_DIRECT_BUFFER.get();
             byteBuffer.clear();
             byteBuffer.limit(total);
             try {
                 StaticsUtil.STRING_BYTE_LENGTH.getAndAdd(stringLengthArrayCompress.length);
                 StaticsUtil.STRING_SHORT_LENGTH.getAndAdd(stringLengthArray.length* 2L);
-                StaticsUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength);
+                StaticsUtil.STRING_TOTAL_LENGTH.getAndAdd(totalStringLength.get());
                 StaticsUtil.STRING_COMPRESS_LENGTH.getAndAdd(compress.length + stringLengthArrayCompress.length + 2);
                 StaticsUtil.DOUBLE_COMPRESS_LENGTH.getAndAdd(2 + compressDouble.length);
                 StaticsUtil.LONG_COMPRESS_LENGTH.getAndAdd(8 + 2 + compress1.length);
@@ -581,7 +612,8 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write bytebuffer error" + e);
             }
-            long putTime = System.currentTimeMillis();
+            long putTime = System.nanoTime();
+            StaticsUtil.PUT_TIME.getAndAdd(putTime - compressTime);
             try {
                 TSFile tsFile = getTsFileByIndex(m);
                 final long append = tsFile.append(byteBuffer);
@@ -598,14 +630,17 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write append error" + e);
             }
-            long append = System.currentTimeMillis();
+            long append = System.nanoTime();
+            StaticsUtil.APPEND_TIME.getAndAdd(append - putTime);
+            StaticsUtil.WRITE_TOTAL.getAndAdd(append - start);
             if (writeTimes.get() % 100000 == 0) {
-                System.out.println("write total cost: " + (System.currentTimeMillis() - start) + " ms"
+                System.out.println("write total cost: " + (System.nanoTime() - start) + " ns"
                         + " write size: " + total
-                        + " prepareData time " + (prepareDataTime - start) + " ms"
-                        + " compress time " + (compressTime - prepareDataTime) + " ms"
-                        + " put time " + (putTime - compressTime) + " ms"
-                        + " append time " + (append - putTime) + " ms");
+                        + " prepareData time " + (prepareDataTime - start) + " ns"
+                        + " for loop time " + (forLoop - prepareDataTime) + " ns"
+                        + " compress time " + (compressTime - forLoop) + " ns"
+                        + " put time " + (putTime - compressTime) + " ns"
+                        + " append time " + (append - putTime) + " ns");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -633,6 +668,51 @@ public class TSFileService {
         tsFile.getFromOffsetByFileChannel(timestampBuffer, offset);
         timestampBuffer.flip();
         return timestampBuffer;
+    }
+
+    public static void main(String[] args) {
+        String[] columnsName = {"QZZS", "ZDWDZXTH", "JYDZ", "FDJGZZS", "QXTZGWD", "ZGWDZXTH", "DW", "QDDJGS", "QQZGND", "ZGDYDCDTDH", "QDDJXH", "ZDDYDCDTDH", "DCDC", "RLDCRLXHL", "DJKZQDY", "DCDTDYZGZ", "ZGDYDCZXTDH", "YXMS", "DWZT", "RLDCDY", "QTGZLB", "QQZGYLCGQDH", "GYDCDCZT", "RLDCDL", "LATITUDE", "DJKZQDL", "QXTZGWDTZDH", "ZDWDTZXH", "KCDCNZZGZDMLB", "CDZT", "QDDJZS", "RLXHL", "QDDJZT", "LONGITUDE", "FDJGZLB", "QDDJGZDMLB", "DCDTDYZDZ", "QQZGNDCGQDH", "LJLC", "ZDWDZ", "QDDJZJ", "ZGBJDJ", "QDDJGZZS", "ZDL", "ZDDYDCZXTDH", "KCDCNZZGZZS", "SOC", "ZDY", "ZGWDTZXH", "QDDJWD", "CS", "RLDCTZGS", "QDDJKZWD", "TZWD", "ZGWDZ", "QTGZZS", "QQZGYL", "TYBJBZ", "CLZT", "FDJZT"};
+        Map<String, String> map = new HashMap<>();
+        Map<String, String> map1 = new HashMap<>();
+        for (String s : columnsName) {
+            map.put(s, s);
+            map1.put(s, s);
+        }
+
+
+        long start = System.nanoTime();
+        for (int i = 0; i < 230; i++) {
+            final Collection<String> values = map1.values();
+            for (String value : values) {
+
+            }
+        }
+        System.out.println("cost time: " + (System.nanoTime() - start) + " ns");
+
+        start = System.nanoTime();
+        for (int i = 0; i <  230; i++) {
+            map1.forEach((k, v) -> {
+//            System.out.println(k + " " + v);
+            });
+        }
+        System.out.println("cost time: " + (System.nanoTime() - start) + " ns");
+//
+        start = System.nanoTime();
+
+        for (int i = 0; i < 230; i++) {
+            for (Map.Entry<String, String> entry : map1.entrySet()) {
+                final String key = entry.getKey();
+            }
+        }
+        System.out.println("cost time: " + (System.nanoTime() - start) + " ns");
+
+         start = System.nanoTime();
+        for (int i = 0; i < 230; i++) {
+            for (String s : columnsName) {
+                map.get(s);
+            }
+        }
+        System.out.println("cost time: " + (System.nanoTime() - start) + " ns");
     }
 
 }

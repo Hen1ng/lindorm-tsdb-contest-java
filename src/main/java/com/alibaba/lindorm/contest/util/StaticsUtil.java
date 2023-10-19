@@ -24,6 +24,17 @@ public class StaticsUtil {
 
     public static AtomicLong GET_SINGPLE_VALUE_TIMES = new AtomicLong(0);
     public static AtomicLong GET_VALUE_TIMES = new AtomicLong(0);
+    public static AtomicLong PREPARE_DATA_TIME = new AtomicLong(0);
+    public static AtomicLong FOR_LOOP_TIME = new AtomicLong(0);
+    public static AtomicLong COMPRESS_TIME = new AtomicLong(0);
+    public static AtomicLong PUT_TIME = new AtomicLong(0);
+    public static AtomicLong APPEND_TIME = new AtomicLong(0);
+    public static AtomicLong WRITE_TOTAL = new AtomicLong(0);
+    public static AtomicLong TIME_RANGE_READ_FROM_FILE_TOTAL = new AtomicLong(0);
+    public static AtomicLong TIME_RANGE_TOTAL = new AtomicLong(0);
+    public static AtomicLong TIME_RANGE_STRING_COMPRESS_TOTAL = new AtomicLong(0);
+    public static AtomicLong TIME_RANGE_INT_COMPRESS_TOTAL = new AtomicLong(0);
+    public static AtomicLong TIME_RANGE_DOUBLE_COMPRESS_TOTAL = new AtomicLong(0);
     public static int MAX_IDLE_BUFFER = Integer.MAX_VALUE;
 
     public static int MAX_INT = Integer.MIN_VALUE;
