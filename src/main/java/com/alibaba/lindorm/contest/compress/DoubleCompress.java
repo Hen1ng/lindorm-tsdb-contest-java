@@ -113,7 +113,7 @@ public class DoubleCompress {
             byteBuffer.put(buffer);
         }
         final byte[] array = byteBuffer.array();
-        final byte[] compress = Zstd.compress(array, 13);
+        final byte[] compress = Zstd.compress(array, 6);
         final ByteBuffer allocate = ByteBuffer.allocate(compress.length + 4);
         allocate.putInt(array.length);
         allocate.put(compress);

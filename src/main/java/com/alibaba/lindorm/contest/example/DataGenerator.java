@@ -203,7 +203,7 @@ public class DataGenerator {
                 for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 1; v++) {
+                        for (int v = 0; v < 5000; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -248,7 +248,7 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            TimeRangeQuery(tsdbEngine);
+//            TimeRangeQuery(tsdbEngine);
 //            AggQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();

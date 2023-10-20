@@ -467,13 +467,13 @@ public class TSFileService {
                 stringList = STRING_BUFFER_LIST.get();
 
                 ints = INT_ARRAY_BUFFER.get();
-                Arrays.fill(ints, 0);
+//                Arrays.fill(ints, 0);
 
                 doubles = DOUBLE_ARRAY_BUFFER.get();
-                Arrays.fill(doubles, 0);
+//                Arrays.fill(doubles, 0);
 
                 longs = LONG_ARRAY_BUFFER.get();
-                Arrays.fill(longs, 0);
+//                Arrays.fill(longs, 0);
 
                 intBuffer.clear();
                 doubleBuffer.clear();
@@ -485,7 +485,6 @@ public class TSFileService {
                 doubles = new double[lineNum * Constants.FLOAT_NUMS];
                 longs = new long[lineNum];
                 //存储每个字符串的长度
-                stringLengthBuffer = ByteBuffer.allocate(lineNum * Constants.STRING_NUMS * 4);
                 stringList = new ArrayList<>(lineNum * Constants.STRING_NUMS);
             }
             int totalStringLength = 0;
@@ -530,10 +529,6 @@ public class TSFileService {
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
 
-//            if (writeTimes.get() == 10000) {
-//                ArrayUtils.printInt(ints);
-//            }
-
             //压缩int
             byte[] compress2 = IntCompress.compress4(ints, lineNum);
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, lineNum);
@@ -566,7 +561,6 @@ public class TSFileService {
                 byteBuffer.putShort((short) compressDouble.length);
                 byteBuffer.put(compressDouble);
                 //string
-                stringLengthBuffer.flip();
                 byteBuffer.putShort((short) stringLengthArrayCompress.length);
                 byteBuffer.put(stringLengthArrayCompress);
                 byteBuffer.put(compress);

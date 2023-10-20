@@ -221,7 +221,7 @@ public class StringCompress {
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = Zstd.compress(allocate.array(), 3);
+        byte[] compress = ZstdInner.compress(allocate.array(), 3);
         ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
         res.putInt(2 + total);
         res.put(compress);
@@ -414,6 +414,7 @@ public class StringCompress {
             byteBufferList[i] = stringList.subList(i * 230, (i + 1) * 230);
             int length = 0;
             for (ByteBuffer byteBuffer : byteBufferList[i]) {
+                System.out.println(new String(byteBuffer.array()));
                 length += byteBuffer.remaining();
             }
             System.out.println(length);

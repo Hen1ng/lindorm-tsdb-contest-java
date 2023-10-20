@@ -44,6 +44,8 @@ public class MemoryTable {
     private Queue<Integer> freeList;
     private List<Value>[] bufferValues;
     private final List<Value>[] values;
+    private final long[] valuesLastUpdateTimeStamp;
+
 
     private final int size;
     private final AtomicInteger atomicIndex = new AtomicInteger(0);
@@ -56,6 +58,7 @@ public class MemoryTable {
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
         this.values = new ArrayList[size];
+        valuesLastUpdateTimeStamp = new long[5000];
 //        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];

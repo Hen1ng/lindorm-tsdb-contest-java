@@ -167,15 +167,15 @@ public class IntCompress {
 
         return result;
     }
-//    static {
-//        String fileName = "int.txt";  // 替换为你的文件路径
-//        try {
-//            testNumReal = readIntsFromFile(fileName);
-//            System.out.println(testNumReal.length);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    static {
+        String fileName = "int.txt";  // 替换为你的文件路径
+        try {
+            testNumReal = readIntsFromFile(fileName);
+            System.out.println(testNumReal.length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
@@ -324,7 +324,8 @@ public class IntCompress {
         for (ByteBuffer byteBuffer : arrayList) {
             allocate.put(byteBuffer.array());
         }
-        byte[] compress = Zstd.compress(allocate.array(), 12);
+        byte[] compress = ZstdInner.compress(allocate.array(), 3);
+//        byte[] compress = allocate.array();
         ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
         buffer.putInt(allocate.array().length);
         buffer.put(compress);
@@ -416,6 +417,7 @@ public class IntCompress {
         int anInt = wrap.getInt();
         byte[] bytes1 = new byte[bytes.length-4];
         wrap.get(bytes1,0,bytes1.length);
+//        byte[] decompress = bytes1;
         byte[] decompress = Zstd.decompress(bytes1, anInt);
         ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
         byte[] compressType = new byte[5];
