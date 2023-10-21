@@ -475,11 +475,15 @@ public class IntCompress {
             }
             long[] output = new long[ints.length];
             final int compress = Simple8.compress(gapArray, output);
-            ByteBuffer resultBuffer = ByteBuffer.allocate(compress*8);
-            long[] outputArray = new long[compress];
-            System.arraycopy(output,0,outputArray,0,compress);
-            LongBuffer longBuffer = resultBuffer.asLongBuffer();
-            longBuffer.put(outputArray);
+            ByteBuffer resultBuffer = ByteBuffer.allocate(compress * 8);
+            for (int i = 0; i < compress; i++) {
+                resultBuffer.putLong(output[i]);
+            }
+//            return resultBuffer.array();
+//            long[] outputArray = new long[compress];
+//            System.arraycopy(output,0,outputArray,0,compress);
+//            LongBuffer longBuffer = resultBuffer.asLongBuffer();
+//            longBuffer.put(outputArray);
 //            byte[] result = new byte[compress * 8];
 //            int position = 0;
 //            for (int i = 0; i < compress; i++) {

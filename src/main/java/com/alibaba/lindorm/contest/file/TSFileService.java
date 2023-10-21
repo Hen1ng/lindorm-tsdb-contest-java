@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.compress.*;
 import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.BucketArrayFactory;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.memory.Value;
@@ -35,6 +36,8 @@ public class TSFileService {
 
     private final TSFile[] tsFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
+
+    private final BucketArrayFactory bucketArrayFactory = new BucketArrayFactory((180000000 / Constants.CACHE_VINS_LINE_NUMS) + 5000);
 
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
@@ -443,8 +446,8 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
-            AggBucket aggBucket = new AggBucket();
-            long start = System.currentTimeMillis();
+            long start = System.nanoTime();
+            AggBucket aggBucket = bucketArrayFactory.getAggBucket();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             String[] indexArray = SchemaUtil.getIndexArray();
@@ -517,7 +520,7 @@ public class TSFileService {
                     }
                 }
             }
-            long prepareDataTime = System.currentTimeMillis();
+            long prepareDataTime = System.nanoTime();
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
             final byte[] compress = compressResult.compressedData;
@@ -538,7 +541,7 @@ public class TSFileService {
                     + stringLengthArrayCompress.length + 2 //string长度记录
                     + compress.length; //string存储string
 //            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(total);
-            long compressTime = System.currentTimeMillis();
+            long compressTime = System.nanoTime();
             ByteBuffer byteBuffer = TOTAL_DIRECT_BUFFER.get();
             byteBuffer.clear();
             byteBuffer.limit(total);
@@ -567,7 +570,7 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write bytebuffer error" + e);
             }
-            long putTime = System.currentTimeMillis();
+            long putTime = System.nanoTime();
             try {
                 TSFile tsFile = getTsFileByIndex(m);
                 final long append = tsFile.append(byteBuffer);
@@ -586,14 +589,14 @@ public class TSFileService {
             } catch (Exception e) {
                 System.out.println("write append error" + e);
             }
-            long append = System.currentTimeMillis();
+            long append = System.nanoTime();
             if (writeTimes.get() % 100000 == 0) {
-                System.out.println("write total cost: " + (System.currentTimeMillis() - start) + " ms"
+                System.out.println("write total cost: " + (System.nanoTime() - start) + " ns"
                         + " write size: " + total
-                        + " prepareData time " + (prepareDataTime - start) + " ms"
-                        + " compress time " + (compressTime - prepareDataTime) + " ms"
-                        + " put time " + (putTime - compressTime) + " ms"
-                        + " append time " + (append - putTime) + " ms");
+                        + " prepareData time " + (prepareDataTime - start) + " ns"
+                        + " compress time " + (compressTime - prepareDataTime) + " ns"
+                        + " put time " + (putTime - compressTime) + " ns"
+                        + " append time " + (append - putTime) + " ns");
             }
         } catch (Exception e) {
             e.printStackTrace();
