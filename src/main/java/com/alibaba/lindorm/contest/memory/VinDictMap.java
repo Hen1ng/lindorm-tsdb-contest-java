@@ -65,7 +65,7 @@ public class VinDictMap {
                 INDEX_VIN[Integer.parseInt(split[1])] = split[0].getBytes(StandardCharsets.UTF_8);
             }
         }
-        file.delete();
+//        file.delete();
     }
 
 }

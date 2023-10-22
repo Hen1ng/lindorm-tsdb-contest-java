@@ -84,6 +84,13 @@ public class Index {
 
     private int length;
 
+    public int getBigStringOffset() {
+        return bigStringOffset;
+    }
+
+    private int bigStringOffset;
+
+
     public Index(long offset
             , long maxTimestamp
             , long minTimestamp
@@ -94,6 +101,7 @@ public class Index {
             , int doubleLength
             , long previousTimeStamp
             , byte[] timeStampBytes
+    , int bigStringOffset
     ) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
@@ -105,11 +113,12 @@ public class Index {
         this.doubleLength = doubleLength;
         this.previousTimeStamp = previousTimeStamp;
         this.timeStampBytes = timeStampBytes;
+        this.bigStringOffset = bigStringOffset;
     }
 
     public byte[] bytes() {
         byte[] bytes = aggBucket.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 5+8+2+timeStampBytes.length);
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6+8+2+timeStampBytes.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -119,6 +128,7 @@ public class Index {
         allocate.putInt(length);
         allocate.putInt(intLength);
         allocate.putInt(doubleLength);
+        allocate.putInt(bigStringOffset);
         allocate.putLong(previousTimeStamp);
         allocate.putShort((short) timeStampBytes.length);
         allocate.put(timeStampBytes);
@@ -142,6 +152,7 @@ public class Index {
         int length = wrap.getInt();
         int intLength = wrap.getInt();
         int doubleLength = wrap.getInt();
+        int bigStringOffset = wrap.getInt();
         long previousTimeStamp = wrap.getLong();
         short timeStampBytesLength = wrap.getShort();
         byte[] bytes1 = new byte[timeStampBytesLength];
@@ -156,7 +167,8 @@ public class Index {
                 intLength,
                 doubleLength,
                 previousTimeStamp,
-                bytes1
+                bytes1,
+                bigStringOffset
         );
     }
 
@@ -191,24 +203,24 @@ public class Index {
     }
 
     public static void main(String[] args) {
-        Random random = new Random();
-        AggBucket aggBucket1 = new AggBucket();
-        aggBucket1.updateInt(1, 1);
-        aggBucket1.updateInt(2, 2);
-        Index index = new Index(random.nextLong(),
-                random.nextLong(),
-                random.nextLong(),
-                random.nextInt(),
-                random.nextInt(),
-                aggBucket1,
-                random.nextInt(),
-                random.nextInt(),
-                random.nextLong(),
-                new byte[0]);
-        byte[] bytes = index.bytes();
-        Index index1 = uncompress(bytes);
-        boolean a = index1.equals(index);
-        System.out.println(a);
+//        Random random = new Random();
+//        AggBucket aggBucket1 = new AggBucket();
+//        aggBucket1.updateInt(1, 1);
+//        aggBucket1.updateInt(2, 2);
+//        Index index = new Index(random.nextLong(),
+//                random.nextLong(),
+//                random.nextLong(),
+//                random.nextInt(),
+//                random.nextInt(),
+//                aggBucket1,
+//                random.nextInt(),
+//                random.nextInt(),
+//                random.nextLong(),
+//                new byte[0]);
+//        byte[] bytes = index.bytes();
+//        Index index1 = uncompress(bytes);
+//        boolean a = index1.equals(index);
+//        System.out.println(a);
 
     }
 

@@ -32,7 +32,7 @@ public class DoubleCompress {
 
     public static ByteBuffer encode3(double[] values, int start, int end) {
         FpcCompressor fpc = new FpcCompressor();
-        ByteBuffer buffer = ByteBuffer.allocate((end - start) * 8);
+        ByteBuffer buffer = ByteBuffer.allocate((end - start) * 10);
         fpc.compress(buffer, values, start, end);
         buffer.flip();
         return buffer.slice();

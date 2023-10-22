@@ -168,13 +168,13 @@ public class IntCompress {
         return result;
     }
     static {
-        String fileName = "int.txt";  // 替换为你的文件路径
-        try {
-            testNumReal = readIntsFromFile(fileName);
-            System.out.println(testNumReal.length);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        String fileName = "int.txt";  // 替换为你的文件路径
+//        try {
+//            testNumReal = readIntsFromFile(fileName);
+//            System.out.println(testNumReal.length);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     public static void main(String[] args) {
@@ -324,7 +324,7 @@ public class IntCompress {
         for (ByteBuffer byteBuffer : arrayList) {
             allocate.put(byteBuffer.array());
         }
-        byte[] compress = ZstdInner.compress(allocate.array(), 3);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
 //        byte[] compress = allocate.array();
         ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
         buffer.putInt(allocate.array().length);
@@ -627,7 +627,7 @@ public class IntCompress {
                 }
             }
         }
-        byte[] compress = ZstdInner.compress(allocate.array(), 12);
+        byte[] compress = Zstd.compress(allocate.array(), 12);
         ByteBuffer allocate1 = ByteBuffer.allocate(4 + compress.length);
         allocate1.putInt(allocate.array().length);
         allocate1.put(compress);
@@ -667,7 +667,7 @@ public class IntCompress {
     }
 
     public static short[] decompressShort(byte[] bytes, int valueSize, int totalLength) {
-        final byte[] bytes1 = ZstdInner.decompress(bytes, totalLength);
+        final byte[] bytes1 = Zstd.decompress(bytes, totalLength);
         final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
         byte length = wrap.get();
         byte[] bytes2 = new byte[2];

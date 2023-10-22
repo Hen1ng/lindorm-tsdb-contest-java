@@ -51,11 +51,17 @@ public class SchemaUtil {
             i++;
         }
         for (String key : STRING_MAP.keySet()) {
+            if ("JUBK".equals(key)) {
+                continue;
+            }
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
             System.out.println("key: " + key + " index : " + i);
             i++;
         }
+        INDEX_ARRAY[i] = "JUBK";
+        COLUMNS_INDEX.put("JUBK", i);
+        System.out.println("key: " + "JUBK" + " index : " + i);
         for (String s : INDEX_ARRAY) {
             maps.put(s, new HashSet<>());
         }
@@ -122,6 +128,6 @@ public class SchemaUtil {
             Constants.setFloatNums(doubleNums);
             Constants.setIntNums(intNums);
         }
-        file.delete();
+//        file.delete();
     }
 }

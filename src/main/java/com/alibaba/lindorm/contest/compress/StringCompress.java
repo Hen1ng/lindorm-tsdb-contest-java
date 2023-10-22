@@ -107,26 +107,47 @@ public class StringCompress {
         // Extract the two bits at the position
         return (values[byteIndex] >> bitIndex) & 3; // 3 in binary is 11. This will mask the two bits we are interested in.
     }
+
+    public static int hashCode(byte[] value) {
+        int h = 0;
+        for (byte v : value) {
+            h = 31 * h + (v & 0xff);
+        }
+        return h;
+    }
+
+    public static class CountAndLength {
+        int count;
+        byte[] bytes;
+
+        public CountAndLength (int count, byte[] bytes) {
+            this.count = count;
+            this.bytes = bytes;
+        }
+    }
+
     public static CompressResult compress1(List<ByteBuffer> stringList, int valueSize) {
-        ArrayList<Short> stringlength = new ArrayList<>();
+        ArrayList<Short> stringlength = new ArrayList<>(stringList.size());
         int length = stringList.size();
         int start = 0;
         int total = 0;
-        ArrayList<byte[]> arrayList = new ArrayList<>();
+        ArrayList<byte[]> arrayList = new ArrayList<>(stringList.size());
         BitSet compressBitSet = BIT_SET_THREAD_LOCAL.get();
         compressBitSet.clear();
         compressBitSet.set(15);
         int index = 0;
         while (start < length) {
-            Map<String, Integer> set = new HashMap<>(2);
+            Map<Integer, CountAndLength> set = new HashMap<>(8);
             int count = 0;
             int totalLength = 0;
             boolean isUseMap = true;
             for (int i = start; i < start + valueSize; i++) {
                 final ByteBuffer byteBuffer = stringList.get(i);
                 totalLength += byteBuffer.remaining();
-                if (isUseMap && !set.containsKey(new String(byteBuffer.array()))) {
-                    set.put(new String(byteBuffer.array()), count);
+                final byte[] array = byteBuffer.array();
+                final int hashCode = hashCode(array);
+                if (isUseMap && !set.containsKey(hashCode)) {
+                    set.put(hashCode, new CountAndLength(count, array));
                     count++;
                 }
                 if (set.size() > 4) {
@@ -158,8 +179,8 @@ public class StringCompress {
                 int dictSize = set.size();
                 if (dictSize == 3) dictSize = 4;
                 int dictLength = 0;
-                for (String bytes : set.keySet()) {
-                    dictLength += bytes.length();
+                for (CountAndLength countAndLength : set.values()) {
+                    dictLength += countAndLength.bytes.length;
                 }
                 int BitSize = valueSize;
                 if (dictSize == 1) BitSize = 0;
@@ -168,10 +189,11 @@ public class StringCompress {
                 compress.put((byte) dictSize);
                 for (int i = 0; i < dictSize; i++) {
                     boolean isExist = false;
-                    for (String bytes : set.keySet()) {
-                        if (set.get(bytes) == i) {
-                            compress.putShort((short) bytes.length());
-                            compress.put(bytes.getBytes());
+                    for (int hashCode : set.keySet()) {
+                        final CountAndLength countAndLength = set.get(hashCode);
+                        if (countAndLength.count == i) {
+                            compress.putShort((short) countAndLength.bytes.length);
+                            compress.put(countAndLength.bytes);
                             isExist = true;
                             break;
                         }
@@ -185,8 +207,6 @@ public class StringCompress {
                         BitSet bitSet = BitSet.valueOf(new byte[UpperBoundByte(BitSize)]);
                         int index1 = 0;
                         for (int i = start; i < start + valueSize; i++) {
-                            final ByteBuffer byteBuffer = stringList.get(i);
-                            Integer i1 = set.get(new String(byteBuffer.array()));
                             bitSet.set(index1);
                             index1++;
                         }
@@ -196,9 +216,9 @@ public class StringCompress {
                         int index1 = 0;
                         for (int i = start; i < start + valueSize; i++) {
                             final ByteBuffer byteBuffer = stringList.get(i);
-                            Integer i1 = set.get(new String(byteBuffer.array()));
+                            CountAndLength countAndLength = set.get(hashCode(byteBuffer.array()));
 
-                            setTwoBit(bitSet, index1, i1);
+                            setTwoBit(bitSet, index1, countAndLength.count);
                             index1++;
                         }
                         compress.put(bitSet);
@@ -221,7 +241,7 @@ public class StringCompress {
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = ZstdInner.compress(allocate.array(), 3);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
         ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
         res.putInt(2 + total);
         res.put(compress);
