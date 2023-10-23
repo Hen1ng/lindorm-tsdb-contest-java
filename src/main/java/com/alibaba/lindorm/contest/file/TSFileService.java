@@ -224,7 +224,6 @@ public class TSFileService {
                     bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 100);
                 }
             } else {
-                System.out.println("containsBigString false");
                 dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
                 tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
                 dataBuffer.flip();
@@ -372,6 +371,7 @@ public class TSFileService {
                     bigStringBytes = new byte[bigStringLength];
                     dataBuffer.position(index.getBigStringOffset() + 4);
                     dataBuffer.get(bigStringBytes, 0, bigStringLength);
+                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 100);
                 }
             } else {
                 dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());

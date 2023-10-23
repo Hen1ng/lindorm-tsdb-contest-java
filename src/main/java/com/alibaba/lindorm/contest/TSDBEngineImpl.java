@@ -242,6 +242,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
+            System.out.println("JUDGE_TIME_RANGE_ERROR_TIMES : " + StaticsUtil.JUDGE_TIME_RANGE_ERROR_TIMES.get());
         }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedColumns());
