@@ -253,7 +253,14 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
-        return executeAggregateQueryByBucket(aggregationReq);
+        try {
+            return executeAggregateQueryByBucket(aggregationReq);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("executeAggregateQuery error, e" + e);
+            System.exit(-1);
+        }
+        return null;
 //        ArrayList<Row> rows = new ArrayList<>();
 //        final String columnName = aggregationReq.getColumnName();
 //        final Aggregator aggregator = aggregationReq.getAggregator();
@@ -495,167 +502,42 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
-        if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
-            System.out.println("executeDownsampleQuery interval: " + downsampleReq.getInterval());
-        }
-        ArrayList<Row> rows = new ArrayList<>();
-        final String columnName = downsampleReq.getColumnName();
-        final Aggregator aggregator = downsampleReq.getAggregator();
-        final long interval = downsampleReq.getInterval();
-        final Vin vin = downsampleReq.getVin();
-        final long timeLowerBound = downsampleReq.getTimeLowerBound();
-        final long timeUpperBound = downsampleReq.getTimeUpperBound();
-        final CompareExpression columnFilter = downsampleReq.getColumnFilter();
-        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
-        int columnIndex = SchemaUtil.COLUMNS_INDEX.get(columnName);
-        Set<String> requestedColumns = new HashSet<>();
-        requestedColumns.add(columnName);
-        int i1 = VinDictMap.get(vin);
-        int i = 0;
-        while (timeLowerBound + i * interval < timeUpperBound) {
-            Map<String, ColumnValue> columns = new HashMap<>(1);
-            ArrayList<ColumnValue> timeRangeRow = new ArrayList<>();
-            long startTime = timeLowerBound + i * interval;
-            long endTime = timeLowerBound + (i + 1) * interval;
-            // [start,end)
-            List<Index> indices = MapIndex.get(i1, startTime, endTime);
-            if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-                if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)) {
-                    // first remove useless index
-                    int integerValue = columnFilter.getValue().getIntegerValue();
-                    boolean isExist = false;
-                    // second
-                    switch (aggregator) {
-                        case AVG:
-                            for (Index index : indices) {
-                                if(index.getAggBucket().getiMax(columnIndex)<integerValue)continue;
-                                if(index.getAggBucket().getiMin(columnIndex)>integerValue)continue;
-                                ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
-                                for (ColumnValue value : rowArrayList) {
-                                    if (columnFilter.doCompare(value)) {
-                                        isExist = true;
-                                        break;
-                                    }
-                                }
-                                if (isExist) break;
-                            }
-                            if (!isExist) {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                            } else {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(integerValue));
-                            }
-                            break;
-                        case MAX:
-                            // equal and max
-                            for (Index index : indices) {
-                                if (index.getAggBucket().getiMin(columnIndex) > integerValue) continue;
-                                if (index.getAggBucket().getiMax(columnIndex) < integerValue) continue;
-                                ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
-                                for (ColumnValue value : rowArrayList) {
-                                    if (columnFilter.doCompare(value)) {
-                                        isExist = true;
-                                        break;
-                                    }
-                                }
-                                if (isExist) break;
-                            }
-                            if (!isExist) {
-                                columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
-                            } else {
-                                columns.put(columnName, new ColumnValue.IntegerColumn(integerValue));
-                            }
-                            break;
-                        default:
-                            System.out.println("error aggregator type");
-                    }
-                }
-                else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
-                    int integerValue = columnFilter.getValue().getIntegerValue();
-                    switch (aggregator) {
-                        case AVG:
-                            double sum = 0;
-                            int size = 0;
-                            for (Index index : indices) {
-                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getiMin(columnIndex) > integerValue) {
-                                    // interval
-                                    sum += index.getAggBucket().getiSum(columnIndex);
-                                    size += index.getValueSize();
-                                } else if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getiMax(columnIndex) <= integerValue) {
-                                    continue;
-                                } else {
-                                    //[start,end) Row
-                                    timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
-                                }
-                            }
-                            for (ColumnValue value : timeRangeRow) {
-                                if (columnFilter.doCompare(value)) {
-                                    sum += value.getIntegerValue();
-                                    size++;
-                                }
-                            }
-                            if (size == 0) {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                            } else {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
-                            }
-                            break;
-                        case MAX:
-                            // greater and max
-                            int maxInt = Integer.MIN_VALUE;
-                            for (Index index : indices) {
-                                if(index.getAggBucket().getiMax(columnIndex) <= integerValue)continue;
-                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1) {
-                                    maxInt = Math.max(maxInt, index.getAggBucket().getiMax(columnIndex));
-                                } else {
-                                    timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
-                                }
-                            }
-                            for (ColumnValue value : timeRangeRow) {
-                                if (columnFilter.doCompare(value)) {
-                                    maxInt = Math.max(maxInt, value.getIntegerValue());
-                                }
-                            }
-                            if (maxInt == Integer.MIN_VALUE) {
-                                columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
-                            } else {
-                                columns.put(columnName, new ColumnValue.IntegerColumn(maxInt));
-                            }
-                            break;
-                        default:
-                            System.out.println("error aggregator type");
-                    }
-                }
+        try {
+            if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
+                System.out.println("executeDownsampleQuery interval: " + downsampleReq.getInterval());
             }
-            else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-                if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)) {
-                    // first remove useless index
-                    boolean isExist = false;
-                    double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
-                    switch (aggregator) {
-                        case AVG:
-                            for (Index index : indices) {
-                                if (index.getAggBucket().getdMin(columnIndex) > doubleFloatValue) continue;
-                                if (index.getAggBucket().getdMax(columnIndex) < doubleFloatValue) continue;
-                                ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
-                                for (ColumnValue value : rowArrayList) {
-                                    if (columnFilter.doCompare(value)) {
-                                        isExist = true;
-                                        break;
-                                    }
-                                }
-                                if (isExist) break;
-                            }
-                            if (!isExist) {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                            } else {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleFloatValue));
-                            }
-                            break;
-                        case MAX:
-                            // equal and max
-                            for (Index index : indices) {
-                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1
-                                        && !(index.getAggBucket().getiMax(columnIndex) < doubleFloatValue || index.getAggBucket().getiMin(columnIndex) > doubleFloatValue)) {
+            ArrayList<Row> rows = new ArrayList<>();
+            final String columnName = downsampleReq.getColumnName();
+            final Aggregator aggregator = downsampleReq.getAggregator();
+            final long interval = downsampleReq.getInterval();
+            final Vin vin = downsampleReq.getVin();
+            final long timeLowerBound = downsampleReq.getTimeLowerBound();
+            final long timeUpperBound = downsampleReq.getTimeUpperBound();
+            final CompareExpression columnFilter = downsampleReq.getColumnFilter();
+            final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
+            int columnIndex = SchemaUtil.COLUMNS_INDEX.get(columnName);
+            Set<String> requestedColumns = new HashSet<>();
+            requestedColumns.add(columnName);
+            int i1 = VinDictMap.get(vin);
+            int i = 0;
+            while (timeLowerBound + i * interval < timeUpperBound) {
+                Map<String, ColumnValue> columns = new HashMap<>(1);
+                ArrayList<ColumnValue> timeRangeRow = new ArrayList<>();
+                long startTime = timeLowerBound + i * interval;
+                long endTime = timeLowerBound + (i + 1) * interval;
+                // [start,end)
+                List<Index> indices = MapIndex.get(i1, startTime, endTime);
+                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
+                    if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)) {
+                        // first remove useless index
+                        int integerValue = columnFilter.getValue().getIntegerValue();
+                        boolean isExist = false;
+                        // second
+                        switch (aggregator) {
+                            case AVG:
+                                for (Index index : indices) {
+                                    if (index.getAggBucket().getiMax(columnIndex) < integerValue) continue;
+                                    if (index.getAggBucket().getiMin(columnIndex) > integerValue) continue;
                                     ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
                                     for (ColumnValue value : rowArrayList) {
                                         if (columnFilter.doCompare(value)) {
@@ -665,80 +547,209 @@ public class TSDBEngineImpl extends TSDBEngine {
                                     }
                                     if (isExist) break;
                                 }
-                            }
-                            if (!isExist) {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                            } else {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleFloatValue));
-                            }
-                            break;
-                        default:
-                            System.out.println("error aggregator type");
-                    }
-                }
-                else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
-                    double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
-                    switch (aggregator) {
-                        case AVG:
-                            double sum = 0;
-                            int size = 0;
-                            for (Index index : indices) {
-                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getdMin(columnIndex) > doubleFloatValue) {
-                                    // interval
-                                    sum += index.getAggBucket().getdSum(columnIndex);
-                                    size += index.getValueSize();
-                                } else if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getdMax(columnIndex) <= doubleFloatValue) {
-                                    continue;
+                                if (!isExist) {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
                                 } else {
-                                    //[start,end) Row
-                                    timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(integerValue));
                                 }
-                            }
-                            for (ColumnValue value : timeRangeRow) {
-                                if (columnFilter.doCompare(value)) {
-                                    sum += value.getDoubleFloatValue();
-                                    size++;
+                                break;
+                            case MAX:
+                                // equal and max
+                                for (Index index : indices) {
+                                    if (index.getAggBucket().getiMin(columnIndex) > integerValue) continue;
+                                    if (index.getAggBucket().getiMax(columnIndex) < integerValue) continue;
+                                    ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
+                                    for (ColumnValue value : rowArrayList) {
+                                        if (columnFilter.doCompare(value)) {
+                                            isExist = true;
+                                            break;
+                                        }
+                                    }
+                                    if (isExist) break;
                                 }
-                            }
-                            if (size == 0) {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                            } else {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
-                            }
-                            break;
-                        case MAX:
-                            // greater and max
-                            double maxDouble = -Double.MAX_VALUE;
-                            for (Index index : indices) {
-                                if(index.getAggBucket().getdMax(columnIndex) <= doubleFloatValue) continue;
-                                if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1) {
-                                    maxDouble = Math.max(maxDouble, index.getAggBucket().getdMax(columnIndex));
+                                if (!isExist) {
+                                    columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
                                 } else {
-                                    timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
+                                    columns.put(columnName, new ColumnValue.IntegerColumn(integerValue));
                                 }
-                            }
-                            for (ColumnValue value : timeRangeRow) {
-                                if (columnFilter.doCompare(value)) {
-                                    maxDouble = Math.max(maxDouble, value.getDoubleFloatValue());
+                                break;
+                            default:
+                                System.out.println("error aggregator type");
+                        }
+                    } else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
+                        int integerValue = columnFilter.getValue().getIntegerValue();
+                        switch (aggregator) {
+                            case AVG:
+                                double sum = 0;
+                                int size = 0;
+                                for (Index index : indices) {
+                                    if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getiMin(columnIndex) > integerValue) {
+                                        // interval
+                                        sum += index.getAggBucket().getiSum(columnIndex);
+                                        size += index.getValueSize();
+                                    } else if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getiMax(columnIndex) <= integerValue) {
+                                        continue;
+                                    } else {
+                                        //[start,end) Row
+                                        timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
+                                    }
                                 }
-                            }
-                            if (maxDouble == -Double.MAX_VALUE) {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
-                            } else {
-                                columns.put(columnName, new ColumnValue.DoubleFloatColumn(maxDouble));
-                            }
-                            break;
-                        default:
-                            System.out.println("error aggregator type");
+                                for (ColumnValue value : timeRangeRow) {
+                                    if (columnFilter.doCompare(value)) {
+                                        sum += value.getIntegerValue();
+                                        size++;
+                                    }
+                                }
+                                if (size == 0) {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                                } else {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
+                                }
+                                break;
+                            case MAX:
+                                // greater and max
+                                int maxInt = Integer.MIN_VALUE;
+                                for (Index index : indices) {
+                                    if (index.getAggBucket().getiMax(columnIndex) <= integerValue) continue;
+                                    if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1) {
+                                        maxInt = Math.max(maxInt, index.getAggBucket().getiMax(columnIndex));
+                                    } else {
+                                        timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
+                                    }
+                                }
+                                for (ColumnValue value : timeRangeRow) {
+                                    if (columnFilter.doCompare(value)) {
+                                        maxInt = Math.max(maxInt, value.getIntegerValue());
+                                    }
+                                }
+                                if (maxInt == Integer.MIN_VALUE) {
+                                    columns.put(columnName, new ColumnValue.IntegerColumn(0x80000000));
+                                } else {
+                                    columns.put(columnName, new ColumnValue.IntegerColumn(maxInt));
+                                }
+                                break;
+                            default:
+                                System.out.println("error aggregator type");
+                        }
                     }
+                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
+                    if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.EQUAL)) {
+                        // first remove useless index
+                        boolean isExist = false;
+                        double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
+                        switch (aggregator) {
+                            case AVG:
+                                for (Index index : indices) {
+                                    if (index.getAggBucket().getdMin(columnIndex) > doubleFloatValue) continue;
+                                    if (index.getAggBucket().getdMax(columnIndex) < doubleFloatValue) continue;
+                                    ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
+                                    for (ColumnValue value : rowArrayList) {
+                                        if (columnFilter.doCompare(value)) {
+                                            isExist = true;
+                                            break;
+                                        }
+                                    }
+                                    if (isExist) break;
+                                }
+                                if (!isExist) {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                                } else {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleFloatValue));
+                                }
+                                break;
+                            case MAX:
+                                // equal and max
+                                for (Index index : indices) {
+                                    if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1
+                                            && !(index.getAggBucket().getiMax(columnIndex) < doubleFloatValue || index.getAggBucket().getiMin(columnIndex) > doubleFloatValue)) {
+                                        ArrayList<ColumnValue> rowArrayList = fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1);
+                                        for (ColumnValue value : rowArrayList) {
+                                            if (columnFilter.doCompare(value)) {
+                                                isExist = true;
+                                                break;
+                                            }
+                                        }
+                                        if (isExist) break;
+                                    }
+                                }
+                                if (!isExist) {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                                } else {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleFloatValue));
+                                }
+                                break;
+                            default:
+                                System.out.println("error aggregator type");
+                        }
+                    } else if (columnFilter.getCompareOp().equals(CompareExpression.CompareOp.GREATER)) {
+                        double doubleFloatValue = columnFilter.getValue().getDoubleFloatValue();
+                        switch (aggregator) {
+                            case AVG:
+                                double sum = 0;
+                                int size = 0;
+                                for (Index index : indices) {
+                                    if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getdMin(columnIndex) > doubleFloatValue) {
+                                        // interval
+                                        sum += index.getAggBucket().getdSum(columnIndex);
+                                        size += index.getValueSize();
+                                    } else if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getdMax(columnIndex) <= doubleFloatValue) {
+                                        continue;
+                                    } else {
+                                        //[start,end) Row
+                                        timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
+                                    }
+                                }
+                                for (ColumnValue value : timeRangeRow) {
+                                    if (columnFilter.doCompare(value)) {
+                                        sum += value.getDoubleFloatValue();
+                                        size++;
+                                    }
+                                }
+                                if (size == 0) {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                                } else {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
+                                }
+                                break;
+                            case MAX:
+                                // greater and max
+                                double maxDouble = -Double.MAX_VALUE;
+                                for (Index index : indices) {
+                                    if (index.getAggBucket().getdMax(columnIndex) <= doubleFloatValue) continue;
+                                    if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1) {
+                                        maxDouble = Math.max(maxDouble, index.getAggBucket().getdMax(columnIndex));
+                                    } else {
+                                        timeRangeRow.addAll(fileService.getSingleValueByIndex(vin, startTime, endTime, index, requestedColumns, i1));
+                                    }
+                                }
+                                for (ColumnValue value : timeRangeRow) {
+                                    if (columnFilter.doCompare(value)) {
+                                        maxDouble = Math.max(maxDouble, value.getDoubleFloatValue());
+                                    }
+                                }
+                                if (maxDouble == -Double.MAX_VALUE) {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
+                                } else {
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(maxDouble));
+                                }
+                                break;
+                            default:
+                                System.out.println("error aggregator type");
+                        }
+                    }
+                } else {
+                    System.out.println("Unexpected columnType: " + columnType);
                 }
-            } else {
-                System.out.println("Unexpected columnType: " + columnType);
+                i++;
+                rows.add(new Row(vin, startTime, columns));
             }
-            i++;
-            rows.add(new Row(vin, startTime, columns));
+            return rows;
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("executeDownsampleQuery error, " + e);
+            System.exit(-1);
         }
-        return rows;
+        return null;
     }
 
 

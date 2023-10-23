@@ -344,7 +344,7 @@ public class TSFileService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("getByIndexV2 e" + e + " containsBigString: " + containsBigString + "index.getBigStringOffset()" + index.getBigStringOffset() + "data limit" + dataBuffer.limit() + "data position" + dataBuffer.position() + "data capacity" + dataBuffer.capacity() + "index " + index);
+//            System.out.println("getByIndexV2 e"  + " containsBigString: " + containsBigString + "index.getBigStringOffset()" + index.getBigStringOffset() + "data limit" + dataBuffer.limit() + "data position" + dataBuffer.position() + "data capacity" + dataBuffer.capacity() );
             System.exit(-1);
         }
         return rowArrayList;
