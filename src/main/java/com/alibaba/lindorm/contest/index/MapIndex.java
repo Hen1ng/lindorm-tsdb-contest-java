@@ -221,6 +221,13 @@ public class MapIndex {
             }
             intBuffer.flip();
         }
+
+        System.out.println("load Index into memory size : " + INDEX_ARRAY.length);
+
+    }
+
+
+    public static void loadBigBucket() {
         for(int i=0;i<INDEX_ARRAY.length;i++){
             int j = 0;
             BigBucket bigBucket = new BigBucket();
@@ -236,9 +243,8 @@ public class MapIndex {
                 BUCKET_ARRAY[i].add(bigBucket);
             }
         }
-        System.out.println("load Index into memory size : " + INDEX_ARRAY.length);
-
     }
+
 
 //    public static void loadMapFromFile(File file)
 //            throws IOException {

@@ -1,13 +1,9 @@
 package com.alibaba.lindorm.contest.index;
 
 
-import com.alibaba.lindorm.contest.compress.GzipCompress;
-import com.alibaba.lindorm.contest.file.TSFileService;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Random;
 
 public class Index {
 
@@ -36,6 +32,10 @@ public class Index {
 
     public void setDoubleLength(int doubleLength) {
         this.doubleLength = doubleLength;
+    }
+
+    public void setAggBucket(AggBucket aggBucket) {
+        this.aggBucket = aggBucket;
     }
 
     private AggBucket aggBucket;
@@ -117,10 +117,7 @@ public class Index {
     }
 
     public byte[] bytes() {
-        byte[] bytes = aggBucket.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6+8+2+timeStampBytes.length);
-        allocate.putInt(bytes.length);
-        allocate.put(bytes);
+        ByteBuffer allocate = ByteBuffer.allocate(  8 * 3 + 4 * 6+8+2+timeStampBytes.length);
         allocate.putLong(offset);
         allocate.putLong(maxTimestamp);
         allocate.putLong(minTimestamp);
@@ -141,10 +138,6 @@ public class Index {
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        bytes = gzipCompress.deCompress(bytes);
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
-        int aggBucketLength = wrap.getInt();
-        byte[] aggBytes = new byte[aggBucketLength];
-        wrap.get(aggBytes, 0, aggBucketLength);
-        AggBucket aggBucket = AggBucket.uncompress(aggBytes);
         long offset = wrap.getLong();
         long maxTimeStamp = wrap.getLong();
         long minTimeStamp = wrap.getLong();
@@ -163,7 +156,7 @@ public class Index {
                 minTimeStamp,
                 length,
                 valueSize,
-                aggBucket,
+                null,
                 intLength,
                 doubleLength,
                 previousTimeStamp,
