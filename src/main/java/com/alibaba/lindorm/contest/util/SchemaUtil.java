@@ -1,6 +1,5 @@
 package com.alibaba.lindorm.contest.util;
 
-import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Schema;
 

@@ -1,4 +1,7 @@
-package com.alibaba.lindorm.contest.compress.gorilla;
+package com.alibaba.lindorm.contest.compress.gorilla.predictors;
+
+
+import com.alibaba.lindorm.contest.compress.gorilla.Predictor;
 
 /**
  * Last-Value predictor, a computational predictor using previous value as a prediction for the next one

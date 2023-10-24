@@ -1,4 +1,7 @@
-package com.alibaba.lindorm.contest.compress.gorilla;
+package com.alibaba.lindorm.contest.compress.gorilla.predictors;
+
+
+import com.alibaba.lindorm.contest.compress.gorilla.Predictor;
 
 /**
  * Differential Finite Context Method (DFCM) is a context based predictor.

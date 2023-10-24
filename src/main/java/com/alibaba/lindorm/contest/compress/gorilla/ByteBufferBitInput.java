@@ -31,7 +31,8 @@ public class ByteBufferBitInput implements BitInput {
      *
      * @return true if the next bit is 1, otherwise 0.
      */
-    public boolean readBit() {
+    @Override
+	public boolean readBit() {
         boolean bit = ((b >> (bitsLeft - 1)) & 1) == 1;
         bitsLeft--;
         flipByte();
@@ -44,7 +45,8 @@ public class ByteBufferBitInput implements BitInput {
      * @param bits How many next bits are read from the stream
      * @return long value that was read from the stream
      */
-    public long getLong(int bits) {
+    @Override
+	public long getLong(int bits) {
         long value = 0;
         while(bits > 0) {
             if(bits > bitsLeft || bits == Byte.SIZE) {

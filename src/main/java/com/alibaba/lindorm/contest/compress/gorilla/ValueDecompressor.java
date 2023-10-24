@@ -1,6 +1,8 @@
 package com.alibaba.lindorm.contest.compress.gorilla;
 
 
+import com.alibaba.lindorm.contest.compress.gorilla.predictors.LastValuePredictor;
+
 /**
  * Value decompressor for Gorilla encoded values
  *

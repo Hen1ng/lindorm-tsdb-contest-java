@@ -24,7 +24,7 @@ public class ByteBufferBitOutput implements BitOutput {
     /**
      * Give an initialSize different than DEFAULT_ALLOCATIONS. Recommended to use values which are dividable by 4096.
      *
-     * @param initialSize New initialsize to use
+     * @param initialSize New initial size to use
      */
     public ByteBufferBitOutput(int initialSize) {
         bb = ByteBuffer.allocateDirect(initialSize);
@@ -69,7 +69,8 @@ public class ByteBufferBitOutput implements BitOutput {
      * @param value Value to be written to the stream
      * @param bits How many bits are stored to the stream
      */
-    public void writeBits(long value, int bits) {
+    @Override
+	public void writeBits(long value, int bits) {
         while(bits > 0) {
             int shift = bits - bitsLeft;
             if(shift >= 0) {

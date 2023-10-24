@@ -241,7 +241,7 @@ public class StringCompress {
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = Zstd.compress(allocate.array(), 3);
+        byte[] compress = ZstdInner.compress(allocate.array(), 3);
         ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
         res.putInt(2 + total);
         res.put(compress);

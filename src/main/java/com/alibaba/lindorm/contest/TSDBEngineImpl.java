@@ -7,14 +7,9 @@
 
 package com.alibaba.lindorm.contest;
 
-import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
-import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
-import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
-import com.alibaba.lindorm.contest.file.DoubleFileService;
 import com.alibaba.lindorm.contest.file.FilePosition;
 import com.alibaba.lindorm.contest.file.TSFile;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.BigBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
@@ -53,7 +48,6 @@ public class TSDBEngineImpl extends TSDBEngine {
     private File bigIntMapFile;
     private FilePosition filePosition;
 
-    private DoubleFileService doubleFileService;
 
 
     /**

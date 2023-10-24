@@ -2,9 +2,9 @@ package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.doublecompress.FpcCompressor;
 import com.alibaba.lindorm.contest.compress.doublecompress1.*;
+import com.alibaba.lindorm.contest.compress.gorilla.*;
 import com.alibaba.lindorm.contest.compress.gorilla.ByteBufferBitInput;
 import com.alibaba.lindorm.contest.compress.gorilla.ByteBufferBitOutput;
-import com.alibaba.lindorm.contest.compress.gorilla.DifferentialFCM;
 import com.alibaba.lindorm.contest.compress.gorilla.ValueCompressor;
 import com.alibaba.lindorm.contest.compress.gorilla.ValueDecompressor;
 import com.alibaba.lindorm.contest.util.Constants;
@@ -35,6 +35,8 @@ public class DoubleCompress {
         corillaList.add(3);
 //        corillaList.add(4);
         corillaList.add(6);
+        corillaList.add(4);
+        corillaList.add(7);
 //        toLongCompress.add(3);
 //        toLongCompress.add(4);
 //        toLongCompress.add(7);
@@ -113,13 +115,45 @@ public class DoubleCompress {
             value[i] -= value[i - 1];
         }
     }
+    public static ByteBuffer encodeCorilla(double[] values, int start, int end) {
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        com.alibaba.lindorm.contest.compress.gorilla.Compressor compressor = new com.alibaba.lindorm.contest.compress.gorilla.Compressor(output);
+        for (int i = start; i < end; i++) {
+            compressor.addValue(values[i]);
+        }
+        compressor.close();
+        ByteBuffer byteBuffer = output.getByteBuffer();
+        int size = compressor.getSize();
+        byte[] bytes = new byte[byteBuffer.position()];
+        byteBuffer.flip();
+        byteBuffer.get(bytes, 0, bytes.length);
+        return ByteBuffer.wrap(bytes);
+//        return byteBuffer;
+    }
+    public static double[] decodeCorilla(ByteBuffer byteBuffer, int valueSize) {
+        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+        Decompressor d = new Decompressor( input);
+        List<Double> values = d.getValues();
+        double[] doubles = new double[values.size()];
+        for (int i = 0; i < doubles.length; i++) {
+            doubles[i] = values.get(i);
+        }
+        return doubles;
+    }
+    public static double P3  = 10000;
+    public static double P4 = 155.6846;
+
+    public static double P6 = -100000;
+    public static double P7 = -35.044;
 
     public static void DeltaCompress(double[] value, int start, int end, double[] target) {
         double[] doubles = new double[end - start];
-        int p = 0;
+        double p = 0;
         int idx = start / (end - start);
-        if (start / (end - start) == 3) p = 10000;
-        else p = -100000;
+        if (idx == 3) p = P3;
+        else if (idx == 4) p = P4;
+        else if (idx == 6) p = P6;
+        else if (idx == 7) p = P7;
         for (int i = start; i < end - 1; i++) {
             double v = value[i + 1] - value[i];
             doubles[i - start] = v - p * target[i - start];
@@ -156,10 +190,13 @@ public class DoubleCompress {
             if (corillaList.contains(i)) {
                 start = i * valueSize;
                 end = (i + 1) * valueSize;
-                int p = i == 3 ? 10000 : -100000;
+                double p = i == 3 ? 10000 : -100000;
+                if (i == 3) p = P3;
+                if (i == 4) p = P4;
+                if (i == 6) p = P6;
+                if (i == 7) p = P7;
                 for (int j = end - 2; j >= start; j--) {
                     values[j] = values[j + 1] - (values[j] + doubles[j - start] * p);
-//                    values[j] += doubles[j-start]/p + values[j+1];
                 }
             }
         }
@@ -195,7 +232,7 @@ public class DoubleCompress {
                 encode = encode3(values, i * valueSize, (i + 1) * valueSize);
             }else if (corillaList.contains(i)) {
                 DeltaCompress(values, i * valueSize, (i + 1) * valueSize, doubles);
-                encode = encode3(values, i * valueSize, (i + 1) * valueSize);
+                encode = encodeCorilla(values, i * valueSize, (i + 1) * valueSize);
             } else {
                 encode = encode3(values, i * valueSize, (i + 1) * valueSize);
             }
@@ -239,7 +276,7 @@ public class DoubleCompress {
                 decode = decode3(ByteBuffer.wrap(array), valueSize);
                 DoubleDeltaDecompress(decode, 0, decode.length);
             } else if (corillaList.contains(count)) {
-                decode = decode3(ByteBuffer.wrap(array), valueSize);
+                decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
             } else {
                 decode = decode3(ByteBuffer.wrap(array), valueSize);
             }
@@ -248,77 +285,6 @@ public class DoubleCompress {
             count++;
         }
         recoverProcess(doubles, valueSize);
-        return doubles;
-    }
-
-    public static ByteBuffer encode(double[] values, int start, int end) {
-        ByteBufferBitOutput byteBufferBitOutput = new ByteBufferBitOutput();
-        final ValueCompressor valueCompressor = new ValueCompressor(byteBufferBitOutput, new DifferentialFCM(1024));
-        for (int i = start; i < end; i++) {
-            final double value = values[i];
-            if (i == start) {
-                valueCompressor.writeFirst(Double.doubleToRawLongBits(value));
-            } else {
-                valueCompressor.compressValue(Double.doubleToRawLongBits(value));
-            }
-        }
-        byteBufferBitOutput.flush();
-        final ByteBuffer byteBuffer = byteBufferBitOutput.getByteBuffer();
-        byteBuffer.flip();
-        return byteBuffer.slice();
-    }
-
-    public static ByteBuffer encode(double[] values) {
-        ByteBufferBitOutput byteBufferBitOutput = new ByteBufferBitOutput();
-        final ValueCompressor valueCompressor = new ValueCompressor(byteBufferBitOutput, new DifferentialFCM(1024));
-        for (int i = 0; i < values.length; i++) {
-            final double value = values[i];
-            if (i == 0) {
-                valueCompressor.writeFirst(Double.doubleToRawLongBits(value));
-            } else {
-                valueCompressor.compressValue(Double.doubleToRawLongBits(value));
-            }
-        }
-        byteBufferBitOutput.flush();
-        final ByteBuffer byteBuffer = byteBufferBitOutput.getByteBuffer();
-        byteBuffer.flip();
-        return byteBuffer.slice();
-    }
-
-    public static ByteBuffer encode(double[] values, int size) {
-        ByteBufferBitOutput byteBufferBitOutput = new ByteBufferBitOutput();
-        final ValueCompressor valueCompressor = new ValueCompressor(byteBufferBitOutput, new DifferentialFCM(1024));
-        for (int i = 0; i < size; i++) {
-            final double value = values[i];
-            if (i == 0) {
-                valueCompressor.writeFirst(Double.doubleToRawLongBits(value));
-            } else {
-                valueCompressor.compressValue(Double.doubleToRawLongBits(value));
-            }
-        }
-        byteBufferBitOutput.flush();
-        final ByteBuffer byteBuffer = byteBufferBitOutput.getByteBuffer();
-        byteBuffer.flip();
-        return byteBuffer.slice();
-    }
-
-    public static double[] decode(ByteBuffer byteBuffer, int valueSize) {
-        double[] doubles = new double[valueSize];
-        final ByteBufferBitInput byteBufferBitInput = new ByteBufferBitInput(byteBuffer);
-        final ValueDecompressor valueDecompressor = new ValueDecompressor(byteBufferBitInput, new DifferentialFCM(1024));
-        final long l =
-                valueDecompressor.readFirst();
-        int j = 0;
-        doubles[j] = Double.longBitsToDouble(l);
-        j++;
-        int i = valueSize - 1;
-        while (i > 0) {
-            final long l1 = valueDecompressor.nextValue();
-            final double v1 = Double.longBitsToDouble(l1);
-            i--;
-            doubles[j] = v1;
-            j++;
-        }
         return doubles;
     }
 

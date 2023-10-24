@@ -201,6 +201,7 @@ public class IntCompress {
         }
         int[] data = testNumReal.clone();
         final byte[] bytes = compress4(data,210);
+        long byteLength = bytes.length;
 //        final int[] output = new int[data.length];
         final int[] longs = decompress4(bytes, 210);
 //        final byte[] bytes1 = compressZstd(data1);
@@ -223,7 +224,7 @@ public class IntCompress {
 //        final byte[] compress3 = gzipCompress.compress(compress2);
 //        final boolean equals = Arrays.equals(testNum3, longs);
         System.out.println(a);
-        System.out.println("compress rate : " + 1.0d * bytes.length / (data.length * 4));
+        System.out.println("compress rate : " + 1.0d * byteLength/ (data.length * 4));
     }
 
     public static final ThreadLocal<long[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
@@ -324,7 +325,7 @@ public class IntCompress {
         for (ByteBuffer byteBuffer : arrayList) {
             allocate.put(byteBuffer.array());
         }
-        byte[] compress = Zstd.compress(allocate.array(), 3);
+        byte[] compress = ZstdInner.compress(allocate.array(), 3);
 //        byte[] compress = allocate.array();
         ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
         buffer.putInt(allocate.array().length);

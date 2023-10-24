@@ -12,7 +12,7 @@ public class Constants {
     public static final int TS_FILE_NUMS = 50;
     public static final long TS_FILE_SIZE = 2L * 1024 * 1024 * 1024;
     public static final long WARM_FILE_SIZE = 1024 * 1024 * 1024;
-    public static final int LOAD_FILE_TO_MEMORY_NUM = 0;
+    public static final int LOAD_FILE_TO_MEMORY_NUM = 5;
 
     public static final int COMPRESS_BATCH_SIZE = 5000;
 

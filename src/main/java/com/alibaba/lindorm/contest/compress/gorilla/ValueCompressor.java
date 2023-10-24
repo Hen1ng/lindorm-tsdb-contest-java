@@ -1,6 +1,8 @@
 package com.alibaba.lindorm.contest.compress.gorilla;
 
 
+import com.alibaba.lindorm.contest.compress.gorilla.predictors.LastValuePredictor;
+
 /**
  * ValueCompressor for the Gorilla encoding format. Supply with long presentation of the value,
  * in case of doubles use Double.doubleToRawLongBits(value)
@@ -23,12 +25,12 @@ public class ValueCompressor {
         this.predictor = predictor;
     }
 
-    public void writeFirst(long value) {
+    void writeFirst(long value) {
         predictor.update(value);
         out.writeBits(value, 64);
     }
 
-    public void compressValue(long value) {
+    protected void compressValue(long value) {
         // In original Gorilla, Last-Value predictor is used
         long diff = predictor.predict() ^ value;
         predictor.update(value);
