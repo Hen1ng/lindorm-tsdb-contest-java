@@ -126,12 +126,12 @@ public class StringCompress {
         }
     }
 
-    public static CompressResult compress1(List<ByteBuffer> stringList, int valueSize) {
-        ArrayList<Short> stringlength = new ArrayList<>(stringList.size());
-        int length = stringList.size();
+    public static CompressResult compress1(ByteBuffer[] stringList, int valueSize) {
+        ArrayList<Short> stringlength = new ArrayList<>(stringList.length);
+        int length = stringList.length;
         int start = 0;
         int total = 0;
-        ArrayList<byte[]> arrayList = new ArrayList<>(stringList.size());
+        ArrayList<byte[]> arrayList = new ArrayList<>(stringList.length);
         BitSet compressBitSet = BIT_SET_THREAD_LOCAL.get();
         compressBitSet.clear();
         compressBitSet.set(15);
@@ -142,7 +142,7 @@ public class StringCompress {
             int totalLength = 0;
             boolean isUseMap = true;
             for (int i = start; i < start + valueSize; i++) {
-                final ByteBuffer byteBuffer = stringList.get(i);
+                final ByteBuffer byteBuffer = stringList[i];
                 totalLength += byteBuffer.remaining();
                 final byte[] array = byteBuffer.array();
                 final int hashCode = hashCode(array);
@@ -157,7 +157,7 @@ public class StringCompress {
             if (!isUseMap) {
                 ByteBuffer allocate = ByteBuffer.allocate(totalLength);
                 for (int i = start; i < start + valueSize; i++) {
-                    final ByteBuffer byteBuffer = stringList.get(i);
+                    final ByteBuffer byteBuffer = stringList[i];
                     stringlength.add((short) byteBuffer.remaining());
                     allocate.put(byteBuffer.array());
                 }
@@ -215,7 +215,7 @@ public class StringCompress {
                         byte[] bitSet = new byte[UpperBoundByte(BitSize)];
                         int index1 = 0;
                         for (int i = start; i < start + valueSize; i++) {
-                            final ByteBuffer byteBuffer = stringList.get(i);
+                            final ByteBuffer byteBuffer = stringList[i];
                             CountAndLength countAndLength = set.get(hashCode(byteBuffer.array()));
 
                             setTwoBit(bitSet, index1, countAndLength.count);
@@ -536,7 +536,7 @@ public class StringCompress {
         }
         final ByteBuffer allocate = ByteBuffer.allocate(totalLength);
         short[] shorts = null;
-        CompressResult compressResult = compress1(stringList, 230);
+        CompressResult compressResult = compress1(null, 230);
         byte[] compress = compressResult.compressedData;
         shorts = compressResult.stringLengthArray;
         byte[] bytes2 = IntCompress.compressShort(shorts, 230);

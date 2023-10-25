@@ -20,10 +20,13 @@ public class Constants {
     public static boolean isBigString(int columnIndex) {
         return columnIndex == 59;
     }
+    public static boolean isBigString(String column) {
+        return bigStringColumn.equals(column)   ;
+    }
 
     public static String bigStringColumn = "JUBK";
 
-    public static final int CACHE_VINS_LINE_NUMS = 230;
+    public static final int CACHE_VINS_LINE_NUMS = 225;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;

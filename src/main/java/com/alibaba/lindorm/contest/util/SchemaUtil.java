@@ -14,6 +14,7 @@ public class SchemaUtil {
     private static final TreeMap<String, ColumnValue.ColumnType> FLOAT_MAP = new TreeMap<>();
     public static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
     private static final String[] INDEX_ARRAY = new String[60];
+    public static final int[] COLUMNS_INDEX_ARRAY = new int[60];
     public static final Map<String, Set<Integer>> maps = new ConcurrentHashMap();
 
 
@@ -64,7 +65,11 @@ public class SchemaUtil {
         for (String s : INDEX_ARRAY) {
             maps.put(s, new HashSet<>());
         }
-
+        int j = 0;
+        for (String key : schema.getColumnTypeMap().keySet()) {
+            COLUMNS_INDEX_ARRAY[j] = COLUMNS_INDEX.get(key);
+            j++;
+        }
     }
 
 
@@ -127,6 +132,11 @@ public class SchemaUtil {
             Constants.setFloatNums(doubleNums);
             Constants.setIntNums(intNums);
         }
-//        file.delete();
+        int j = 0;
+        for (String key : schema1.getColumnTypeMap().keySet()) {
+            COLUMNS_INDEX_ARRAY[j] = COLUMNS_INDEX.get(key);
+            j++;
+        }
+        file.delete();
     }
 }
