@@ -241,7 +241,7 @@ public class StringCompress {
         for (byte[] aByte : arrayList) {
             allocate.put(aByte);
         }
-        byte[] compress = ZstdInner.compress(allocate.array(), 3);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
         ByteBuffer res = ByteBuffer.allocate(4 + compress.length);
         res.putInt(2 + total);
         res.put(compress);
@@ -515,9 +515,9 @@ public class StringCompress {
 
         int[][] segmentsToRemove = {
 //                {230 * 9, 230 * 10},
-                {230 * 5, 230 * 6},
-                {230 * 3, 230 * 4},
-                {230 * 2, 230 * 3},
+//                {230 * 5, 230 * 6},
+//                {230 * 3, 230 * 4},
+//                {230 * 2, 230 * 3},
 //                {230 * 1, 230 * 2},
         };
         for (int i = 0; i < segmentsToRemove.length; i++) {

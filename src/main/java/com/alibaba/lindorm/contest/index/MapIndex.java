@@ -155,7 +155,7 @@ public class MapIndex {
                 allocate.put(byteBuffer);
             }
             byte[] array = allocate.array();
-            final byte[] compress = Zstd.compress(array);
+            final byte[] compress = Zstd.compress(array,6);
             final ByteBuffer allocate1 = ByteBuffer.allocate(compress.length + 4 + 4);
             indexFileLength += compress.length + 4;
             allocate1.putInt(compress.length+4);

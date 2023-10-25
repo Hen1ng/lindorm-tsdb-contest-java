@@ -234,7 +234,7 @@ public class DoubleCompress {
                 DeltaCompress(values, i * valueSize, (i + 1) * valueSize, doubles);
                 encode = encodeCorilla(values, i * valueSize, (i + 1) * valueSize);
             } else {
-                encode = encode3(values, i * valueSize, (i + 1) * valueSize);
+                encode = encodeCorilla(values, i * valueSize, (i + 1) * valueSize);
             }
             total += encode.capacity();
             buffers.add(encode);
@@ -278,7 +278,7 @@ public class DoubleCompress {
             } else if (corillaList.contains(count)) {
                 decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
             } else {
-                decode = decode3(ByteBuffer.wrap(array), valueSize);
+                decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
             }
             System.arraycopy(decode, 0, doubles, start, decode.length);
             start += decode.length;
