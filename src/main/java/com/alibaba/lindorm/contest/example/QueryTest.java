@@ -86,10 +86,10 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 1; j++) {
+                        for (int j = 0; j < 10000; j++) {
                             List<Row> rowList = new ArrayList<>();
-                            for (int i1 = 0; i1 < 1; i1++) {
-                                Vin vin = vins[random.nextInt(20)];
+                            for (int i1 = 0; i1 < 10; i1++) {
+                                Vin vin = vins[random.nextInt(5000)];
                                 final long andIncrement = atomicLong.getAndIncrement();
                                 Map<String, ColumnValue> columns1 = new HashMap<>();
                                 for (String s : columns.keySet()) {

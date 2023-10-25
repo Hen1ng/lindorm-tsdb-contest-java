@@ -104,14 +104,14 @@ public class TSDBEngineImpl extends TSDBEngine {
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
         MapIndex.loadMapFromFileunCompress(indexFile);
-        this.fileService.loadBucket();
-        MapIndex.loadBigBucket();
         for (int i = 0; i < 40; i++) {
             StaticsUtil.columnInfos.add(new ColumnInfo());
         }
         if (RestartUtil.IS_FIRST_START) {
 
         } else {
+            this.fileService.loadBucket();
+            MapIndex.loadBigBucket();
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
