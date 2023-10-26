@@ -6,6 +6,7 @@ import com.alibaba.lindorm.contest.util.RestartUtil;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -30,6 +31,8 @@ public class TSFile {
     private File file;
     private byte[] array;
 
+    private MappedByteBuffer mappedByteBuffer;
+
     public TSFile(String filePath, int fileName, long initPosition) {
         try {
             this.fileName = fileName;
@@ -44,8 +47,9 @@ public class TSFile {
                 file.createNewFile();
             }
             if (!RestartUtil.IS_FIRST_START) {
+                final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
+                this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, position);
                 if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
-                    final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
                     final ByteBuffer allocate = ByteBuffer.allocate((int) position);
                     getFromOffsetByFileChannel(allocate, initPosition);
                     array = allocate.array();
@@ -87,6 +91,21 @@ public class TSFile {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset + "initPosition " + initPosition);
             e.printStackTrace();
         }
+    }
+
+
+    public ByteBuffer getFromMMap(long offset, int size) {
+        if (mappedByteBuffer != null) {
+            try {
+                byte[] bytes = new byte[size];
+                mappedByteBuffer.position((int) (offset - initPosition));
+                mappedByteBuffer.get(bytes);
+                return ByteBuffer.wrap(bytes);
+            } catch (Throwable e) {
+                System.out.println("Error occurred when get message" + e);
+            }
+        }
+        return null;
     }
 
 //    public long append(byte[] data) {

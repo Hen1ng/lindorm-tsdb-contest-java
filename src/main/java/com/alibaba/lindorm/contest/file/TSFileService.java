@@ -97,10 +97,10 @@ public class TSFileService {
             }
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
-            ByteBuffer dataBuffer = ByteBuffer.allocate(length);
+//            ByteBuffer dataBuffer = ByteBuffer.allocate(length);
             long startRead = System.currentTimeMillis();
-            tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-            dataBuffer.flip();
+            ByteBuffer dataBuffer = tsFile.getFromMMap(offset, length);
+//            dataBuffer.flip();
             long longPrevious = index.getPreviousTimeStamp();
             byte[] longBytes = index.getTimeStampBytes();
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
@@ -204,9 +204,9 @@ public class TSFileService {
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
             if (containsBigString) {
-                dataBuffer = ByteBuffer.allocate(length);
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-                dataBuffer.flip();
+//                dataBuffer = ByteBuffer.allocate(length);
+                dataBuffer = tsFile.getFromMMap(offset, length);
+//                dataBuffer.flip();
                 if (bigStringBytes == null) {
                     int bigStringLength = dataBuffer.getInt(index.getBigStringOffset());
                     bigStringBytes = new byte[bigStringLength];
@@ -215,9 +215,10 @@ public class TSFileService {
                     bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 100);
                 }
             } else {
-                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-                dataBuffer.flip();
+//                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
+//                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+                dataBuffer = tsFile.getFromMMap(offset, index.getBigStringOffset());
+//                dataBuffer.flip();
             }
             dataBuffer.position(0);
             long longPrevious = index.getPreviousTimeStamp();
@@ -339,9 +340,10 @@ public class TSFileService {
             ByteBuffer dataBuffer;
             byte[] bigStringBytes = null;
             if (containsBigString) {
-                dataBuffer = ByteBuffer.allocate(length);
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-                dataBuffer.flip();
+//                dataBuffer = ByteBuffer.allocate(length);
+//                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+                dataBuffer = tsFile.getFromMMap(offset, length);
+//                dataBuffer.flip();
                 int bigStringLength = dataBuffer.getInt(index.getBigStringOffset());
                 if (bigStringBytes == null) {
                     bigStringBytes = new byte[bigStringLength];
@@ -350,9 +352,10 @@ public class TSFileService {
                     bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 100);
                 }
             } else {
-                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-                dataBuffer.flip();
+//                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
+//                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+//                dataBuffer.flip();
+                dataBuffer = tsFile.getFromMMap(offset, index.getBigStringOffset());
             }
             dataBuffer.position(0);
             long longPrevious = index.getPreviousTimeStamp();
