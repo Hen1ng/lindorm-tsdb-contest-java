@@ -697,7 +697,7 @@ public class TSFileService {
         long startTime = System.currentTimeMillis();
         ExecutorService executorService = new ThreadPoolExecutor(500, 600,
                 2L, TimeUnit.MINUTES, new LinkedBlockingQueue<>(100));
-        int batch = Constants.TS_FILE_NUMS * 10;
+        int batch = Constants.TS_FILE_NUMS * 4;
         List<IndexListWrapper>[] indexWrapperList = new ArrayList[batch];
         for (int i = 0; i < batch; i++) {
             indexWrapperList[i] = new ArrayList<>();
