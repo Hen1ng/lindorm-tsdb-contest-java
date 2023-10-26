@@ -27,7 +27,6 @@ public class TSFileService {
     public static final ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
     public static final ThreadLocal<ByteBuffer> TOTAL_DIRECT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(1024 * 6 * 10));
-    public static final ThreadLocal<ArrayList<ByteBuffer>> STRING_BUFFER_LIST = ThreadLocal.withInitial(() -> new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
 
     public static final ThreadLocal<ArrayList<ColumnValue>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(ArrayList::new);
@@ -84,11 +83,13 @@ public class TSFileService {
             long offset = index.getOffset();
             final int valueSize = index.getValueSize();
             int length = index.getDoubleLength();
+            List<Integer> intColumnIndex = new ArrayList<>();
             for (String requestedColumn : requestedColumns) {
-                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
+                if (columnIndex < Constants.INT_NUMS) {
                     offset = index.getOffset();
                     length = index.getIntLength();
+                    intColumnIndex.add(columnIndex);
                 } else {
                     offset = index.getOffset() + index.getIntLength();
                     length = index.getDoubleLength() - index.getIntLength();
@@ -106,27 +107,16 @@ public class TSFileService {
             int i = 0;//多少行
             double[] doubles = null;
             Map<Integer, int[]> intMap = null;
-            List<Integer> doubleColumnIndex = new ArrayList<>();
-            List<Integer> intColumnIndex = new ArrayList<>();
+
             long endRead = System.currentTimeMillis();
             StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
-            for (String requestedColumn : requestedColumns) {
-                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
-                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
-                    doubleColumnIndex.add(columnIndex);
-                } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
-                    intColumnIndex.add(columnIndex);
-                }
-            }
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     long startGetValue = System.currentTimeMillis();
                     ColumnValue value = null;
                     for (String requestedColumn : requestedColumns) {
                         final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
-                        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                        if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                        if (columnIndex < Constants.INT_NUMS) {
                             long compressStart = System.currentTimeMillis();
                             try {
                                 if (intMap == null) {
@@ -142,7 +132,7 @@ public class TSFileService {
                             }
                             long compressEnd = System.currentTimeMillis();
                             StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
-                        } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                        } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
                                 long compressStart = System.currentTimeMillis();
                                 if (doubles == null) {
@@ -205,7 +195,7 @@ public class TSFileService {
         ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
         rowArrayList.clear();
         boolean containsBigString = requestedColumns.contains(Constants.bigStringColumn);
-        ByteBuffer dataBuffer = null;
+        ByteBuffer dataBuffer;
         byte[] bigStringBytes = null;
         try {
             final long offset = index.getOffset();
@@ -241,16 +231,12 @@ public class TSFileService {
             List<ByteBuffer> stringBytes = null;
             Short everyStringLength = null;
             ByteBuffer stringLengthBuffer = null;
-            Set<Integer> queryStringNum = new HashSet<>();
-            boolean judgeTimeRangeError = true;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
-                    judgeTimeRangeError = false;
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {
                         final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
-                        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                        if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                        if (columnIndex < Constants.INT_NUMS) {
                             try {
                                 if (ints == null) {
                                     final byte[] allocate1 = new byte[intCompressLength];
@@ -264,7 +250,7 @@ public class TSFileService {
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
-                        } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                        } else if (columnIndex >= Constants.INT_NUMS && columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
                                 if (doubles == null) {
                                     final byte[] allocate1 = new byte[doubleCompressInt];
@@ -280,7 +266,6 @@ public class TSFileService {
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
                         } else {
-                            queryStringNum.add(columnIndex);
                             if (isBigString(columnIndex)) {
                                 final ByteBuffer wrap = ByteBuffer.wrap(bigStringBytes, i * 100, 100);
                                 columns.put(requestedColumn, new ColumnValue.StringColumn(wrap));
@@ -331,16 +316,6 @@ public class TSFileService {
                     rowArrayList.add(new Row(vin, aLong, columns));
                 }
                 i++;
-            }
-            if (judgeTimeRangeError) {
-                StaticsUtil.JUDGE_TIME_RANGE_ERROR_TIMES.getAndIncrement();
-            }
-            if (queryStringNum.size() >= 3) {
-                String s = "";
-                for (Integer integer : queryStringNum) {
-                    s += integer + ",";
-                }
-                System.out.println("get time range string size > 3 , queryColumns " + s);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -396,8 +371,7 @@ public class TSFileService {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
                     for (String requestedColumn : requestedColumns) {
                         final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
-                        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                        if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_INTEGER)) {
+                        if (columnIndex < Constants.INT_NUMS) {
                             try {
                                 if (ints == null) {
                                     final byte[] allocate1 = new byte[intCompressLength];
@@ -411,7 +385,7 @@ public class TSFileService {
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
-                        } else if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_DOUBLE_FLOAT)) {
+                        } else if (columnIndex >= Constants.INT_NUMS && columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
                                 if (doubles == null) {
                                     final byte[] allocate1 = new byte[doubleCompressInt];
