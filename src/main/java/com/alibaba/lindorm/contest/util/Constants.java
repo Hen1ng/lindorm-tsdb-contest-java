@@ -26,7 +26,7 @@ public class Constants {
 
     public static String bigStringColumn = "JUBK";
 
-    public static final int CACHE_VINS_LINE_NUMS = 225;
+    public static final int CACHE_VINS_LINE_NUMS = 230;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;
