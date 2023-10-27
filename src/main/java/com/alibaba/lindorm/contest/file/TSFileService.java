@@ -69,7 +69,7 @@ public class TSFileService {
         return Math.abs(h);
     }
 
-    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
+    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j, Map<Long, ByteBuffer> map,Context ctx) {
         if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
             System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
             System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
@@ -77,8 +77,9 @@ public class TSFileService {
             System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES);
 
         }
+        ctx.addAccessTime();
         long start = System.currentTimeMillis();
-        ArrayList<ColumnValue> rowArrayList = LIST_THREAD_VALUE_LOCAL.get();
+        ArrayList<ColumnValue> rowArrayList = new ArrayList<>();
         rowArrayList.clear();
         try {
             long offset = index.getOffset();
@@ -96,10 +97,21 @@ public class TSFileService {
             }
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
-            ByteBuffer dataBuffer = ByteBuffer.allocate(length);
+            ByteBuffer dataBuffer;
             long startRead = System.currentTimeMillis();
-            tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-            dataBuffer.flip();
+            if (map != null && map.containsKey(offset)) {
+                ctx.addHitTime();
+                dataBuffer = map.get(offset);
+            } else {
+                dataBuffer = ByteBuffer.allocate(length);
+                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+                if (map != null) {
+                    map.put(offset, dataBuffer);
+                }
+            }
+            if(dataBuffer.position() != 0){
+                dataBuffer.flip();
+            }
             long longPrevious = index.getPreviousTimeStamp();
             byte[] longBytes = index.getTimeStampBytes();
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);

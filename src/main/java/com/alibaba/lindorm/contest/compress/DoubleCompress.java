@@ -45,7 +45,7 @@ public class DoubleCompress {
 
     public static ByteBuffer encode3(double[] values, int start, int end) {
         FpcCompressor fpc = new FpcCompressor();
-        ByteBuffer buffer = ByteBuffer.allocate((end - start) * 8+100);
+        ByteBuffer buffer = ByteBuffer.allocate((end - start) * 8 + 100);
         fpc.compress(buffer, values, start, end);
         buffer.flip();
         return buffer.slice();
@@ -108,13 +108,30 @@ public class DoubleCompress {
     }
 
     public static void DoubleDeltaCompress(double[] value, int start, int end) {
+        int idx = start / (end - start);
         for (int i = end - 1; i >= start + 1; i--) {
             value[i] -= value[i - 1];
         }
         for (int i = end - 1; i >= start + 2; i--) {
             value[i] -= value[i - 1];
         }
+        for (int i = end - 1; i >= start + 3; i--) {
+            value[i] -= value[i - 1];
+        }
     }
+
+    public static void DoubleDeltaDecompress(double[] value, int start, int end) {
+        for (int i = start + 3; i < end; i++) {
+            value[i] += value[i - 1];
+        }
+        for (int i = start + 2; i < end; i++) {
+            value[i] += value[i - 1];
+        }
+        for (int i = start + 1; i < end; i++) {
+            value[i] += value[i - 1];
+        }
+    }
+
     public static ByteBuffer encodeCorilla(double[] values, int start, int end) {
         ByteBufferBitOutput output = new ByteBufferBitOutput();
         com.alibaba.lindorm.contest.compress.gorilla.Compressor compressor = new com.alibaba.lindorm.contest.compress.gorilla.Compressor(output);
@@ -130,9 +147,10 @@ public class DoubleCompress {
         return ByteBuffer.wrap(bytes);
 //        return byteBuffer;
     }
+
     public static double[] decodeCorilla(ByteBuffer byteBuffer, int valueSize) {
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor( input);
+        Decompressor d = new Decompressor(input);
         List<Double> values = d.getValues();
         double[] doubles = new double[values.size()];
         for (int i = 0; i < doubles.length; i++) {
@@ -140,8 +158,9 @@ public class DoubleCompress {
         }
         return doubles;
     }
-    public static double P3  = 10000;
-    public static double P4 = 155.6846;
+
+    public static double P3 = 10000;
+    public static double P4 = 155.68460000003;
 
     public static double P6 = -100000;
     public static double P7 = -35.044;
@@ -162,6 +181,7 @@ public class DoubleCompress {
             value[i] = doubles[i - start];
         }
     }
+
     public static double[] preProcess(double[] values, int valueSize) {
         int index = 6;
         int start = 9 * valueSize;
@@ -178,6 +198,7 @@ public class DoubleCompress {
 
         return doubles;
     }
+
     public static void recoverProcess(double[] values, int valueSize) {
         int index = 9;
         int start = index * valueSize;
@@ -202,22 +223,12 @@ public class DoubleCompress {
         }
     }
 
-    public static void DoubleDeltaDecompress(double[] value, int start, int end) {
-        for (int i = start + 2; i < end; i++) {
-            value[i] += value[i - 1];
-        }
-        for (int i = start + 1; i < end; i++) {
-            value[i] += value[i - 1];
-        }
-    }
-
     public static ByteBuffer encodeByFloatCompress(double[] values, int start, int end) {
         double[] doubles = new double[end - start];
         System.arraycopy(values, start, doubles, 0, end - start);
         byte[] bytes = FloatCompress.encode2(doubles);
         return ByteBuffer.wrap(bytes);
     }
-
 
 
     public static byte[] encode2(double[] values, int valueSize) throws IOException {
@@ -230,7 +241,7 @@ public class DoubleCompress {
             if (doubleDelta.contains(i)) {
                 DoubleDeltaCompress(values, i * valueSize, (i + 1) * valueSize);
                 encode = encode3(values, i * valueSize, (i + 1) * valueSize);
-            }else if (corillaList.contains(i)) {
+            } else if (corillaList.contains(i)) {
                 DeltaCompress(values, i * valueSize, (i + 1) * valueSize, doubles);
                 encode = encodeCorilla(values, i * valueSize, (i + 1) * valueSize);
             } else {
@@ -294,12 +305,12 @@ public class DoubleCompress {
         double[] data = values.clone();
         double avg = 0;
         int index = 0;
-//        for (int i = 0; i < values.length; i += 150) {
-//            for (int j = i; j < i + 150; j++) {
-//                System.out.printf("%f,", values[j]);
-//            }
-//            System.out.println("");
-//        }
+        for (int i = 0; i < values.length; i += 150) {
+            for (int j = i; j < i + 150; j++) {
+                System.out.printf("%f,", values[j]);
+            }
+            System.out.println("");
+        }
 //        System.out.println("==================");
 //        for (int i = 0; i < values.length; i += 150) {
 //            if (doubleDelta.contains(index)) {
