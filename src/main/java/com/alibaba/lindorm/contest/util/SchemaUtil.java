@@ -51,7 +51,7 @@ public class SchemaUtil {
             i++;
         }
         for (String key : STRING_MAP.keySet()) {
-            if ("JUBK".equals(key)) {
+            if ("JUBK".equals(key) || "LIYD".equals(key)) {
                 continue;
             }
             INDEX_ARRAY[i] = key;
@@ -59,6 +59,10 @@ public class SchemaUtil {
             System.out.println("key: " + key + " index : " + i);
             i++;
         }
+        INDEX_ARRAY[i] = "LIYD";
+        COLUMNS_INDEX.put("LIYD", i);
+        System.out.println("key: " + "LIYD" + " index : " + i);
+        i++;
         INDEX_ARRAY[i] = "JUBK";
         COLUMNS_INDEX.put("JUBK", i);
         System.out.println("key: " + "JUBK" + " index : " + i);
