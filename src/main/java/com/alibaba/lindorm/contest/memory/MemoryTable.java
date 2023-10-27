@@ -33,6 +33,7 @@ import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
  */
 public class MemoryTable {
 
+    private static final ThreadLocal<Map<String, ColumnValue>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(() -> new HashMap<>(60));
     public ExecutorService fixThreadPool;
     private Lock bufferValuesLock;
 
@@ -186,19 +187,13 @@ public class MemoryTable {
         long totalStringLength = 0;
         try {
             Value value = values[slot].get(0);
-            Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
+            final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             for (String requestedColumn : requestedColumns) {
                 final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
                 if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
                     final ByteBuffer stringValue = value.getColumns().get(requestedColumn).getStringValue();
-                    final ByteBuffer allocate = ByteBuffer.allocate(stringValue.capacity());
-                    totalStringLength += stringValue.capacity();
-                    int position = stringValue.position();
-                    int limit = stringValue.limit();
-                    allocate.put(stringValue);
-                    stringValue.limit(limit);
-                    stringValue.position(position);
-                    columns.put(requestedColumn, new ColumnValue.StringColumn(allocate.flip()));
+                    final ByteBuffer compact = stringValue.slice();
+                    columns.put(requestedColumn, new ColumnValue.StringColumn(compact));
                 } else {
                     columns.put(requestedColumn, value.getColumns().get(requestedColumn));
                 }
@@ -210,6 +205,7 @@ public class MemoryTable {
             }
         }
     }
+
 
     public ArrayList<Row> getTimeRangeRow(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns) {
         long start = System.currentTimeMillis();
