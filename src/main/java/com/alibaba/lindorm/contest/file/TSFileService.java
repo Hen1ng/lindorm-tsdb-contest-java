@@ -10,6 +10,7 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
+import com.carrotsearch.hppc.LongObjectMap;
 import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
@@ -69,13 +70,12 @@ public class TSFileService {
         return Math.abs(h);
     }
 
-    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j, Map<Long, ByteBuffer> map,Context ctx) {
+    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j, LongObjectMap<ByteBuffer> map, Context ctx) {
         if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
             System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
             System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
             System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME);
             System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES);
-
         }
         ctx.addAccessTime();
         long start = System.currentTimeMillis();

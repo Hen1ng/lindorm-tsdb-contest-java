@@ -60,6 +60,14 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>com.carrotsearch</groupId>
+            <artifactId>hppc</artifactId>
+            <version>0.9.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/hppc-0.9.1.jar</systemPath>
+        </dependency>
+
     </dependencies>
 
 

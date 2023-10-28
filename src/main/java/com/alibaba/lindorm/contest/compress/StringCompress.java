@@ -1,6 +1,10 @@
 package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.util.StaticsUtil;
+import com.carrotsearch.hppc.IntObjectHashMap;
+import com.carrotsearch.hppc.IntObjectMap;
+import com.carrotsearch.hppc.cursors.IntCursor;
+import com.carrotsearch.hppc.cursors.ObjectCursor;
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdDictCompress;
 import com.github.luben.zstd.ZstdDictDecompress;
@@ -137,7 +141,7 @@ public class StringCompress {
         compressBitSet.set(15);
         int index = 0;
         while (start < length) {
-            Map<Integer, CountAndLength> set = new HashMap<>(8);
+            IntObjectMap<CountAndLength> set = new IntObjectHashMap<>(8);
             int count = 0;
             int totalLength = 0;
             boolean isUseMap = true;
@@ -179,9 +183,12 @@ public class StringCompress {
                 int dictSize = set.size();
                 if (dictSize == 3) dictSize = 4;
                 int dictLength = 0;
-                for (CountAndLength countAndLength : set.values()) {
-                    dictLength += countAndLength.bytes.length;
+                for (ObjectCursor<CountAndLength> value : set.values()) {
+                    dictLength += value.value.bytes.length;
                 }
+//                for (CountAndLength countAndLength : set.values()) {
+//                    dictLength += countAndLength.bytes.length;
+//                }
                 int BitSize = valueSize;
                 if (dictSize == 1) BitSize = 0;
                 if (dictSize == 4) BitSize *= 2;
@@ -189,7 +196,8 @@ public class StringCompress {
                 compress.put((byte) dictSize);
                 for (int i = 0; i < dictSize; i++) {
                     boolean isExist = false;
-                    for (int hashCode : set.keySet()) {
+                    for (IntCursor key : set.keys()) {
+                        int hashCode = key.value;
                         final CountAndLength countAndLength = set.get(hashCode);
                         if (countAndLength.count == i) {
                             compress.putShort((short) countAndLength.bytes.length);

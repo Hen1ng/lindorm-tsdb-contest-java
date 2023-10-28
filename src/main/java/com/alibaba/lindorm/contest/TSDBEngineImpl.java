@@ -17,6 +17,8 @@ import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.*;
 import com.alibaba.lindorm.contest.util.*;
+import com.carrotsearch.hppc.LongObjectHashMap;
+import com.carrotsearch.hppc.LongObjectMap;
 import sun.misc.Unsafe;
 
 import java.io.File;
@@ -515,7 +517,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             int i1 = VinDictMap.get(vin);
             int i = 0;
             Context ctx = new Context(0, 0);
-            Map<Long, ByteBuffer> bufferMap = new HashMap<>();
+            LongObjectMap< ByteBuffer> bufferMap = new LongObjectHashMap<>();
             long readFileTime = 0;
             while (timeLowerBound + i * interval < timeUpperBound) {
                 Map<String, ColumnValue> columns = new HashMap<>(1);

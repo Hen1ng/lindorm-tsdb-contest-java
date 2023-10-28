@@ -7,6 +7,9 @@ import com.alibaba.lindorm.contest.memory.Value;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
+import com.carrotsearch.hppc.IntIntHashMap;
+import com.carrotsearch.hppc.IntIntMap;
+import com.carrotsearch.hppc.cursors.IntIntCursor;
 import com.github.luben.zstd.Zstd;
 
 import java.io.BufferedReader;
@@ -372,7 +375,6 @@ public class IntCompress {
 
     public static byte[] compress4(int[] ints, int valueSize) {
         List<ByteBuffer> arrayList = new ArrayList<>();
-        List<Integer> notUseDictArray = new ArrayList<>();
         int start = 0;
         int length = ints.length;
         int totalLength = 0;
@@ -381,8 +383,8 @@ public class IntCompress {
         preProcess(ints, valueSize);
         while (start < length) {
             int count = 0;
-            Map<Integer, Integer> map = new HashMap<>();
-            Map<Integer, Integer> invMap = new HashMap<>();
+            IntIntMap map = new IntIntHashMap(4);
+            IntIntMap invMap = new IntIntHashMap();
             boolean isUseMap = true;
             for (int index = start; index < start + valueSize; index++) {
                 if (isUseMap && !map.containsKey(ints[index])) {
@@ -409,9 +411,11 @@ public class IntCompress {
                 // put dict
                 for (int i = 0; i < dictSize; i++) {
                     boolean exist = false;
-                    for (Integer integer : map.keySet()) {
-                        if (map.get(integer) == i) {
-                            allocate.putInt(integer);
+                    for (IntIntCursor intIntCursor : map) {
+                        final int key = intIntCursor.key;
+                        final int value = intIntCursor.value;
+                        if (value == i) {
+                            allocate.putInt(value);
                             exist = true;
                             break;
                         }
@@ -423,7 +427,7 @@ public class IntCompress {
                     if (dictSize == 2) {
                         byte[] bitSet = new byte[UpperBoundByte(bitSize)];
                         for (int j = start; j < start + valueSize; j++) {
-                            Integer i = map.get(ints[j]);
+                            int i = map.get(ints[j]);
                             if (i == 1) {
                                 setBit(j - start, bitSet);
                             }
@@ -432,7 +436,7 @@ public class IntCompress {
                     } else if (dictSize == 4) {
                         byte[] bitSet = new byte[UpperBoundByte(bitSize)];
                         for (int j = start; j < start + valueSize; j++) {
-                            Integer i = map.get(ints[j]);
+                            int i = map.get(ints[j]);
                             setTwoBit(bitSet, j - start, i);
                         }
                         allocate.put(bitSet);
