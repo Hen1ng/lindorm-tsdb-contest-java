@@ -212,8 +212,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     rows.add(lastRow);
                 }
             }
-            executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.incrementAndGet() % 20000000 == 0) {
+            if (executeLatestQueryTimes.incrementAndGet() % 2000000 == 0) {
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
                 for (String requestedColumn : pReadReq.getRequestedColumns()) {
                     System.out.print(requestedColumn + ", ");

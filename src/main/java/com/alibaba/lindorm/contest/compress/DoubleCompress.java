@@ -151,12 +151,12 @@ public class DoubleCompress {
     public static double[] decodeCorilla(ByteBuffer byteBuffer, int valueSize) {
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
         Decompressor d = new Decompressor(input);
-        List<Double> values = d.getValues();
-        double[] doubles = new double[values.size()];
-        for (int i = 0; i < doubles.length; i++) {
-            doubles[i] = values.get(i);
-        }
-        return doubles;
+        return d.getValues(valueSize);
+//        double[] doubles = new double[values.size()];
+//        for (int i = 0; i < doubles.length; i++) {
+//            doubles[i] = values.get(i);
+//        }
+//        return doubles;
     }
 
     public static double P3 = 10000;

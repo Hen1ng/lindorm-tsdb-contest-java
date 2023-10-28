@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class QueryTest {
-    static int threadNum = 16;
+    static int threadNum = 1;
     static ExecutorService executorService = Executors.newFixedThreadPool(15);
     static AtomicLong writeTimes = new AtomicLong(0);
     static CountDownLatch countDownLatch = new CountDownLatch(threadNum);
@@ -98,7 +98,7 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 100; j++) {
+                        for (int j = 0; j < 10; j++) {
                             List<Row> rowList = new ArrayList<>();
                             for (int i1 = 0; i1 < 10; i1++) {
                                 Vin vin = vins[random.nextInt(20)];
@@ -126,12 +126,12 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "lEthBFkW0jIFOqzT3";
+                String v = "v8zsENqqrGHNeJu9l";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
                 Set<String> requestedColumns = new HashSet<>();
-                requestedColumns.add("5String543210");
+//                requestedColumns.add("5String543210");
                 requestedColumns.add("JUBK");
                 requestedColumns.add("0String0");
                 requestedColumns.add("0double");

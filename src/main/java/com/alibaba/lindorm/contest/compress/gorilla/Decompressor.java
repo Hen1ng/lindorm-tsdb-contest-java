@@ -1,5 +1,6 @@
 package com.alibaba.lindorm.contest.compress.gorilla;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,13 +26,24 @@ public class Decompressor {
     }
 
     public List<Double> getValues() {
-    	List<Double> list = new LinkedList<>();
+    	List<Double> list = new ArrayList<>(250);
     	Value value = readPair();
     	while (value != null) {
     		list.add(value.getDoubleValue());
     		value = readPair();
     	}
     	return list;
+    }
+
+    public double[] getValues(int size) {
+        double[] doubles = new double[size];
+        int i = 0;
+        Value value = readPair();
+        while (value != null) {
+            doubles[i++] = value.getDoubleValue();
+            value = readPair();
+        }
+        return doubles;
     }
     
     /**
