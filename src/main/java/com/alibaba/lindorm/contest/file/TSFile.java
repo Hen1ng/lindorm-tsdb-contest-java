@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.file;
 
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.RestartUtil;
+import com.alibaba.lindorm.contest.util.StaticsUtil;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -77,12 +78,15 @@ public class TSFile {
     }
 
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset) {
+        long start = System.nanoTime();
         try {
             if (array != null) {
                 byteBuffer.put(array, (int) (offset - initPosition), byteBuffer.capacity());
                 return;
             }
             this.fileChannel.read(byteBuffer, offset - initPosition);
+            StaticsUtil.TOTAL_READ_BYTES.getAndAdd(byteBuffer.remaining());
+            StaticsUtil.TOTAL_READ_COST_TIME.getAndAdd((System.nanoTime() - start));
         } catch (Exception e) {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset + "initPosition " + initPosition);
             e.printStackTrace();

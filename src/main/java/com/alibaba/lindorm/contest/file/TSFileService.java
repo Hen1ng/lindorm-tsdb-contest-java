@@ -541,6 +541,11 @@ public class TSFileService {
                                 System.out.println("write length != 100");
                             }
                         } else {
+                            if ("LIYD".equals(k)) {
+                                if (stringValue.remaining() != 30) {
+                                    System.out.println("LIYD length != 30");
+                                }
+                            }
                             stringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS) * valueSize + finalL] = stringValue;
                         }
                         totalStringLength.getAndAdd(stringValue.remaining());
