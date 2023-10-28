@@ -1,5 +1,6 @@
 package com.alibaba.lindorm.contest.file;
 
+import com.alibaba.lindorm.contest.TSDBEngineImpl;
 import com.alibaba.lindorm.contest.compress.*;
 import com.alibaba.lindorm.contest.index.AggBucket;
 import com.alibaba.lindorm.contest.index.BucketArrayFactory;
@@ -69,7 +70,7 @@ public class TSFileService {
         return Math.abs(h);
     }
 
-    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j, Map<Long, ByteBuffer> map,Context ctx) {
+    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, String columnName, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap) {
         if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
             System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
             System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
@@ -81,20 +82,46 @@ public class TSFileService {
         long start = System.currentTimeMillis();
         ArrayList<ColumnValue> rowArrayList = new ArrayList<>();
         try {
-            long offset = index.getOffset();
+            long longPrevious = index.getPreviousTimeStamp();
+            byte[] longBytes = index.getTimeStampBytes();
             final int valueSize = index.getValueSize();
-            int length = index.getDoubleLength();
-            List<Integer> intColumnIndex = new ArrayList<>();
-            for (String requestedColumn : requestedColumns) {
-                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
-                if (columnIndex < Constants.INT_NUMS) {
-                    offset = index.getOffset();
-                    length = index.getIntLength();
-                    intColumnIndex.add(columnIndex);
-                } else {
-                    offset = index.getOffset() + index.getIntLength();
-                    length = index.getDoubleLength() - index.getIntLength();
+            long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
+            final int columnIndex = SchemaUtil.getIndexByColumn(columnName);
+            ColumnValue value = null;
+            if (cacheDataMap != null) {
+                final TSDBEngineImpl.CacheData cacheData = cacheDataMap.get(index.getOffset());
+                if (cacheData != null) {
+                    int m = 0;
+                    for (long aLong : decompress) {
+                        if (aLong >= timeLowerBound && aLong < timeUpperBound) {
+                            if (columnIndex < Constants.INT_NUMS) {
+                                final int[] ints1 = cacheData.ints;
+                                value = new ColumnValue.IntegerColumn(ints1[m]);
+                            } else {
+                                double[] doubles = cacheData.doubles;
+                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + m);
+                                value = new ColumnValue.DoubleFloatColumn(doubles[position]);
+                            }
+
+                        }
+                        m++;
+                    }
                 }
+            }
+            if (value != null) {
+                rowArrayList.add(value);
+                return rowArrayList;
+            }
+            long offset;
+            int length;
+            List<Integer> intColumnIndex = new ArrayList<>();
+            if (columnIndex < Constants.INT_NUMS) {
+                offset = index.getOffset();
+                length = index.getIntLength();
+                intColumnIndex.add(columnIndex);
+            } else {
+                offset = index.getOffset() + index.getIntLength();
+                length = index.getDoubleLength() - index.getIntLength();
             }
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
@@ -109,65 +136,69 @@ public class TSFileService {
                     map.put(offset, dataBuffer);
                 }
             }
-            if (dataBuffer.position() != 0){
+            if (dataBuffer.position() != 0) {
                 dataBuffer.flip();
             }
             long endRead = System.currentTimeMillis();
             StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
-            long longPrevious = index.getPreviousTimeStamp();
-            byte[] longBytes = index.getTimeStampBytes();
-            long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
+
             int i = 0;//多少行
             double[] doubles = null;
             Map<Integer, int[]> intMap = null;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     long startGetValue = System.currentTimeMillis();
-                    ColumnValue value = null;
-                    for (String requestedColumn : requestedColumns) {
-                        final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn); //多少列
-                        if (columnIndex < Constants.INT_NUMS) {
-                            long compressStart = System.currentTimeMillis();
-                            try {
-                                if (intMap == null) {
-                                    int intCompressLength = dataBuffer.getShort();
-                                    dataBuffer.position(2);
-                                    intMap = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), intColumnIndex, intCompressLength);
-                                }
-                                final int[] ints1 = intMap.get(columnIndex);
-                                value = new ColumnValue.IntegerColumn(ints1[i]);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                    value = null;
+                    if (columnIndex < Constants.INT_NUMS) {
+                        long compressStart = System.currentTimeMillis();
+                        try {
+                            if (intMap == null) {
+                                int intCompressLength = dataBuffer.getShort();
+                                dataBuffer.position(2);
+                                intMap = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), intColumnIndex, intCompressLength);
                             }
-                            long compressEnd = System.currentTimeMillis();
-                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
-                        } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
-                            try {
-                                long compressStart = System.currentTimeMillis();
-                                if (doubles == null) {
-                                    int doubleCompressInt = dataBuffer.getShort();
-                                    final byte[] allocate1 = new byte[doubleCompressInt];
-                                    dataBuffer.position(
-                                            +2);
-                                    dataBuffer.get(allocate1);
-                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
-                                }
-                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
-                                value = new ColumnValue.DoubleFloatColumn(doubles[position]);
-                                long compressEnd = System.currentTimeMillis();
-                                StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
-                            } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                            final int[] ints1 = intMap.get(columnIndex);
+                            if (cacheDataMap != null) {
+                                final TSDBEngineImpl.CacheData cacheData = new TSDBEngineImpl.CacheData(ints1, null);
+                                cacheDataMap.put(index.getOffset(), cacheData);
                             }
-                        } else {
-                            long compressStart = System.currentTimeMillis();
-                            long compressEnd = System.currentTimeMillis();
-                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                            value = new ColumnValue.IntegerColumn(ints1[i]);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
+                        long compressEnd = System.currentTimeMillis();
+                        StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                    } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
+                        try {
+                            long compressStart = System.currentTimeMillis();
+                            if (doubles == null) {
+                                int doubleCompressInt = dataBuffer.getShort();
+                                final byte[] allocate1 = new byte[doubleCompressInt];
+                                dataBuffer.position(
+                                        +2);
+                                dataBuffer.get(allocate1);
+                                doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+                                if (cacheDataMap != null) {
+                                    final TSDBEngineImpl.CacheData cacheData = new TSDBEngineImpl.CacheData(null, doubles);
+                                    cacheDataMap.put(index.getOffset(), cacheData);
+                                }
+                            }
+                            int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
+                            value = new ColumnValue.DoubleFloatColumn(doubles[position]);
+                            long compressEnd = System.currentTimeMillis();
+                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                        } catch (Exception e) {
+                            System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                        }
+                    } else {
+                        long compressStart = System.currentTimeMillis();
+                        long compressEnd = System.currentTimeMillis();
+                        StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
                     }
                     long endGetValue = System.currentTimeMillis();
                     StaticsUtil.GET_VALUE_TIMES.addAndGet(endGetValue - startGetValue);
+
                     if (value != null) {
                         rowArrayList.add(value);
                     }
@@ -280,7 +311,7 @@ public class TSFileService {
                                 int bigStringSize;
                                 int off;
                                 if (columnIndex == 58) {
-                                    off =  i * 30;
+                                    off = i * 30;
                                     bigStringSize = 30;
                                 } else {
                                     off = 30 * valueSize + i * 100;
@@ -425,7 +456,7 @@ public class TSFileService {
                                 int bigStringSize;
                                 int off;
                                 if (columnIndex == 58) {
-                                    off =  i * 30;
+                                    off = i * 30;
                                     bigStringSize = 30;
                                 } else {
                                     off = 30 * valueSize + i * 100;

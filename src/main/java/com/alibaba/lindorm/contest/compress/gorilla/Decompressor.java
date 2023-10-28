@@ -1,5 +1,6 @@
 package com.alibaba.lindorm.contest.compress.gorilla;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
