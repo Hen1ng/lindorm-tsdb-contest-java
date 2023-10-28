@@ -73,7 +73,7 @@ public class QueryTest {
                     ByteBuffer buffer = ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
                     columns.put(key, new ColumnValue.StringColumn(buffer));
                 } else if (i == 5) {
-                    key = "LIYD";
+                    key = "ORNI";
                     String s = "";
                     for (int i1 = 0; i1 < 30; i1++) {
                         s+="s";

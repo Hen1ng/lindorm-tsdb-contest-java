@@ -556,6 +556,9 @@ public class TSFileService {
                     } else {
                         final ByteBuffer stringValue = columnValue.getStringValue();
                         if (isBigString(k)) {
+                            if ("ORNI".equals(k) && stringValue.remaining() != 30) {
+                                System.out.println("ORNI length != 30");
+                            }
                             bigStringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS - 8) * valueSize + finalL] = stringValue;
                             bigStringLength.addAndGet(stringValue.remaining());
                         } else {
