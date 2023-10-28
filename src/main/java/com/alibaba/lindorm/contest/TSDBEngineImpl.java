@@ -143,7 +143,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
-        System.out.println("JUDGE_TIME_RANGE_ERROR_TIMES : " + StaticsUtil.JUDGE_TIME_RANGE_ERROR_TIMES.get());
 //        for (String s : SchemaUtil.maps.keySet()) {
 //            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
 //        }
@@ -205,9 +204,6 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeLatestQuery(LatestQueryRequest pReadReq) throws IOException {
-        if (executeLatestQueryTimes.incrementAndGet() == 1) {
-            System.out.println("executeLatestQuery start, ts:" + System.currentTimeMillis());
-        }
         try {
             ArrayList<Row> rows = new ArrayList<>();
             for (Vin vin : pReadReq.getVins()) {
@@ -217,8 +213,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
             }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.get() % 20000000 == 0) {
-//                MemoryUtil.printJVMHeapMemory();
+            if (executeLatestQueryTimes.incrementAndGet() % 20000000 == 0) {
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
                 for (String requestedColumn : pReadReq.getRequestedColumns()) {
                     System.out.print(requestedColumn + ", ");
@@ -239,7 +234,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
             MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
-            System.out.println("JUDGE_TIME_RANGE_ERROR_TIMES : " + StaticsUtil.JUDGE_TIME_RANGE_ERROR_TIMES.get());
         }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedColumns());

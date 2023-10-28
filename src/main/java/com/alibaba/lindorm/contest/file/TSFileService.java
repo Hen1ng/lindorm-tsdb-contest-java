@@ -80,7 +80,6 @@ public class TSFileService {
         ctx.addAccessTime();
         long start = System.currentTimeMillis();
         ArrayList<ColumnValue> rowArrayList = new ArrayList<>();
-        rowArrayList.clear();
         try {
             long offset = index.getOffset();
             final int valueSize = index.getValueSize();
@@ -101,9 +100,8 @@ public class TSFileService {
             final TSFile tsFile = getTsFileByIndex(m);
             ByteBuffer dataBuffer;
             long startRead = System.currentTimeMillis();
-            if (map != null && map.containsKey(offset)) {
+            if (map != null && (dataBuffer = map.get(offset)) != null) {
                 ctx.addHitTime();
-                dataBuffer = map.get(offset);
             } else {
                 dataBuffer = ByteBuffer.allocate(length);
                 tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
@@ -111,18 +109,17 @@ public class TSFileService {
                     map.put(offset, dataBuffer);
                 }
             }
-            if(dataBuffer.position() != 0){
+            if (dataBuffer.position() != 0){
                 dataBuffer.flip();
             }
+            long endRead = System.currentTimeMillis();
+            StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
             long longPrevious = index.getPreviousTimeStamp();
             byte[] longBytes = index.getTimeStampBytes();
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
             int i = 0;//多少行
             double[] doubles = null;
             Map<Integer, int[]> intMap = null;
-
-            long endRead = System.currentTimeMillis();
-            StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     long startGetValue = System.currentTimeMillis();

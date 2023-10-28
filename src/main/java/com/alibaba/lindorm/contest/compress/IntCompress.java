@@ -143,15 +143,15 @@ public class IntCompress {
         return result;
     }
 
-    static {
-        String fileName = "int.txt";  // 替换为你的文件路径
-        try {
-            testNumReal = readIntsFromFile(fileName);
-            System.out.println(testNumReal.length);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    static {
+//        String fileName = "int.txt";  // 替换为你的文件路径
+//        try {
+//            testNumReal = readIntsFromFile(fileName);
+//            System.out.println(testNumReal.length);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
