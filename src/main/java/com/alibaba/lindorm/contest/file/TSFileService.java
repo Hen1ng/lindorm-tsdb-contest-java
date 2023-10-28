@@ -17,6 +17,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.alibaba.lindorm.contest.util.Constants.bigStringColumn1;
 import static com.alibaba.lindorm.contest.util.Constants.isBigString;
 
 
@@ -206,7 +207,7 @@ public class TSFileService {
     public ArrayList<Row> getByIndexV2(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
         ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
         rowArrayList.clear();
-        boolean containsBigString = requestedColumns.contains(Constants.bigStringColumn);
+        boolean containsBigString = requestedColumns.contains(Constants.bigStringColumn) || requestedColumns.contains(Constants.bigStringColumn1);
         ByteBuffer dataBuffer;
         byte[] bigStringBytes = null;
         try {
@@ -224,7 +225,7 @@ public class TSFileService {
                     bigStringBytes = new byte[bigStringLength];
                     dataBuffer.position(index.getBigStringOffset() + 4);
                     dataBuffer.get(bigStringBytes, 0, bigStringLength);
-                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 100);
+                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 130);
                 }
             } else {
                 dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
@@ -262,7 +263,7 @@ public class TSFileService {
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
-                        } else if (columnIndex >= Constants.INT_NUMS && columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
+                        } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
                                 if (doubles == null) {
                                     final byte[] allocate1 = new byte[doubleCompressInt];
@@ -279,8 +280,18 @@ public class TSFileService {
                             }
                         } else {
                             if (isBigString(columnIndex)) {
-                                final ByteBuffer wrap = ByteBuffer.wrap(bigStringBytes, i * 100, 100);
-                                columns.put(requestedColumn, new ColumnValue.StringColumn(wrap));
+                                int bigStringSize;
+                                int off;
+                                if (columnIndex == 58) {
+                                    off =  i * 30;
+                                    bigStringSize = 30;
+                                } else {
+                                    off = 30 * valueSize + i * 100;
+                                    bigStringSize = 100;
+                                }
+                                byte[] dest = new byte[bigStringSize];
+                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
+                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(dest)));
                             } else {
                                 if (stringLengthBuffer == null) {
                                     everyStringLength = dataBuffer.getShort(
@@ -345,7 +356,7 @@ public class TSFileService {
             final long offset = index.getOffset();
             final int valueSize = index.getValueSize();
             final int length = index.getLength();
-            boolean containsBigString = requestedColumns.contains(Constants.bigStringColumn);
+            boolean containsBigString = requestedColumns.contains(Constants.bigStringColumn) || requestedColumns.contains(Constants.bigStringColumn1);
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
             ByteBuffer dataBuffer;
@@ -359,7 +370,7 @@ public class TSFileService {
                     bigStringBytes = new byte[bigStringLength];
                     dataBuffer.position(index.getBigStringOffset() + 4);
                     dataBuffer.get(bigStringBytes, 0, bigStringLength);
-                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 100);
+                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 130);
                 }
             } else {
                 dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
@@ -397,7 +408,7 @@ public class TSFileService {
                             } catch (Exception e) {
                                 System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
-                        } else if (columnIndex >= Constants.INT_NUMS && columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
+                        } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
                                 if (doubles == null) {
                                     final byte[] allocate1 = new byte[doubleCompressInt];
@@ -414,8 +425,18 @@ public class TSFileService {
                             }
                         } else {
                             if (isBigString(columnIndex)) {
-                                final ByteBuffer wrap = ByteBuffer.wrap(bigStringBytes, i * 100, 100);
-                                columns.put(requestedColumn, new ColumnValue.StringColumn(wrap));
+                                int bigStringSize;
+                                int off;
+                                if (columnIndex == 58) {
+                                    off =  i * 30;
+                                    bigStringSize = 30;
+                                } else {
+                                    off = 30 * valueSize + i * 100;
+                                    bigStringSize = 100;
+                                }
+                                byte[] dest = new byte[bigStringSize];
+                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
+                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(dest)));
                             } else {
                                 if (stringLengthBuffer == null) {
                                     everyStringLength = dataBuffer.getShort(
@@ -490,8 +511,8 @@ public class TSFileService {
             ByteBuffer doubleBuffer;
             ByteBuffer longBuffer;
             ByteBuffer stringLengthBuffer;
-            ByteBuffer[] stringList = new ByteBuffer[9 * lineNum];
-            List<ByteBuffer> stringList1 = new ArrayList<>(lineNum);
+            ByteBuffer[] stringList = new ByteBuffer[8 * lineNum];
+            ByteBuffer[] bigStringList = new ByteBuffer[2 * lineNum];
             AtomicInteger bigStringLength = new AtomicInteger();
             double[] doubles;
             long[] longs;
@@ -547,11 +568,11 @@ public class TSFileService {
                     } else {
                         final ByteBuffer stringValue = columnValue.getStringValue();
                         if (isBigString(k)) {
-                            stringList1.add(stringValue);
-                            bigStringLength.addAndGet(stringValue.remaining());
-                            if (stringValue.remaining() != 100) {
-                                System.out.println("write length != 100");
+                            if ("ORNI".equals(k) && stringValue.remaining() != 30) {
+                                System.out.println("ORNI length != 30");
                             }
+                            bigStringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS - 8) * valueSize + finalL] = stringValue;
+                            bigStringLength.addAndGet(stringValue.remaining());
                         } else {
                             stringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS) * valueSize + finalL] = stringValue;
                         }
@@ -568,7 +589,7 @@ public class TSFileService {
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
             final ByteBuffer allocate = ByteBuffer.allocate(bigStringLength.get());
-            for (ByteBuffer byteBuffer : stringList1) {
+            for (ByteBuffer byteBuffer : bigStringList) {
                 allocate.put(byteBuffer);
             }
             final byte[] stringCompress = compressResult.compressedData;

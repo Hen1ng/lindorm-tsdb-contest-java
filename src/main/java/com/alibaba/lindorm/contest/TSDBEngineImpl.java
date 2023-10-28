@@ -220,6 +220,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             if (executeLatestQueryTimes.get() % 20000000 == 0) {
 //                MemoryUtil.printJVMHeapMemory();
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
+                for (String requestedColumn : pReadReq.getRequestedColumns()) {
+                    System.out.print(requestedColumn + ", ");
+                }
             }
             return rows;
         } catch (Exception e) {
