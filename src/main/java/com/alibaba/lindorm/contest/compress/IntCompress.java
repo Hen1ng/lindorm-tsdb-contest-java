@@ -767,7 +767,7 @@ public class IntCompress {
                 }
             }
         }
-        byte[] compress = Zstd.compress(allocate.array(), 6);
+        byte[] compress = Zstd.compress(allocate.array(), 12);
         ByteBuffer allocate1 = ByteBuffer.allocate(4 + compress.length);
         allocate1.putInt(allocate.array().length);
         allocate1.put(compress);

@@ -213,7 +213,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 }
             }
             executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.incrementAndGet() % 20000000 == 0) {
+            if (executeLatestQueryTimes.incrementAndGet() % 5000000 == 0) {
                 System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
                 for (String requestedColumn : pReadReq.getRequestedColumns()) {
                     System.out.print(requestedColumn + ", ");
@@ -794,7 +794,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 rows.add(new Row(vin, startTime, columns));
             }
             long endTime = System.nanoTime();
-            if (executeDownsampleQueryTimes.get() % 10000 == 0) {
+            if (executeDownsampleQueryTimes.get() % 30000 == 0) {
                 System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
                 System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
                 System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());

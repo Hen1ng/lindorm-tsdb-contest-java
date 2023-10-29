@@ -91,6 +91,7 @@ public class TSFileService {
             if (cacheDataMap != null) {
                 final TSDBEngineImpl.CacheData cacheData = cacheDataMap.get(index.getOffset());
                 if (cacheData != null) {
+                    ctx.addHitTime();
                     int m = 0;
                     for (long aLong : decompress) {
                         if (aLong >= timeLowerBound && aLong < timeUpperBound) {
@@ -102,14 +103,13 @@ public class TSFileService {
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + m);
                                 value = new ColumnValue.DoubleFloatColumn(doubles[position]);
                             }
-
+                            rowArrayList.add(value);
                         }
                         m++;
                     }
                 }
             }
-            if (value != null) {
-                rowArrayList.add(value);
+            if (!rowArrayList.isEmpty()) {
                 return rowArrayList;
             }
             long offset;
@@ -596,9 +596,6 @@ public class TSFileService {
                     } else {
                         final ByteBuffer stringValue = columnValue.getStringValue();
                         if (isBigString(k)) {
-                            if ("ORNI".equals(k) && stringValue.remaining() != 30) {
-                                System.out.println("ORNI length != 30");
-                            }
                             bigStringList[(columnIndex - Constants.INT_NUMS - Constants.FLOAT_NUMS - 8) * valueSize + finalL] = stringValue;
                             bigStringLength.addAndGet(stringValue.remaining());
                         } else {
