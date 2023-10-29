@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.alibaba.lindorm.contest.util.Constants.bigStringColumn1;
 import static com.alibaba.lindorm.contest.util.Constants.isBigString;
 
 
@@ -70,16 +69,21 @@ public class TSFileService {
         return Math.abs(h);
     }
 
-    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, String columnName, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap) {
-        if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
-            System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
-            System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
-            System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME);
-            System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES);
+    private AtomicLong atomicLong = new AtomicLong(0);
 
+    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, String columnName, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap, String queryType) {
+        if ("downSample".equals(queryType)) {
+            if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
+                System.out.println("getSingleValueByIndex times : " + StaticsUtil.GET_SINGPLE_VALUE_TIMES.get());
+                System.out.println("getSingleValueByIndex hitCacheTimes : " + atomicLong.get());
+                System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
+                System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
+                System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME);
+                System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES);
+            }
         }
-        ctx.addAccessTime();
         long start = System.currentTimeMillis();
+        ctx.addAccessTime();
         ArrayList<ColumnValue> rowArrayList = new ArrayList<>();
         try {
             long longPrevious = index.getPreviousTimeStamp();
@@ -110,6 +114,9 @@ public class TSFileService {
                 }
             }
             if (!rowArrayList.isEmpty()) {
+                if (atomicLong.getAndIncrement() % 100000 == 0) {
+                    System.out.println("hit cache , cost:" + (System.currentTimeMillis() - start) + " ms");
+                }
                 return rowArrayList;
             }
             long offset;
@@ -139,8 +146,10 @@ public class TSFileService {
             if (dataBuffer.position() != 0) {
                 dataBuffer.flip();
             }
-            long endRead = System.currentTimeMillis();
-            StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
+            if ("downSample".equals(queryType)) {
+                long endRead = System.currentTimeMillis();
+                StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
+            }
 
             int i = 0;//多少行
             double[] doubles = null;
@@ -167,8 +176,10 @@ public class TSFileService {
                             e.printStackTrace();
                             System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
-                        long compressEnd = System.currentTimeMillis();
-                        StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                        if ("downSample".equals(queryType)) {
+                            long compressEnd = System.currentTimeMillis();
+                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                        }
                     } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         try {
                             long compressStart = System.currentTimeMillis();
@@ -186,18 +197,24 @@ public class TSFileService {
                             }
                             int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                             value = new ColumnValue.DoubleFloatColumn(doubles[position]);
-                            long compressEnd = System.currentTimeMillis();
-                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                            if ("downSample".equals(queryType)) {
+                                long compressEnd = System.currentTimeMillis();
+                                StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                            }
                         } catch (Exception e) {
                             System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
                     } else {
                         long compressStart = System.currentTimeMillis();
                         long compressEnd = System.currentTimeMillis();
-                        StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                        if ("downSample".equals(queryType)) {
+                            StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
+                        }
                     }
                     long endGetValue = System.currentTimeMillis();
-                    StaticsUtil.GET_VALUE_TIMES.addAndGet(endGetValue - startGetValue);
+                    if ("downSample".equals(queryType)) {
+                        StaticsUtil.GET_VALUE_TIMES.addAndGet(endGetValue - startGetValue);
+                    }
 
                     if (value != null) {
                         rowArrayList.add(value);
@@ -211,7 +228,9 @@ public class TSFileService {
             System.exit(-1);
         }
         long end = System.currentTimeMillis();
-        StaticsUtil.SINGLEVALUE_TOTAL_TIME.getAndAdd(end - start);
+        if ("downSample".equals(queryType)) {
+            StaticsUtil.SINGLEVALUE_TOTAL_TIME.getAndAdd(end - start);
+        }
         return rowArrayList;
     }
 

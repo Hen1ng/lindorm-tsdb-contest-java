@@ -182,27 +182,27 @@ public class MemoryTable {
     }
 
     public Row getFromMemoryTable(Vin vin, Set<String> requestedColumns, int slot) {
-        long start = System.currentTimeMillis();
-        queryLastTimes.getAndIncrement();
-        long totalStringLength = 0;
+//        long start = System.currentTimeMillis();
+//        queryLastTimes.getAndIncrement();
+//        long totalStringLength = 0;
         try {
             Value value = values[slot].get(0);
             final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             for (String requestedColumn : requestedColumns) {
-                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
-                    final ByteBuffer stringValue = value.getColumns().get(requestedColumn).getStringValue();
-                    final ByteBuffer compact = stringValue.slice();
-                    columns.put(requestedColumn, new ColumnValue.StringColumn(compact));
-                } else {
+//                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+//                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
+//                    final ByteBuffer stringValue = value.getColumns().get(requestedColumn).getStringValue();
+//                    final ByteBuffer compact = stringValue.slice();
+//                    columns.put(requestedColumn, new ColumnValue.StringColumn(compact));
+//                } else {
                     columns.put(requestedColumn, value.getColumns().get(requestedColumn));
-                }
+//                }
             }
             return new Row(vin, value.getTimestamp(), columns);
         } finally {
-            if (queryLastTimes.get() % 300000000 == 0) {
-                System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
-            }
+//            if (queryLastTimes.get() % 300000000 == 0) {
+//                System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
+//            }
         }
     }
 
@@ -223,7 +223,7 @@ public class MemoryTable {
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
             return timeRangeRowFromMemoryTable;
         } finally {
-            if (queryTimeRangeTimes.get() % 500000 == 0) {
+            if (queryTimeRangeTimes.get() % 1000000 == 0) {
                 System.out.println("getTimeRangeRow cost: " + (System.currentTimeMillis() - start) + " ms");
             }
 //            spinLockArray[lock].readLock().unlock();

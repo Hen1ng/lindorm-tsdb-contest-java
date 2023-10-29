@@ -16,12 +16,8 @@ import java.util.*;
 
 public class DoubleCompress {
     private static ArrayList<Integer> doubleDelta = new ArrayList<>();
-    private static ArrayList<Integer> toLongCompress = new ArrayList<>();
     private static ArrayList<Integer> corillaList = new ArrayList<>();
 
-    public static final ThreadLocal<ByteBuffer> DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * 8));
-    public static final ThreadLocal<FpcCompressor> FPC_COMPRESSOR_THREAD_LOCAL = ThreadLocal.withInitial(FpcCompressor::new);
-    public static final ThreadLocal<double[]> DESC_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.CACHE_VINS_LINE_NUMS]);
     public static final ThreadLocal<double[]> TOTAL_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.FLOAT_NUMS * Constants.CACHE_VINS_LINE_NUMS]);
 
     static {
@@ -140,23 +136,14 @@ public class DoubleCompress {
         }
         compressor.close();
         ByteBuffer byteBuffer = output.getByteBuffer();
-        int size = compressor.getSize();
-        byte[] bytes = new byte[byteBuffer.position()];
         byteBuffer.flip();
-        byteBuffer.get(bytes, 0, bytes.length);
-        return ByteBuffer.wrap(bytes);
-//        return byteBuffer;
+        return byteBuffer.slice();
     }
 
     public static double[] decodeCorilla(ByteBuffer byteBuffer, int valueSize) {
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
         Decompressor d = new Decompressor(input);
-        List<Double> values = d.getValues();
-        double[] doubles = new double[values.size()];
-        for (int i = 0; i < doubles.length; i++) {
-            doubles[i] = values.get(i);
-        }
-        return doubles;
+        return d.getValues(valueSize);
     }
 
     public static double P3 = 10000;

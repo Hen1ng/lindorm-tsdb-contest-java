@@ -34,7 +34,18 @@ public class Decompressor {
     	}
     	return list;
     }
-    
+
+    public double[] getValues(int size) {
+        double[] doubles = new double[size];
+        int i = 0;
+        Value value = readPair();
+        while (value != null) {
+            doubles[i++] = value.getDoubleValue();
+            value = readPair();
+        }
+        return doubles;
+    }
+
     /**
      * Returns the next pair in the time series, if available.
      *
