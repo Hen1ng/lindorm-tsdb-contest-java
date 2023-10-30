@@ -752,5 +752,13 @@ public class TSFileService {
         return timestampBuffer;
     }
 
+    public void totalCompressInShutDown() {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < Constants.TOTAL_COMPRESS_NUMS; i++) {
+            tsFiles[i].totalCompressInShutDown();
+        }
+        System.out.println("totalCompressInShutDown cost: " + (System.currentTimeMillis() - start));
+    }
+
 }
 

@@ -2,6 +2,9 @@ package com.alibaba.lindorm.contest.util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class StaticsUtil {
@@ -28,6 +31,9 @@ public class StaticsUtil {
 
     public static AtomicLong FIRST_READ_TIME = new AtomicLong(0);
     public static AtomicLong SECOND_READ_TIME = new AtomicLong(0);
+
+    public static Set<String> AGG_QUERY_THREAD = new ConcurrentSkipListSet<>();
+    public static Set<String> DOWNSAMPLE_QUERY_THREAD = new ConcurrentSkipListSet<>();
 
     public static int MAX_INT = Integer.MIN_VALUE;
     public static int MIN_INT = Integer.MAX_VALUE;

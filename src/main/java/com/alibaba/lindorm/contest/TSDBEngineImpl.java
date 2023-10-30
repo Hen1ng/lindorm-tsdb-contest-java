@@ -174,12 +174,13 @@ public class TSDBEngineImpl extends TSDBEngine {
                 submit3.get();
                 submit4.get();
                 submit.get();
-                final List<Object> objects = List.of();
+
 
             }
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
+//            fileService.totalCompressInShutDown();
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);
         }
@@ -250,6 +251,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
         try {
+            StaticsUtil.AGG_QUERY_THREAD.add(Thread.currentThread().getName());
             return executeAggregateQueryByBucket(aggregationReq);
         } catch (Exception e) {
             e.printStackTrace();
@@ -502,6 +504,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
             System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (System.nanoTime() - start1) + "readFileCost " + readFileCost + "accessFile " + accessFile);
+            System.out.println("aggQueryThreads " + StaticsUtil.AGG_QUERY_THREAD.size());
         }
         return rows;
     }
@@ -531,6 +534,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
                 System.out.println("executeDownsampleQuery interval: " + downsampleReq.getInterval());
             }
+            StaticsUtil.DOWNSAMPLE_QUERY_THREAD.add(Thread.currentThread().getName());
             ArrayList<Row> rows = new ArrayList<>();
             final String columnName = downsampleReq.getColumnName();
             final Aggregator aggregator = downsampleReq.getAggregator();
@@ -805,6 +809,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
                 System.out.println("executeDownsampleQuery useTime : " + (endTime - beginTime) + "ns");
                 System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
+                System.out.println("downSampleThread " + StaticsUtil.DOWNSAMPLE_QUERY_THREAD.size());
             }
             return rows;
         } catch (Exception e) {
