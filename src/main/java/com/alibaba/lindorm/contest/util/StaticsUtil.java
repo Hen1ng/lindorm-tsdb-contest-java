@@ -26,6 +26,9 @@ public class StaticsUtil {
     public static AtomicLong GET_VALUE_TIMES = new AtomicLong(0);
     public static int MAX_IDLE_BUFFER = Integer.MAX_VALUE;
 
+    public static AtomicLong FIRST_READ_TIME = new AtomicLong(0);
+    public static AtomicLong SECOND_READ_TIME = new AtomicLong(0);
+
     public static int MAX_INT = Integer.MIN_VALUE;
     public static int MIN_INT = Integer.MAX_VALUE;
 }

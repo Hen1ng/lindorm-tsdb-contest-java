@@ -71,18 +71,20 @@ public class TSFileService {
 
     private AtomicLong atomicLong = new AtomicLong(0);
 
-    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, String columnName, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap, String queryType) {
+    public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, String columnName, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap, String queryType, Map<Long, Long> queryTimeMap) {
         if ("downSample".equals(queryType)) {
             if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
-                System.out.println("getSingleValueByIndex times : " + StaticsUtil.GET_SINGPLE_VALUE_TIMES.get());
-                System.out.println("getSingleValueByIndex hitCacheTimes : " + atomicLong.get());
-                System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME);
+                System.out.println("getSingleValueByIndex times : " + StaticsUtil.GET_SINGPLE_VALUE_TIMES.get() + " ns");
+                System.out.println("getSingleValueByIndex hitCacheTimes : " + atomicLong.get() + " ns");
+                System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME + " ns");
                 System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
-                System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME);
-                System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES);
+                System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME + " ns");
+                System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES + " ns");
+                System.out.println("getSingleValueByIndex FIRST_READ_TIME : " + StaticsUtil.FIRST_READ_TIME.get() + " ns");
+                System.out.println("getSingleValueByIndex SECOND_READ_TIME : " + StaticsUtil.SECOND_READ_TIME.get() + " ns");
             }
         }
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
         ctx.addAccessTime();
         ArrayList<ColumnValue> rowArrayList = new ArrayList<>();
         try {
@@ -115,7 +117,7 @@ public class TSFileService {
             }
             if (!rowArrayList.isEmpty()) {
                 if (atomicLong.getAndIncrement() % 100000 == 0) {
-                    System.out.println("hit cache , cost:" + (System.currentTimeMillis() - start) + " ms");
+                    System.out.println("hit cache , cost:" + (System.nanoTime() - start) + " ns");
                 }
                 return rowArrayList;
             }
@@ -133,21 +135,28 @@ public class TSFileService {
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
             ByteBuffer dataBuffer;
-            long startRead = System.currentTimeMillis();
-            if (map != null && (dataBuffer = map.get(offset)) != null) {
+            long startRead = System.nanoTime();
+            if (map != null && map.containsKey(offset)) {
+                long s = System.nanoTime();
+                dataBuffer = ByteBuffer.allocate(length);
+                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
                 ctx.addHitTime();
+                long useTime = System.nanoTime() - s;
+                StaticsUtil.SECOND_READ_TIME.getAndAdd(useTime);
             } else {
+                long s = System.nanoTime();
                 dataBuffer = ByteBuffer.allocate(length);
                 tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
                 if (map != null) {
                     map.put(offset, dataBuffer);
+                    StaticsUtil.FIRST_READ_TIME.getAndAdd((System.nanoTime() - s));
                 }
             }
             if (dataBuffer.position() != 0) {
                 dataBuffer.flip();
             }
             if ("downSample".equals(queryType)) {
-                long endRead = System.currentTimeMillis();
+                long endRead = System.nanoTime();
                 StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
             }
 
@@ -156,10 +165,10 @@ public class TSFileService {
             Map<Integer, int[]> intMap = null;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
-                    long startGetValue = System.currentTimeMillis();
+                    long startGetValue = System.nanoTime();
                     value = null;
                     if (columnIndex < Constants.INT_NUMS) {
-                        long compressStart = System.currentTimeMillis();
+                        long compressStart = System.nanoTime();
                         try {
                             if (intMap == null) {
                                 int intCompressLength = dataBuffer.getShort();
@@ -177,12 +186,12 @@ public class TSFileService {
                             System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
                         if ("downSample".equals(queryType)) {
-                            long compressEnd = System.currentTimeMillis();
+                            long compressEnd = System.nanoTime();
                             StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
                         }
                     } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         try {
-                            long compressStart = System.currentTimeMillis();
+                            long compressStart = System.nanoTime();
                             if (doubles == null) {
                                 int doubleCompressInt = dataBuffer.getShort();
                                 final byte[] allocate1 = new byte[doubleCompressInt];
@@ -198,20 +207,20 @@ public class TSFileService {
                             int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                             value = new ColumnValue.DoubleFloatColumn(doubles[position]);
                             if ("downSample".equals(queryType)) {
-                                long compressEnd = System.currentTimeMillis();
+                                long compressEnd = System.nanoTime();
                                 StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
                             }
                         } catch (Exception e) {
                             System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
                     } else {
-                        long compressStart = System.currentTimeMillis();
-                        long compressEnd = System.currentTimeMillis();
+                        long compressStart = System.nanoTime();
+                        long compressEnd = System.nanoTime();
                         if ("downSample".equals(queryType)) {
                             StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
                         }
                     }
-                    long endGetValue = System.currentTimeMillis();
+                    long endGetValue = System.nanoTime();
                     if ("downSample".equals(queryType)) {
                         StaticsUtil.GET_VALUE_TIMES.addAndGet(endGetValue - startGetValue);
                     }
@@ -227,7 +236,7 @@ public class TSFileService {
             System.out.println("getByIndexV2 e" + e);
             System.exit(-1);
         }
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
         if ("downSample".equals(queryType)) {
             StaticsUtil.SINGLEVALUE_TOTAL_TIME.getAndAdd(end - start);
         }
