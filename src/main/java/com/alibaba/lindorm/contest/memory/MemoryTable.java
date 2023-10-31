@@ -181,6 +181,18 @@ public class MemoryTable {
         return null;
     }
 
+    public Row getLastRow(Vin vin, int[] queryColumns, Set<String> requestedColumns ) {
+        Integer i = VinDictMap.get(vin);
+        Value value = values[i].get(0);
+        final Map<String, ColumnValue> columns = new HashMap<>(queryColumns.length);
+        int j = 0;
+        for (String requestedColumn : requestedColumns) {
+            columns.put(requestedColumn, value.getColumnValues()[j]);
+            j++;
+        }
+        return new Row(vin, value.getTimestamp(), columns);
+    }
+
     public Row getFromMemoryTable(Vin vin, Set<String> requestedColumns, int slot) {
 //        long start = System.currentTimeMillis();
 //        queryLastTimes.getAndIncrement();
@@ -419,6 +431,14 @@ public class MemoryTable {
                 }
                 final List<Value> valueSortedList = this.values[i];
                 final Value value = new Value(timestamp, row.getColumns());
+                ColumnValue[] columnValues = new ColumnValue[60];
+                for (Map.Entry<String, ColumnValue> entry : row.getColumns().entrySet()) {
+                    final String key = entry.getKey();
+                    final ColumnValue value1 = entry.getValue();
+                    final int indexByColumn = SchemaUtil.getIndexByColumn(key);
+                    columnValues[indexByColumn] = value1;
+                }
+                value.setColumnValues(columnValues);
                 valueSortedList.add(value);
             }
             System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");

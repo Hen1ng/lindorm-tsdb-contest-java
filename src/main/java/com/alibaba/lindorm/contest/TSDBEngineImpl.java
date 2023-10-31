@@ -209,23 +209,34 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
     }
 
+    private static final ThreadLocal<ArrayList<Row>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(() -> new ArrayList<>(60));
+    private static final ThreadLocal<int[]> INT_ARRAY_THREADLOCAL = ThreadLocal.withInitial(() -> new int[60]);
     @Override
     public ArrayList<Row> executeLatestQuery(LatestQueryRequest pReadReq) throws IOException {
         try {
-            ArrayList<Row> rows = new ArrayList<>();
+            ArrayList<Row> rows = LIST_THREAD_VALUE_LOCAL.get();
+            rows.clear();
+//            final int size = pReadReq.getRequestedColumns().size();
+            final int[] ints = INT_ARRAY_THREADLOCAL.get();
+            int i = 0;
+            for (String requestedColumn : pReadReq.getRequestedColumns()) {
+                ints[i] = SchemaUtil.getIndexByColumn(requestedColumn);
+                i++;
+            }
             for (Vin vin : pReadReq.getVins()) {
-                final Row lastRow = memoryTable.getLastRow(vin, pReadReq.getRequestedColumns());
+                Row lastRow = memoryTable.getLastRow(vin, ints, pReadReq.getRequestedColumns());
+//                final Row lastRow = memoryTable.getLastRow(vin, pReadReq.getRequestedColumns());
                 if (lastRow != null) {
                     rows.add(lastRow);
                 }
             }
-            executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
-            if (executeLatestQueryTimes.incrementAndGet() % 5000000 == 0) {
-                System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
-                for (String requestedColumn : pReadReq.getRequestedColumns()) {
-                    System.out.print(requestedColumn + ", ");
-                }
-            }
+//            executeLatestQueryVinsSize.getAndAdd(pReadReq.getVins().size());
+//            if (executeLatestQueryTimes.incrementAndGet() % 5000000 == 0) {
+//                System.out.println("executeLatestQuery query vin size:" + pReadReq.getVins().size() + "querySize: " + pReadReq.getRequestedColumns().size());
+//                for (String requestedColumn : pReadReq.getRequestedColumns()) {
+//                    System.out.print(requestedColumn + ", ");
+//                }
+//            }
             return rows;
         } catch (Exception e) {
             System.out.println("executeLatestQuery error, e" + e);
