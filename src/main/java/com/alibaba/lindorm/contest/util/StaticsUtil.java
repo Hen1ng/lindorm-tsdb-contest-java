@@ -35,6 +35,10 @@ public class StaticsUtil {
     public static Set<String> AGG_QUERY_THREAD = new ConcurrentSkipListSet<>();
     public static Set<String> DOWNSAMPLE_QUERY_THREAD = new ConcurrentSkipListSet<>();
 
+    public static AtomicLong AGG_TOTAL_TIME = new AtomicLong(0);
+    public static AtomicLong DOWNSAMPLE_TOTAL_TIME = new AtomicLong(0);
+
+
     public static int MAX_INT = Integer.MIN_VALUE;
     public static int MIN_INT = Integer.MAX_VALUE;
 }

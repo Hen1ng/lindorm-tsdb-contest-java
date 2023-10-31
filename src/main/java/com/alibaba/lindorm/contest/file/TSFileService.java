@@ -94,33 +94,33 @@ public class TSFileService {
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
             final int columnIndex = SchemaUtil.getIndexByColumn(columnName);
             ColumnValue value = null;
-            if (cacheDataMap != null) {
-                final TSDBEngineImpl.CacheData cacheData = cacheDataMap.get(index.getOffset());
-                if (cacheData != null) {
-                    ctx.addHitTime();
-                    int m = 0;
-                    for (long aLong : decompress) {
-                        if (aLong >= timeLowerBound && aLong < timeUpperBound) {
-                            if (columnIndex < Constants.INT_NUMS) {
-                                final int[] ints1 = cacheData.ints;
-                                value = new ColumnValue.IntegerColumn(ints1[m]);
-                            } else {
-                                double[] doubles = cacheData.doubles;
-                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + m);
-                                value = new ColumnValue.DoubleFloatColumn(doubles[position]);
-                            }
-                            rowArrayList.add(value);
-                        }
-                        m++;
-                    }
-                }
-            }
-            if (!rowArrayList.isEmpty()) {
-                if (atomicLong.getAndIncrement() % 100000 == 0) {
-                    System.out.println("hit cache , cost:" + (System.nanoTime() - start) + " ns");
-                }
-                return rowArrayList;
-            }
+//            if (cacheDataMap != null) {
+//                final TSDBEngineImpl.CacheData cacheData = cacheDataMap.get(index.getOffset());
+//                if (cacheData != null) {
+//                    ctx.addHitTime();
+//                    int m = 0;
+//                    for (long aLong : decompress) {
+//                        if (aLong >= timeLowerBound && aLong < timeUpperBound) {
+//                            if (columnIndex < Constants.INT_NUMS) {
+//                                final int[] ints1 = cacheData.ints;
+//                                value = new ColumnValue.IntegerColumn(ints1[m]);
+//                            } else {
+//                                double[] doubles = cacheData.doubles;
+//                                int position = ((columnIndex - Constants.INT_NUMS) * valueSize + m);
+//                                value = new ColumnValue.DoubleFloatColumn(doubles[position]);
+//                            }
+//                            rowArrayList.add(value);
+//                        }
+//                        m++;
+//                    }
+//                }
+//            }
+//            if (!rowArrayList.isEmpty()) {
+//                if (atomicLong.getAndIncrement() % 100000 == 0) {
+//                    System.out.println("hit cache , cost:" + (System.nanoTime() - start) + " ns");
+//                }
+//                return rowArrayList;
+//            }
             long offset;
             int length;
             List<Integer> intColumnIndex = new ArrayList<>();
@@ -136,22 +136,22 @@ public class TSFileService {
             final TSFile tsFile = getTsFileByIndex(m);
             ByteBuffer dataBuffer;
             long startRead = System.nanoTime();
-            if (map != null && map.containsKey(offset)) {
+//            if (map != null && map.containsKey(offset)) {
+//                long s = System.nanoTime();
+//                dataBuffer = ByteBuffer.allocate(length);
+//                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+//                ctx.addHitTime();
+//                long useTime = System.nanoTime() - s;
+//                StaticsUtil.SECOND_READ_TIME.getAndAdd(useTime);
+//            } else {
                 long s = System.nanoTime();
                 dataBuffer = ByteBuffer.allocate(length);
                 tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-                ctx.addHitTime();
-                long useTime = System.nanoTime() - s;
-                StaticsUtil.SECOND_READ_TIME.getAndAdd(useTime);
-            } else {
-                long s = System.nanoTime();
-                dataBuffer = ByteBuffer.allocate(length);
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
-                if (map != null) {
-                    map.put(offset, dataBuffer);
-                    StaticsUtil.FIRST_READ_TIME.getAndAdd((System.nanoTime() - s));
-                }
-            }
+//                if (map != null) {
+//                    map.put(offset, dataBuffer);
+//                    StaticsUtil.FIRST_READ_TIME.getAndAdd((System.nanoTime() - s));
+//                }
+//            }
             if (dataBuffer.position() != 0) {
                 dataBuffer.flip();
             }

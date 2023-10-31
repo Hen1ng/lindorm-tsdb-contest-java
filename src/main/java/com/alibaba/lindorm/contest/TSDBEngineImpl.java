@@ -251,7 +251,6 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public ArrayList<Row> executeAggregateQuery(TimeRangeAggregationRequest aggregationReq) throws IOException {
         try {
-            StaticsUtil.AGG_QUERY_THREAD.add(Thread.currentThread().getName());
             return executeAggregateQueryByBucket(aggregationReq);
         } catch (Exception e) {
             e.printStackTrace();
@@ -502,9 +501,10 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.out.println("executeAggregateQuery aggregator error, not support");
                 System.exit(-1);
         }
+        long gap = System.nanoTime() - start1;
+        StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
         if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
-            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (System.nanoTime() - start1) + "readFileCost " + readFileCost + "accessFile " + accessFile);
-            System.out.println("aggQueryThreads " + StaticsUtil.AGG_QUERY_THREAD.size());
+            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns");
         }
         return rows;
     }
@@ -531,15 +531,11 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public ArrayList<Row> executeDownsampleQuery(TimeRangeDownsampleRequest downsampleReq) throws IOException {
         try {
-            if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
-                System.out.println("executeDownsampleQuery interval: " + downsampleReq.getInterval());
-            }
-            StaticsUtil.DOWNSAMPLE_QUERY_THREAD.add(Thread.currentThread().getName());
+            long beginTime = System.nanoTime();
             ArrayList<Row> rows = new ArrayList<>();
             final String columnName = downsampleReq.getColumnName();
             final Aggregator aggregator = downsampleReq.getAggregator();
             final long interval = downsampleReq.getInterval();
-            long beginTime = System.nanoTime();
             final Vin vin = downsampleReq.getVin();
             final long timeLowerBound = downsampleReq.getTimeLowerBound();
             final long timeUpperBound = downsampleReq.getTimeUpperBound();
@@ -551,9 +547,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             int i1 = VinDictMap.get(vin);
             int i = 0;
             Context ctx = new Context(0, 0);
-            Map<Long, ByteBuffer> bufferMap = new HashMap<>(32);
+            Map<Long, ByteBuffer> bufferMap = null;
             Map<Long, CacheData> cacheDataMap = null;
-            Map<Long, Long> queryTimeMap = new HashMap<>(32);
+            Map<Long, Long> queryTimeMap = null;
             long readFileTime = 0;
             while (timeLowerBound + i * interval < timeUpperBound) {
                 Map<String, ColumnValue> columns = new HashMap<>(1);
@@ -803,13 +799,14 @@ public class TSDBEngineImpl extends TSDBEngine {
                 rows.add(new Row(vin, startTime, columns));
             }
             long endTime = System.nanoTime();
-            if (executeDownsampleQueryTimes.get() % 100000 == 0) {
-                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
-                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
-                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
-                System.out.println("executeDownsampleQuery useTime : " + (endTime - beginTime) + "ns");
-                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
-                System.out.println("downSampleThread " + StaticsUtil.DOWNSAMPLE_QUERY_THREAD.size());
+            long gap = endTime - beginTime;
+            StaticsUtil.DOWNSAMPLE_TOTAL_TIME.getAndAdd(gap);
+            if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
+//                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
+//                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
+//                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
+                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns");
+//                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
             }
             return rows;
         } catch (Exception e) {
