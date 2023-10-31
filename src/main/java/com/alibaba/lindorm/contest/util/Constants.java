@@ -37,6 +37,9 @@ public class Constants {
     public static final int TOTAL_BUFFER_NUMS = 1200;
     public static final int TOTAL_COMPRESS_NUMS = 1;
 
+    public static final int TOTAL_BUCKET = 600000;
+
+
     public static final boolean OPEN_DOWNSAMPLE_BYPUCKET_OPT = true;
 
 

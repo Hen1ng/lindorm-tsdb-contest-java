@@ -1,5 +1,7 @@
 package com.alibaba.lindorm.contest.index;
 
+import com.alibaba.lindorm.contest.util.Constants;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BucketArrayFactory {
@@ -16,7 +18,11 @@ public class BucketArrayFactory {
 
     public AggBucket getAggBucket() {
         try {
-            return aggBucketArray[position.getAndIncrement()];
+            final int andIncrement = position.getAndIncrement();
+            if (andIncrement > Constants.TOTAL_BUCKET) {
+                return null;
+            }
+            return aggBucketArray[andIncrement];
         } catch (Exception e) {
             System.out.println("get aggBucket error position:" + position.get());
             System.exit(-1);

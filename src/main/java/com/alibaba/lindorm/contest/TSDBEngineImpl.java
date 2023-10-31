@@ -113,6 +113,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (RestartUtil.IS_FIRST_START) {
 
         } else {
+            fileService.loadBucket();
+            MapIndex.loadBigBucket();
             memoryTable.loadLastTsToMemory();
         }
         System.gc();

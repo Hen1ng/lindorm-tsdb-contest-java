@@ -13,11 +13,14 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.github.luben.zstd.Zstd;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
 import static com.alibaba.lindorm.contest.util.Constants.isBigString;
 
 
@@ -615,11 +618,15 @@ public class TSFileService {
                     final int columnIndex = SchemaUtil.COLUMNS_INDEX_ARRAY[i.getAndIncrement()];
                     if (columnIndex < Constants.INT_NUMS) {
                         int integerValue = columnValue.getIntegerValue();
-                        aggBucket.updateInt(integerValue, columnIndex);
+                        if (aggBucket != null) {
+                            aggBucket.updateInt(integerValue, columnIndex);
+                        }
                         ints[columnIndex * valueSize + finalL] = integerValue;
                     } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                         final double doubleFloatValue = columnValue.getDoubleFloatValue();
-                        aggBucket.updateDouble(doubleFloatValue, columnIndex);
+                        if (aggBucket != null) {
+                            aggBucket.updateDouble(doubleFloatValue, columnIndex);
+                        }
                         doubles[(columnIndex - Constants.INT_NUMS) * valueSize + finalL] = doubleFloatValue;
                     } else {
                         final ByteBuffer stringValue = columnValue.getStringValue();
@@ -758,6 +765,96 @@ public class TSFileService {
             tsFiles[i].totalCompressInShutDown();
         }
         System.out.println("totalCompressInShutDown cost: " + (System.currentTimeMillis() - start));
+    }
+
+    public void loadBucket() {
+        long startTime = System.currentTimeMillis();
+        ExecutorService executorService = new ThreadPoolExecutor(500, 600,
+                2L, TimeUnit.MINUTES, new LinkedBlockingQueue<>(100));
+        int batch = Constants.TS_FILE_NUMS * 4;
+        List<IndexListWrapper>[] indexWrapperList = new ArrayList[batch];
+        for (int i = 0; i < batch; i++) {
+            indexWrapperList[i] = new ArrayList<>();
+        }
+        for (int i = 0; i < INDEX_ARRAY.length; i++) {
+            indexWrapperList[i % batch].add(new IndexListWrapper(INDEX_ARRAY[i], i));
+        }
+        try {
+            final CountDownLatch countDownLatch = new CountDownLatch(batch);
+            AtomicInteger atomicInteger = new AtomicInteger(0);
+            for (int i = 0; i < indexWrapperList.length; i++) {
+                final List<IndexListWrapper> indices = indexWrapperList[i];
+                executorService.submit(() -> {
+                    try {
+                        for (IndexListWrapper indexListWrapper : indices) {
+                            for (Index index : indexListWrapper.indexList) {
+                                if (index.getAggBucket() != null) {
+                                    continue;
+                                }
+                                final int bigStringOffset = index.getBigStringOffset();
+                                final long offset = index.getOffset();
+                                final TSFile tsFileByIndex = getTsFileByIndex(indexListWrapper.i % Constants.TS_FILE_NUMS);
+                                final ByteBuffer allocate = ByteBuffer.allocate(bigStringOffset);
+                                tsFileByIndex.getFromOffsetByFileChannel(allocate, offset);
+                                allocate.flip();
+                                int intCompressLength = allocate.getShort();
+                                int doubleCompressInt = allocate.getShort(intCompressLength + 2);
+                                byte[] allocate1 = new byte[intCompressLength];
+                                allocate.position(2);
+                                allocate.get(allocate1);
+                                int[] ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                allocate1 = new byte[doubleCompressInt];
+                                allocate.position(
+                                        +intCompressLength + 2
+                                                + 2);
+                                allocate.get(allocate1);
+                                double[] doubles = new double[0];
+                                try {
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * index.getValueSize(), index.getValueSize());
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                final AggBucket aggBucket = new AggBucket();
+                                for (int i1 = 0; i1 < doubles.length; i1++) {
+                                    int columnIndex = i1 / Constants.CACHE_VINS_LINE_NUMS + Constants.INT_NUMS;
+                                    aggBucket.updateDouble(doubles[i1], columnIndex);
+
+                                }
+                                for (int i1 = 0; i1 < ints.length; i1++) {
+                                    int columnIndex = i1 / Constants.CACHE_VINS_LINE_NUMS;
+                                    aggBucket.updateInt(ints[i1], columnIndex);
+                                }
+                                index.setAggBucket(aggBucket);
+                                if (atomicInteger.getAndIncrement() % 100000 == 0) {
+                                    System.out.println("load bucket num" + atomicInteger.get());
+                                }
+                            }
+
+                        }
+                    } catch (Exception e) {
+                        System.out.println("loadBucket error" + e);
+                        e.printStackTrace();
+                    } finally {
+                        countDownLatch.countDown();
+
+                    }
+                });
+            }
+            countDownLatch.await();
+            System.out.println("loadBucket cost: " + (System.currentTimeMillis() - startTime) + " ms");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static class IndexListWrapper {
+        List<Index> indexList;
+        int i;
+
+        public IndexListWrapper(List<Index> indexList, int i) {
+            this.indexList = indexList;
+            this.i = i;
+        }
     }
 
 }

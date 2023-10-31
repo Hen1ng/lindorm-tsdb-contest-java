@@ -89,7 +89,7 @@ public class QueryTest {
                 columnTypeMap.put(key, ColumnValue.ColumnType.COLUMN_TYPE_STRING);
 
             }
-            boolean write = true;
+            boolean write = false;
             if (write) {
                 Schema schema = new Schema(columnTypeMap);
                 tsdbEngineSample.connect();

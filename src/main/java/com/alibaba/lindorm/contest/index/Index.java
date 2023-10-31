@@ -38,6 +38,10 @@ public class Index {
         this.doubleLength = doubleLength;
     }
 
+    public void setAggBucket(AggBucket aggBucket) {
+        this.aggBucket = aggBucket;
+    }
+
     private AggBucket aggBucket;
 
     public int getValueSize() {
@@ -117,7 +121,11 @@ public class Index {
     }
 
     public byte[] bytes() {
-        byte[] bytes = aggBucket.bytes();
+
+        byte[] bytes = new byte[0];
+        if (aggBucket!= null) {
+            bytes = aggBucket.bytes();
+        }
         ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6+8+2+timeStampBytes.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
@@ -142,9 +150,14 @@ public class Index {
 //        bytes = gzipCompress.deCompress(bytes);
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
         int aggBucketLength = wrap.getInt();
-        byte[] aggBytes = new byte[aggBucketLength];
-        wrap.get(aggBytes, 0, aggBucketLength);
-        AggBucket aggBucket = AggBucket.uncompress(aggBytes);
+        AggBucket aggBucket;
+        if (aggBucketLength == 0) {
+            aggBucket = null;
+        } else {
+            byte[] aggBytes = new byte[aggBucketLength];
+            wrap.get(aggBytes, 0, aggBucketLength);
+            aggBucket = AggBucket.uncompress(aggBytes);
+        }
         long offset = wrap.getLong();
         long maxTimeStamp = wrap.getLong();
         long minTimeStamp = wrap.getLong();
