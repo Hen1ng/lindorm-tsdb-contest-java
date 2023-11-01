@@ -348,9 +348,10 @@ public class TSFileService {
                                     off = 30 * valueSize + i * 100;
                                     bigStringSize = 100;
                                 }
-                                byte[] dest = new byte[bigStringSize];
-                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
-                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(dest)));
+//                                byte[] dest = new byte[bigStringSize];
+//                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
+//                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(dest)));
+                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(bigStringBytes, off, bigStringSize)));
                             } else {
                                 if (stringLengthBuffer == null) {
                                     everyStringLength = dataBuffer.getShort(
@@ -493,9 +494,9 @@ public class TSFileService {
                                     off = 30 * valueSize + i * 100;
                                     bigStringSize = 100;
                                 }
-                                byte[] dest = new byte[bigStringSize];
-                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
-                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(dest)));
+//                                byte[] dest = new byte[bigStringSize];
+//                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
+                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(bigStringBytes, off, bigStringSize)));
                             } else {
                                 if (stringLengthBuffer == null) {
                                     everyStringLength = dataBuffer.getShort(

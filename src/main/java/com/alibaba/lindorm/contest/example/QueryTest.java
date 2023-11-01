@@ -128,7 +128,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "rTSHN9W1RthQSB6Rf";
+                String v = "ddUuAM0ibh7AvXgo7";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
@@ -159,8 +159,8 @@ public class QueryTest {
                 queryList.add("9double");
                 final ArrayList<Vin> vins1 = new ArrayList<>(VinDictMap.getVinDictMap().keySet());
 
-//                final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
-//                final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
+                final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
+                final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
                 final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
                 ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
 //                final TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "7double", 0, Long.MAX_VALUE, Aggregator.MAX);

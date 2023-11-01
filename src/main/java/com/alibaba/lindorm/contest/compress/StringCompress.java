@@ -254,7 +254,7 @@ public class StringCompress {
         stringLengthBuffer.flip();
         byte[] decompress1 = Zstd.decompress(bytes, totalLength);
         ByteBuffer wrap = ByteBuffer.wrap(decompress1);
-        ArrayList<ByteBuffer> byteBuffers = new ArrayList<>();
+        ArrayList<ByteBuffer> byteBuffers = new ArrayList<>(valueSize * 8);
         byte[] compressType = new byte[2];
         wrap.get(compressType, 0, 2);
         BitSet compressTypeBitSet = BitSet.valueOf(compressType);
