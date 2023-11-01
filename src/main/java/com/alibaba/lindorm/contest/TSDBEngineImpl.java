@@ -113,8 +113,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (RestartUtil.IS_FIRST_START) {
 
         } else {
-            fileService.loadBucket();
+//            fileService.loadBucket();
             MapIndex.loadBigBucket();
+            fileService.recoverFile();
             memoryTable.loadLastTsToMemory();
         }
         System.gc();
@@ -182,7 +183,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             for (TSFile tsFile : fileService.getTsFiles()) {
                 System.out.println("tsFile: " + tsFile.getFileName() + "position: " + tsFile.getPosition().get());
             }
-//            fileService.totalCompressInShutDown();
+            fileService.totalCompressInShutDown();
         } catch (Exception e) {
             System.out.println("shutdown error, e" + e);
         }

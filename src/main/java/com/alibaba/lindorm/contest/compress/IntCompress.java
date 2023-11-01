@@ -463,11 +463,11 @@ public class IntCompress {
         for (ByteBuffer byteBuffer : arrayList) {
             allocate.put(byteBuffer.array());
         }
-        byte[] compress = Zstd.compress(allocate.array(), 3);
+//        byte[] compress = Zstd.compress(allocate.array(), 3);
 //        byte[] compress = allocate.array();
-        ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
+        ByteBuffer buffer = ByteBuffer.allocate(4 + allocate.array().length);
         buffer.putInt(allocate.array().length);
-        buffer.put(compress);
+        buffer.put(allocate.array());
         return buffer.array();
     }
 
@@ -573,10 +573,10 @@ public class IntCompress {
     public static int[] decompress4(byte[] bytes, int valueSize) {
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
         int anInt = wrap.getInt();
-        byte[] bytes1 = new byte[bytes.length - 4];
-        wrap.get(bytes1, 0, bytes1.length);
+        byte[] decompress = new byte[bytes.length - 4];
+        wrap.get(decompress, 0, decompress.length);
 //        byte[] decompress = bytes1;
-        byte[] decompress = Zstd.decompress(bytes1, anInt);
+//        byte[] decompress = Zstd.decompress(bytes1, anInt);
         ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
         byte[] compressType = new byte[5];
         int[] result = new int[valueSize * 40];

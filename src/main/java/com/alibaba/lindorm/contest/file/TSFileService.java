@@ -768,6 +768,16 @@ public class TSFileService {
         System.out.println("totalCompressInShutDown cost: " + (System.currentTimeMillis() - start));
     }
 
+    public void recoverFile() {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < Constants.TOTAL_COMPRESS_NUMS; i++) {
+            tsFiles[i].recoverFile();
+        }
+        System.out.println("recoverFile cost: " + (System.currentTimeMillis() - start));
+    }
+
+
+
     public void loadBucket() {
         long startTime = System.currentTimeMillis();
         ExecutorService executorService = new ThreadPoolExecutor(500, 600,

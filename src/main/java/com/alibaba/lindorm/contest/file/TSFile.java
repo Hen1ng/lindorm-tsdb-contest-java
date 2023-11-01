@@ -4,6 +4,7 @@ import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.ZlibCompress;
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.RestartUtil;
+import com.github.luben.zstd.Zstd;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -155,11 +156,35 @@ public class TSFile {
     }
 
     public void totalCompressInShutDown() {
-        final ByteBuffer allocate = ByteBuffer.allocate((int) (this.position.get() - initPosition));
-        getFromOffsetByFileChannel(allocate, initPosition);
-        final byte[] array1 = allocate.array();
-        final ZlibCompress gzipCompress = new ZlibCompress();
-        final byte[] compress = gzipCompress.compress(array1);
-        System.out.println("totalCompressInShutDown before size :" + array1.length + " after size :" + compress.length);
+        try {
+            final ByteBuffer allocate = ByteBuffer.allocate((int) (this.position.get() - initPosition));
+            getFromOffsetByFileChannel(allocate, initPosition);
+            final byte[] array1 = allocate.array();
+//        final ZlibCompress gzipCompress = new ZlibCompress();
+            final byte[] compress = Zstd.compress(array1, 12);
+            file.delete();
+            file.createNewFile();
+            fileChannel.write(ByteBuffer.wrap(compress));
+            System.out.println("totalCompressInShutDown before size :" + array1.length + " after size :" + compress.length);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void recoverFile() {
+        long start = System.currentTimeMillis();
+        try {
+            final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
+            final ByteBuffer allocate = ByteBuffer.allocate((int) position);
+            getFromOffsetByFileChannel(allocate, initPosition);
+            final byte[] decompress = Zstd.decompress(allocate.array(), allocate.capacity());
+            file.delete();
+            file.createNewFile();
+            fileChannel.write(ByteBuffer.wrap(decompress));
+            System.out.println("recoverFile fileName:" + fileName + " cost: " + (System.currentTimeMillis() - start) + " ms");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 }
