@@ -467,7 +467,7 @@ public class IntCompress {
                     invMap.put(count, ints[start]);
                     count++;
                 }
-                if (map.size() > 16) {
+                if (map.size() > 64) {
                     isUseMap = false;
                     break;
                 }
@@ -476,10 +476,12 @@ public class IntCompress {
                 setBit(batchIndex, compressType);
                 // write dict
                 byte dictSize = (byte) map.size();
-                if (dictSize > 4) dictSize = 16;
+                if (dictSize > 16) dictSize = 64;
+                else if (dictSize > 4) dictSize = 16;
 //                else if (dictSize > 4) dictSize = 8;
                 else if (dictSize > 2) dictSize = 4;
                 int bitSize = valueSize;
+                if (dictSize == 64) bitSize *= 8;
                 if (dictSize == 16) bitSize *= 4;
                 if (dictSize == 8) bitSize *= 3;
                 if (dictSize == 4) bitSize *= 2;
@@ -530,6 +532,14 @@ public class IntCompress {
                         for (int j = start+1; j < start + valueSize; j++) {
                             Integer i = map.get(ints[j]);
                             setFourBit(bitSet, j - start, i);
+                        }
+                        allocate.put(bitSet);
+                    }
+                    else if (dictSize == 64) {
+                        byte[] bitSet = new byte[UpperBoundByte(bitSize)];
+                        for (int j = start+1; j < start + valueSize; j++) {
+                            int i = map.get(ints[j]);
+                            bitSet[j-start] = (byte) i;
                         }
                         allocate.put(bitSet);
                     }
@@ -720,6 +730,13 @@ public class IntCompress {
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         int ix = getFourBit(indexBit, j);
+                        result[i * valueSize + j] = dict.get(ix);
+                    }
+                }else if (dictSize == 64) {
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize * 8)];
+                    wrap1.get(indexBit, 0, indexBit.length);
+                    for (int j = 1; j < valueSize; j++) {
+                        int ix = indexBit[j];
                         result[i * valueSize + j] = dict.get(ix);
                     }
                 }
