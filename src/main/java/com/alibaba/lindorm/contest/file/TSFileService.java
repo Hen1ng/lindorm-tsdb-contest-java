@@ -113,7 +113,7 @@ public class TSFileService {
                 ByteBuffer header = ByteBuffer.wrap(doubleHeader);
                 int doubleDeltaLength = header.getInt();
                 int corrilaLength = header.getInt();
-                if (DoubleCompress.doubleDelta.contains(columnIndex)) {
+                if (DoubleCompress.doubleDelta.contains(columnIndex-40)) {
                     offset += 2;
                     length = doubleDeltaLength;
                 } else {
@@ -173,7 +173,7 @@ public class TSFileService {
                             value = new ColumnValue.IntegerColumn(ints1[i]);
                         } catch (Exception e) {
                             e.printStackTrace();
-                            System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                            System.out.println("getSingleValueByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
                         if ("downSample".equals(queryType)) {
                             long compressEnd = System.nanoTime();
@@ -195,7 +195,8 @@ public class TSFileService {
                                 StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
                             }
                         } catch (Exception e) {
-                            System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                            e.printStackTrace();
+                            System.out.println("getSingleValueByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
                     } else {
                         long compressStart = System.nanoTime();

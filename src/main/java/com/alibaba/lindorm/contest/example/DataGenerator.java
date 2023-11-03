@@ -2,7 +2,9 @@ package com.alibaba.lindorm.contest.example;
 
 import com.alibaba.lindorm.contest.TSDBEngineImpl;
 import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
+import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.structs.*;
 import com.alibaba.lindorm.contest.util.MemoryUtil;
 
@@ -105,7 +107,9 @@ public class DataGenerator {
         Set<String> requestedColumns = new HashSet<>(Arrays.asList(columnsName));
         Vin vin = vins[random.nextInt(1)];
         Set<String> request = new HashSet<>();
-        request.add("QZZS");
+        for(int i=40;i<51;i++){
+            request.add(columnsName[i]);
+        }
         int time = random.nextInt(36000 - 300);
         long timeLower = timeStamp[time];
         long timeUpper = timeStamp[time + 300];
@@ -156,14 +160,15 @@ public class DataGenerator {
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start + 3600] + randomTime;
         int i = random.nextInt(4);
+        String columnName = columnsName[40+random.nextInt(10)];
         if (i == 1) {
-            return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 2) {
-            return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 3) {
-            return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
         }
-        return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+        return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
     }
 
     public static void main(String[] args) {
@@ -251,6 +256,9 @@ public class DataGenerator {
                 executorService.shutdownNow();  // 如果当前线程被中断，也尝试强制关闭线程池
             }
             tsdbEngineSample.shutdown();
+            for (List<Index> indices : MapIndex.INDEX_ARRAY) {
+                indices.clear();
+            }
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            TimeRangeQuery(tsdbEngine);
@@ -305,8 +313,9 @@ public class DataGenerator {
             TimeRangeQueryRequest latestQueryRequest = genTimeRangeQueryRequest();
             ArrayList<Row> rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
             for (Row row : rows) {
-                int qzzs = row.getColumns().get("QZZS").getIntegerValue();
-                System.out.println(qzzs);
+                for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
+                    System.out.println(stringColumnValueEntry.getValue());
+                }
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 
@@ -381,11 +390,11 @@ public class DataGenerator {
                 if (row.getTimestamp() != ansRow.getTimestamp()) {
                     System.out.println("timeStamp error");
                 }
-                if (!row.getColumns().get("SOC").equals(ansRow.getColumns().get("SOC"))) {
-                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("SOC") + " but got : " + row.getColumns().get("SOC"));
-                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
-                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
-                }
+//                if (!row.getColumns().get("SOC").equals(ansRow.getColumns().get("SOC"))) {
+//                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("SOC") + " but got : " + row.getColumns().get("SOC"));
+//                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
+//                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
+//                }
             }
             if (i % 100 == 0) {
                 MemoryUtil.printJVMHeapMemory();
