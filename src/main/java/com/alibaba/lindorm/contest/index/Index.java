@@ -138,7 +138,7 @@ public class Index {
         if (aggBucket != null) {
             bytes = aggBucket.bytes();
         }
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6 + 8 + 2 + timeStampBytes.length);
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
