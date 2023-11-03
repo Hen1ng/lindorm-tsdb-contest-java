@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class DataGenerator {
 
-    public static String[] columnsName = {"QZZS", "ZDWDZXTH", "JYDZ", "FDJGZZS", "QXTZGWD", "ZGWDZXTH", "DW", "QDDJGS", "QQZGND", "ZGDYDCDTDH", "QDDJXH", "ZDDYDCDTDH", "DCDC", "RLDCRLXHL", "DJKZQDY", "DCDTDYZGZ", "ZGDYDCZXTDH", "YXMS", "DWZT", "RLDCDY", "QTGZLB", "QQZGYLCGQDH", "GYDCDCZT", "RLDCDL", "LATITUDE", "DJKZQDL", "QXTZGWDTZDH", "ZDWDTZXH", "KCDCNZZGZDMLB", "CDZT", "QDDJZS", "RLXHL", "QDDJZT", "LONGITUDE", "FDJGZLB", "QDDJGZDMLB", "DCDTDYZDZ", "QQZGNDCGQDH", "LJLC", "ZDWDZ", "QDDJZJ", "ZGBJDJ", "QDDJGZZS", "ZDL", "ZDDYDCZXTDH", "KCDCNZZGZZS", "SOC", "ZDY", "ZGWDTZXH", "QDDJWD", "CS", "RLDCTZGS", "QDDJKZWD", "JUBK", "ZGWDZ", "QTGZZS", "QQZGYL", "TYBJBZ", "CLZT", "FDJZT"};
+    public static String[] columnsName = {"QZZS", "ZDWDZXTH", "JYDZ", "FDJGZZS", "QXTZGWD", "ZGWDZXTH", "DW", "QDDJGS", "QQZGND", "ZGDYDCDTDH", "QDDJXH", "ZDDYDCDTDH", "DCDC", "RLDCRLXHL", "DJKZQDY", "DCDTDYZGZ", "ZGDYDCZXTDH", "YXMS", "DWZT", "RLDCDY", "QTGZLB", "QQZGYLCGQDH", "GYDCDCZT", "RLDCDL", "LATITUDE", "DJKZQDL", "QXTZGWDTZDH", "ZDWDTZXH", "KCDCNZZGZDMLB", "CDZT", "QDDJZS", "RLXHL", "QDDJZT", "LONGITUDE", "FDJGZLB", "QDDJGZDMLB", "DCDTDYZDZ", "QQZGNDCGQDH", "LJLC", "ZDWDZ", "QDDJZJ", "ZGBJDJ", "QDDJGZZS", "ZDL", "ZDDYDCZXTDH", "KCDCNZZGZZS", "SOC", "ZDY", "ZGWDTZXH", "QDDJWD", "CS", "RLDCTZGS", "QDDJKZWD", "FDJZT", "ZGWDZ", "CLZT", "QQZGYL", "TYBJBZ", "ORNI", "JUBK"};
 
     public static int INT_NUM = 40;
     public static int DOUBLE_NUM = 10;
@@ -72,7 +72,14 @@ public class DataGenerator {
         }
         for (int i = INT_NUM + DOUBLE_NUM; i < INT_NUM + DOUBLE_NUM + STRING_NUM; i++) {
             int length = 10;
-            String str = random.nextInt(4) + "asd";
+            String str;
+            if(i == 58){
+                str = generateRandomString(30);
+            }else if(i==59){
+                str = generateRandomString(100);
+            }else {
+                str = random.nextInt(4) + "asd";
+            }
             rowFactory.byteBuffers[i - INT_NUM - DOUBLE_NUM] = str;
         }
         return rowFactory;
@@ -150,13 +157,13 @@ public class DataGenerator {
         long timeUpper = timeStamp[start + 3600] + randomTime;
         int i = random.nextInt(4);
         if (i == 1) {
-            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 2) {
-            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 3) {
-            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+            return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
         }
-        return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+        return new TimeRangeDownsampleRequest("test", vin, "SOC", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
     }
 
     public static void main(String[] args) {
@@ -374,8 +381,8 @@ public class DataGenerator {
                 if (row.getTimestamp() != ansRow.getTimestamp()) {
                     System.out.println("timeStamp error");
                 }
-                if (!row.getColumns().get("QZZS").equals(ansRow.getColumns().get("QZZS"))) {
-                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("QZZS") + " but got : " + row.getColumns().get("QZZS"));
+                if (!row.getColumns().get("SOC").equals(ansRow.getColumns().get("SOC"))) {
+                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("SOC") + " but got : " + row.getColumns().get("SOC"));
                     ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
                     rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
                 }

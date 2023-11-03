@@ -108,6 +108,18 @@ public class TSFileService {
             } else {
                 offset = index.getOffset() + index.getIntLength();
                 length = index.getDoubleLength() - index.getIntLength();
+
+                byte[] doubleHeader = index.getDoubleHeader();
+                ByteBuffer header = ByteBuffer.wrap(doubleHeader);
+                int doubleDeltaLength = header.getInt();
+                int corrilaLength = header.getInt();
+                if (DoubleCompress.doubleDelta.contains(columnIndex)) {
+                    offset += 2;
+                    length = doubleDeltaLength;
+                } else {
+                    offset += 2 + doubleDeltaLength;
+                    length = corrilaLength;
+                }
             }
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
@@ -121,9 +133,9 @@ public class TSFileService {
 //                long useTime = System.nanoTime() - s;
 //                StaticsUtil.SECOND_READ_TIME.getAndAdd(useTime);
 //            } else {
-                long s = System.nanoTime();
-                dataBuffer = ByteBuffer.allocate(length);
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
+            long s = System.nanoTime();
+            dataBuffer = ByteBuffer.allocate(length);
+            tsFile.getFromOffsetByFileChannel(dataBuffer, offset);
 //                if (map != null) {
 //                    map.put(offset, dataBuffer);
 //                    StaticsUtil.FIRST_READ_TIME.getAndAdd((System.nanoTime() - s));
@@ -140,6 +152,7 @@ public class TSFileService {
             int i = 0;//多少行
             double[] doubles = null;
 //            Map<Integer, int[]> intMap = null;
+            int[] ints1 = null;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     long startGetValue = System.nanoTime();
@@ -147,11 +160,11 @@ public class TSFileService {
                     if (columnIndex < Constants.INT_NUMS) {
                         long compressStart = System.nanoTime();
                         try {
-//                            if (ints1 == null) {
+                            if (ints1 == null) {
                                 int intCompressLength = dataBuffer.getShort();
                                 dataBuffer.position(2);
-                                int[] ints1 = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), columnIndex, intCompressLength);
-//                            }
+                                ints1 = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), columnIndex, intCompressLength);
+                            }
 //                            final int[] ints1 = intMap.get(columnIndex);
 //                            if (cacheDataMap != null) {
 //                                final TSDBEngineImpl.CacheData cacheData = new TSDBEngineImpl.CacheData(ints1, null);
@@ -170,19 +183,13 @@ public class TSFileService {
                         try {
                             long compressStart = System.nanoTime();
                             if (doubles == null) {
-                                int doubleCompressInt = dataBuffer.getShort();
-                                final byte[] allocate1 = new byte[doubleCompressInt];
-                                dataBuffer.position(
-                                        +2);
-                                dataBuffer.get(allocate1);
-                                doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+                                doubles = DoubleCompress.decodeByIndex(dataBuffer, Constants.FLOAT_NUMS * valueSize, valueSize, index.getDoubleHeader(),columnIndex-40);
                                 if (cacheDataMap != null) {
                                     final TSDBEngineImpl.CacheData cacheData = new TSDBEngineImpl.CacheData(null, doubles);
                                     cacheDataMap.put(index.getOffset(), cacheData);
                                 }
                             }
-                            int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
-                            value = new ColumnValue.DoubleFloatColumn(doubles[position]);
+                            value = new ColumnValue.DoubleFloatColumn(doubles[i]);
                             if ("downSample".equals(queryType)) {
                                 long compressEnd = System.nanoTime();
                                 StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
@@ -312,7 +319,7 @@ public class TSFileService {
                                             +intCompressLength + 2
                                                     + 2);
                                     dataBuffer.get(allocate1);
-                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize, index.getDoubleHeader());
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -458,7 +465,7 @@ public class TSFileService {
                                             +intCompressLength + 2
                                                     + 2);
                                     dataBuffer.get(allocate1);
-                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize);
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize, index.getDoubleHeader());
                                 }
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
@@ -641,7 +648,9 @@ public class TSFileService {
 
 
             //压缩double
-            final byte[] compressDouble = DoubleCompress.encode2(doubles, valueList.size());
+            final doubleCompressResult compressResult1 = DoubleCompress.encode2(doubles, valueList.size());
+            final byte[] compressDouble = compressResult1.getData();
+            final byte[] doubleHeader = compressResult1.getHeader();
             // 压缩long
             final byte[] compress1 = LongCompress.compress(longs);
             long previousLong = longs[longs.length - 1];
@@ -699,7 +708,8 @@ public class TSFileService {
                         , 2 + compress2.length + 2 + compressDouble.length
                         , previousLong
                         , compress1
-                        , bigOffset);
+                        , bigOffset
+                        , doubleHeader);
                 MapIndex.put(j, index);
                 valueList.clear();
             } catch (Exception e) {
@@ -793,7 +803,7 @@ public class TSFileService {
                                 allocate.get(allocate1);
                                 double[] doubles = new double[0];
                                 try {
-                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * index.getValueSize(), index.getValueSize());
+                                    doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * index.getValueSize(), index.getValueSize(), index.getDoubleHeader());
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }

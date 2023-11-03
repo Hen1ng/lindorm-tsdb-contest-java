@@ -22,6 +22,16 @@ public class Index {
 
     private byte[] timeStampBytes;
 
+    private byte[] doubleHeader;
+
+    public byte[] getDoubleHeader() {
+        return doubleHeader;
+    }
+
+    public void setDoubleHeader(byte[] doubleHeader) {
+        this.doubleHeader = doubleHeader;
+    }
+
     public int getIntLength() {
         return intLength;
     }
@@ -105,7 +115,8 @@ public class Index {
             , int doubleLength
             , long previousTimeStamp
             , byte[] timeStampBytes
-    , int bigStringOffset
+            , int bigStringOffset
+            , byte[] doubleHeader
     ) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
@@ -118,15 +129,16 @@ public class Index {
         this.previousTimeStamp = previousTimeStamp;
         this.timeStampBytes = timeStampBytes;
         this.bigStringOffset = bigStringOffset;
+        this.doubleHeader = doubleHeader;
     }
 
     public byte[] bytes() {
 
         byte[] bytes = new byte[0];
-        if (aggBucket!= null) {
+        if (aggBucket != null) {
             bytes = aggBucket.bytes();
         }
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6+8+2+timeStampBytes.length);
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6 + 8 + 2 + timeStampBytes.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -140,6 +152,8 @@ public class Index {
         allocate.putLong(previousTimeStamp);
         allocate.putShort((short) timeStampBytes.length);
         allocate.put(timeStampBytes);
+        allocate.putShort((short) doubleHeader.length);
+        allocate.put(doubleHeader);
         return allocate.array();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        return gzipCompress.compress(allocate.array());
@@ -169,7 +183,10 @@ public class Index {
         long previousTimeStamp = wrap.getLong();
         short timeStampBytesLength = wrap.getShort();
         byte[] bytes1 = new byte[timeStampBytesLength];
-        wrap.get(bytes1,0,bytes1.length);
+        wrap.get(bytes1, 0, bytes1.length);
+        short doubleHeaderLength = wrap.getShort();
+        byte[] doubleHeader = new byte[doubleHeaderLength];
+        wrap.get(doubleHeader,0,doubleHeader.length);
         return new Index(
                 offset,
                 maxTimeStamp,
@@ -181,7 +198,8 @@ public class Index {
                 doubleLength,
                 previousTimeStamp,
                 bytes1,
-                bigStringOffset
+                bigStringOffset,
+                doubleHeader
         );
     }
 
