@@ -128,7 +128,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "ddUuAM0ibh7AvXgo7";
+                String v = "BSA5pqv9GHsqzvhlj";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));

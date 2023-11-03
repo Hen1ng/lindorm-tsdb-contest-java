@@ -656,7 +656,8 @@ public class TSFileService {
             long previousLong = longs[longs.length - 1];
 
             //压缩int
-            byte[] compress2 = IntCompress.compress4(ints, lineNum);
+            final IntCompress.IntCompressResult intCompressResult = IntCompress.compress4(ints, lineNum);
+            byte[] compress2 = intCompressResult.data;
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, lineNum);
             int total =  //timestamp
                     compress2.length + 2 //int
@@ -698,6 +699,7 @@ public class TSFileService {
             try {
                 TSFile tsFile = getTsFileByIndex(m);
                 final long append = tsFile.append(byteBuffer);
+                intCompressResult.data = null;
                 final Index index = new Index(append
                         , maxTimestamp
                         , minTimestamp
@@ -709,7 +711,8 @@ public class TSFileService {
                         , previousLong
                         , compress1
                         , bigOffset
-                        , doubleHeader);
+                        , doubleHeader
+                        , intCompressResult);
                 MapIndex.put(j, index);
                 valueList.clear();
             } catch (Exception e) {

@@ -3,8 +3,7 @@ package com.alibaba.lindorm.contest.compress;
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.memory.Value;
-import com.alibaba.lindorm.contest.structs.Vin;
+import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
 import com.github.luben.zstd.Zstd;
@@ -143,15 +142,15 @@ public class IntCompress {
         return result;
     }
 
-//    static {
-//        String fileName = "int.txt";  // 替换为你的文件路径
-//        try {
-//            testNumReal = readIntsFromFile(fileName);
-//            System.out.println(testNumReal.length);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    static {
+        String fileName = "int.txt";  // 替换为你的文件路径
+        try {
+            testNumReal = readIntsFromFile(fileName);
+            System.out.println(testNumReal.length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
@@ -232,6 +231,11 @@ public class IntCompress {
     public static ArrayList<Integer> notSecondDelta;
     public static ArrayList<Integer> divSet;
 
+    public static ArrayList<Integer> split1 = new ArrayList<>(10);
+    public static ArrayList<Integer> split2 = new ArrayList<>(10);
+    public static ArrayList<Integer> split3 = new ArrayList<>(10);
+    public static ArrayList<Integer> split4 = new ArrayList<>(10);
+
 
     static {
         subSet = new ArrayList<>();
@@ -241,7 +245,53 @@ public class IntCompress {
         subSet.add(new Pair<>(19, 20));
         subSet.add(new Pair<>(12, 39));
         subSet.add(new Pair<>(34, 39));
+        /*split1*/
+        split1.add(3);
+        split1.add(4);
+        split1.add(12);
+        split1.add(15);
+        split1.add(19);
+        split1.add(20);
+        split1.add(34);
+        split1.add(39);
 
+        /*split2*/
+        split2.add(0);
+        split2.add(1);
+        split2.add(2);
+        split2.add(5);
+        split2.add(6);
+        split2.add(7);
+        split2.add(8);
+        split2.add(9);
+        split2.add(10);
+        split2.add(11);
+        split2.add(13);
+
+        /*split3*/
+        split2.add(14);
+        split2.add(16);
+        split2.add(17);
+        split2.add(18);
+        split2.add(21);
+        split2.add(22);
+        split2.add(23);
+        split2.add(24);
+        split2.add(25);
+        split2.add(26);
+
+        /*split4*/
+        split2.add(27);
+        split2.add(28);
+        split2.add(29);
+        split2.add(30);
+        split2.add(31);
+        split2.add(32);
+        split2.add(33);
+        split2.add(35);
+        split2.add(36);
+        split2.add(37);
+        split2.add(38);
 
         notFirstDelta = new ArrayList<>();
 
@@ -370,7 +420,7 @@ public class IntCompress {
         }
     }
 
-    public static byte[] compress4(int[] ints, int valueSize) {
+    public static IntCompressResult compress4(int[] ints, int valueSize) {
         List<ByteBuffer> arrayList = new ArrayList<>();
         List<Integer> notUseDictArray = new ArrayList<>();
         int start = 0;
@@ -458,17 +508,137 @@ public class IntCompress {
 
         // compressType 5B
         //
-        ByteBuffer allocate = ByteBuffer.allocate(5 + totalLength);
-        allocate.put(compressType);
+
+        List<ByteBuffer> list1 = new ArrayList<>(valueSize * 8);
+        List<ByteBuffer> list2 = new ArrayList<>(valueSize * 11);
+//        List<ByteBuffer> list3 = new ArrayList<>(valueSize * 10);
+//        List<ByteBuffer> list4 = new ArrayList<>(valueSize * 11);
+        int total1 = 0;
+        int total2 = 0;
+//        int total3 = 0;
+//        int total4 = 0;
+        int j = 0;
         for (ByteBuffer byteBuffer : arrayList) {
-            allocate.put(byteBuffer.array());
+//            allocate.put(byteBuffer.array());
+            if (split1.contains(j)) {
+                list1.add(byteBuffer);
+                total1 += byteBuffer.capacity();
+            }
+            if (split2.contains(j)) {
+                list2.add(byteBuffer);
+                total2 += byteBuffer.capacity();
+            }
+//            if (split3.contains(j)) {
+//                list3.add(byteBuffer);
+//                total3 += byteBuffer.capacity();
+//            }
+//            if (split4.contains(j)) {
+//                list4.add(byteBuffer);
+//                total4 += byteBuffer.capacity();
+//            }
+            j++;
         }
-        byte[] compress = Zstd.compress(allocate.array(), 3);
+        final ByteBuffer allocate1 = ByteBuffer.allocate(total1);
+        for (ByteBuffer byteBuffer : list1) {
+            allocate1.put(byteBuffer.array());
+        }
+        byte[] compress1 = Zstd.compress(allocate1.array(), 3);
+        final ByteBuffer allocate2 = ByteBuffer.allocate(total2);
+        for (ByteBuffer byteBuffer : list2) {
+            allocate2.put(byteBuffer.array());
+        }
+        byte[] compress2 = Zstd.compress(allocate2.array(), 3);
+
+//        final ByteBuffer allocate3 = ByteBuffer.allocate(total3);
+//        for (ByteBuffer byteBuffer : list3) {
+//            allocate3.put(byteBuffer.array());
+//        }
+//        byte[] compress3 = Zstd.compress(allocate3.array(), 3);
+//
+//        final ByteBuffer allocate4 = ByteBuffer.allocate(total4);
+//        for (ByteBuffer byteBuffer : list4) {
+//            allocate4.put(byteBuffer.array());
+//        }
+//        byte[] compress4 = Zstd.compress(allocate4.array(), 3);
+
+        ByteBuffer allocate = ByteBuffer.allocate( compress1.length + compress2.length);
+//        allocate.put(compressType);
+//        allocate.putShort((short)compress1.length);
+        allocate.put(compress1);
+//        allocate.putShort((short)compress2.length);
+        allocate.put(compress2);
+        final short[] ints1 = new short[2];
+        ints1[0] = (short)compress1.length;
+        ints1[1] = (short)compress2.length;
+//        allocate.putShort((short)compress3.length);
+//        allocate.put(compress3);
+//        allocate.putShort((short)compress4.length);
+//        allocate.put(compress4);
+
+
 //        byte[] compress = allocate.array();
-        ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
-        buffer.putInt(allocate.array().length);
-        buffer.put(compress);
-        return buffer.array();
+//        ByteBuffer buffer = ByteBuffer.allocate(4 + allocate.capacity());
+//        buffer.putInt(allocate.array().length);
+//        buffer.put(allocate.array());
+        return new IntCompressResult(compressType, ints1, allocate.array());
+    }
+
+    public static class IntCompressResult {
+        public IntCompressResult(byte[] compressType, short[] splitLength,  byte[] data) {
+            this.compressType = compressType;
+            this.splitLength = splitLength;
+            this.data = data;
+        }
+
+        public IntCompressResult(byte[] bytes) {
+            final ByteBuffer wrap = ByteBuffer.wrap(bytes);
+            this.compressType = new byte[5];
+            wrap.get(compressType, 0, 5);
+            this.splitLength = new short[2];
+            splitLength[0] = wrap.getShort();
+            splitLength[1] = wrap.getShort();
+        }
+
+        public byte[] compressType;
+        public short[] splitLength;
+
+        public byte[] data;
+
+        public byte[] bytes() {
+            final ByteBuffer allocate = ByteBuffer.allocate(compressType.length + splitLength.length * 2);
+            allocate.put(compressType);
+            for (short i : splitLength) {
+                allocate.putShort(i);
+            }
+            return allocate.array();
+        }
+
+    }
+
+    public int[] getSingleColumn(ByteBuffer byteBuffer, int valueSize, int columnIndex, Index index) {
+        int offset = 0;
+        int length = 0;
+        int originalSize = 0;
+        if (split1.contains(columnIndex)) {
+            length = index.getIntCompressResult().splitLength[0];
+            originalSize = split1.size() * valueSize * 4;
+        } else {
+            length = index.getIntCompressResult().splitLength[1];
+            offset = index.getIntCompressResult().splitLength[0];
+            originalSize = split2.size() * valueSize * 4;
+        }
+        byteBuffer.position(offset);
+        final byte[] bytes = new byte[length];
+        byteBuffer.get(bytes, 0, length);
+        final byte[] decompress = Zstd.decompress(bytes, originalSize);
+        final byte[] compressType = index.getIntCompressResult().compressType;
+
+        final int[] ints = new int[decompress.length / 4];
+        final ByteBuffer wrap = ByteBuffer.wrap(decompress);
+        for (int i = 0; i < ints.length; i++) {
+            ints[i] = wrap.getInt();
+        }
+        return ints;
     }
 
     public static boolean openSub = true;
