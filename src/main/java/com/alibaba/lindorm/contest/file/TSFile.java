@@ -81,7 +81,7 @@ public class TSFile {
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset) {
         try {
             if (array != null) {
-                byteBuffer.put(array, (int) (offset - initPosition), byteBuffer.capacity());
+                byteBuffer.put(array, (int) (offset - initPosition), byteBuffer.remaining());
                 return;
             }
             this.fileChannel.read(byteBuffer, offset - initPosition);

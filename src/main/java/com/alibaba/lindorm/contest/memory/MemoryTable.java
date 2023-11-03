@@ -196,19 +196,10 @@ public class MemoryTable {
         try {
             Integer i = VinDictMap.get(vin);
             if (i == null) {
-                System.out.println("getLastRow i is null " + vin);
                 return null;
             }
             final List<Value> value1 = values[i];
-            if (value1 == null) {
-                System.out.println("value1 is null i:" + i);
-                System.exit(-1);
-            }
             Value value = value1.get(0);
-            if (value == null) {
-                System.out.println("value is null");
-                System.exit(-1);
-            }
             final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             int j = 0;
             for (String requestedColumn : requestedColumns) {
@@ -370,16 +361,21 @@ public class MemoryTable {
         return result;
     }
 
+    private final AtomicLong executeTimeRangeQueryTimes = new AtomicLong(0);
+
     private ArrayList<Row> getTimeRangeRowFromTsFile(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int vinIndex) {
         ArrayList<Row> rowArrayList = new ArrayList<>();
         try {
             final List<Index> indexList = MapIndex.get(vinIndex, timeLowerBound, timeUpperBound);
             for (Index index : indexList) {
-                final Integer integer = VinDictMap.get(vin);
-                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
+//                final Integer integer = VinDictMap.get(vin);
+                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, vinIndex);
                 if (!byIndex.isEmpty()) {
                     rowArrayList.addAll(byIndex);
                 }
+            }
+            if (executeTimeRangeQueryTimes.getAndIncrement() % 200000 == 0) {
+                System.out.println("getTimeRangeRowFromTsFile indexList size " + indexList.size() + "interval:" + (timeUpperBound - timeLowerBound));
             }
         } catch (Exception e) {
             System.out.println("getTimeRangeRowFromTsFile error, e" + e);
