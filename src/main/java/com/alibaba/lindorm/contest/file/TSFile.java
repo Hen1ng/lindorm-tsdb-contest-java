@@ -4,6 +4,7 @@ import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.ZlibCompress;
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.RestartUtil;
+import com.github.luben.zstd.Zstd;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -77,6 +78,8 @@ public class TSFile {
         System.out.println("TSFile not enough, return -2");
         return -2;
     }
+
+
 
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset) {
         try {
