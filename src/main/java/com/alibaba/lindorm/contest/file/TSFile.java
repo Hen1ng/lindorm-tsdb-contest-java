@@ -58,7 +58,7 @@ public class TSFile {
                     getFromOffsetByFileChannel(allocate, initPosition,null);
                     array = allocate.array();
                     final boolean delete = file.delete();
-                    System.out.println("delete file " + fileName + "result " + delete);
+                    System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
                 }
             }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);

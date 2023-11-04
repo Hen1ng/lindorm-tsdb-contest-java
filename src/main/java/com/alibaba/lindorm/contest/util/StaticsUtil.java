@@ -41,6 +41,7 @@ public class StaticsUtil {
     public static Set<String> DOWNSAMPLE_QUERY_THREAD = new ConcurrentSkipListSet<>();
 
     public static AtomicLong AGG_TOTAL_TIME = new AtomicLong(0);
+    public static AtomicLong AGG_TOTAL_READ_FILE_TIME = new AtomicLong(0);
     public static AtomicLong DOWNSAMPLE_TOTAL_TIME = new AtomicLong(0);
 
 

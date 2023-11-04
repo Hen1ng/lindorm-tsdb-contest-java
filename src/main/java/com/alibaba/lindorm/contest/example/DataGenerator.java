@@ -262,9 +262,9 @@ public class DataGenerator {
             }
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-            AggQuery(tsdbEngine);
+//            AggQuery(tsdbEngine);
 //            TimeRangeQuery(tsdbEngine);
-//            DownSampleQuery(tsdbEngine);
+            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -386,18 +386,18 @@ public class DataGenerator {
                 ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
                 rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
             }
-            for (int j = 0; j < rows.size(); j++) {
-                Row row = rows.get(j);
-                Row ansRow = ans.get(j);
-                if (row.getTimestamp() != ansRow.getTimestamp()) {
-                    System.out.println("timeStamp error");
-                }
-//                if (!row.getColumns().get("SOC").equals(ansRow.getColumns().get("SOC"))) {
-//                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("SOC") + " but got : " + row.getColumns().get("SOC"));
-//                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
-//                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
+//            for (int j = 0; j < rows.size(); j++) {
+//                Row row = rows.get(j);
+//                Row ansRow = ans.get(j);
+//                if (row.getTimestamp() != ansRow.getTimestamp()) {
+//                    System.out.println("timeStamp error");
 //                }
-            }
+////                if (!row.getColumns().get("SOC").equals(ansRow.getColumns().get("SOC"))) {
+////                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("SOC") + " but got : " + row.getColumns().get("SOC"));
+////                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
+////                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
+////                }
+//            }
             if (i % 100 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }
