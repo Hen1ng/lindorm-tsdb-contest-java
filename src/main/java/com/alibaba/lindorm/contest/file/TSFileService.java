@@ -101,11 +101,15 @@ public class TSFileService {
 //
             long offset;
             int length;
-            List<Integer> intColumnIndex = new ArrayList<>();
             if (columnIndex < Constants.INT_NUMS) {
                 offset = index.getOffset();
-                length = index.getIntLength();
-                intColumnIndex.add(columnIndex);
+                if (IntCompress.split1.contains(columnIndex)) {
+                    offset = offset + 2;
+                    length = index.getIntCompressResult().splitLength[0];
+                } else {
+                    offset = offset + 2 + index.getIntCompressResult().splitLength[0];
+                    length = index.getIntCompressResult().splitLength[1];
+                }
             } else {
                 offset = index.getOffset() + index.getIntLength();
                 length = index.getDoubleLength() - index.getIntLength();
@@ -154,9 +158,11 @@ public class TSFileService {
                         long compressStart = System.nanoTime();
                         try {
                             if (ints1 == null) {
-                                int intCompressLength = dataBuffer.getShort();
-                                dataBuffer.position(2);
-                                ints1 = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), columnIndex, intCompressLength);
+//                                int intCompressLength = dataBuffer.getShort();
+//                                dataBuffer.position(2);
+//                                dataBuffer.limit(intCompressLength + 2);
+                                ints1 = IntCompress.getSingleColumn(dataBuffer, valueSize, columnIndex, index.getIntCompressResult());
+//                                ints1 = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), columnIndex, intCompressLength);
                             }
 //                            final int[] ints1 = intMap.get(columnIndex);
 //                            if (cacheDataMap != null) {
@@ -166,7 +172,7 @@ public class TSFileService {
                             value = new ColumnValue.IntegerColumn(ints1[i]);
                         } catch (Exception e) {
                             e.printStackTrace();
-                            System.out.println("getSingleValueByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                            System.out.println("getSingleValueByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
                         ctx.setGetSingleDecompressTime(ctx.getGetSingleDecompressTime()+(System.nanoTime()-compressStart));
                         if ("downSample".equals(queryType)) {
@@ -191,7 +197,7 @@ public class TSFileService {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
-                            System.out.println("getSingleValueByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                            System.out.println("getSingleValueByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
                     } else {
                         long compressStart = System.nanoTime();
@@ -299,7 +305,7 @@ public class TSFileService {
                                     final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(2);
                                     dataBuffer.get(allocate1);
-                                    ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                    ints = IntCompress.decompress4V2(allocate1, index.getValueSize(), index.getIntCompressResult());
                                 }
                                 int off = columnIndex * valueSize + i;
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn((int) ints[off]));
@@ -320,6 +326,7 @@ public class TSFileService {
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
                             } catch (Exception e) {
+                                e.printStackTrace();
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
                         } else {
@@ -445,13 +452,13 @@ public class TSFileService {
                                     final byte[] allocate1 = new byte[intCompressLength];
                                     dataBuffer.position(2);
                                     dataBuffer.get(allocate1);
-                                    ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                    ints = IntCompress.decompress4V2(allocate1, index.getValueSize(), index.getIntCompressResult());
                                 }
                                 int off = columnIndex * valueSize + i;
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
 
                             } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                                System.out.println("getByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
                         } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
@@ -466,7 +473,8 @@ public class TSFileService {
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
                             } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                                e.printStackTrace();
+                                System.out.println("getByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
                         } else {
                             if (isBigString(columnIndex)) {
@@ -523,7 +531,7 @@ public class TSFileService {
                                     int stringPosition = (stringNum * valueSize + i);
                                     columns.put(requestedColumn, new ColumnValue.StringColumn(stringBytes.get(stringPosition)));
                                 } catch (Exception e) {
-                                    System.out.println("getByIndex time range String error, e:" + e + "index:" + index);
+                                    System.out.println("getByIndex String error, e:" + e + "index:" + index);
                                 }
                             }
                         }
@@ -652,7 +660,8 @@ public class TSFileService {
             long previousLong = longs[longs.length - 1];
 
             //压缩int
-            byte[] compress2 = IntCompress.compress4(ints, lineNum);
+            final IntCompress.IntCompressResult intCompressResult = IntCompress.compress4(ints, lineNum);
+            byte[] compress2 = intCompressResult.data;
             byte[] stringLengthArrayCompress = IntCompress.compressShort(stringLengthArray, lineNum);
             int total =  //timestamp
                     compress2.length + 2 //int
@@ -694,6 +703,7 @@ public class TSFileService {
             try {
                 TSFile tsFile = getTsFileByIndex(m);
                 final long append = tsFile.append(byteBuffer);
+                intCompressResult.data = null;
                 final Index index = new Index(append
                         , maxTimestamp
                         , minTimestamp
@@ -705,7 +715,8 @@ public class TSFileService {
                         , previousLong
                         , compress1
                         , bigOffset
-                        , doubleHeader);
+                        , doubleHeader
+                        , intCompressResult);
                 MapIndex.put(j, index);
                 valueList.clear();
             } catch (Exception e) {
@@ -718,7 +729,10 @@ public class TSFileService {
                         + " prepareData time " + (prepareDataTime - start) + " ns"
                         + " compress time " + (compressTime - prepareDataTime) + " ns"
                         + " put time " + (putTime - compressTime) + " ns"
-                        + " append time " + (append - putTime) + " ns");
+                        + " append time " + (append - putTime) + " ns"
+                        + " int split[0] " + intCompressResult.splitLength[0]
+                        + " int split[1] " + intCompressResult.splitLength[1]
+                );
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -791,7 +805,7 @@ public class TSFileService {
                                 byte[] allocate1 = new byte[intCompressLength];
                                 allocate.position(2);
                                 allocate.get(allocate1);
-                                int[] ints = IntCompress.decompress4(allocate1, index.getValueSize());
+                                int[] ints = IntCompress.decompress4V2(allocate1, index.getValueSize(), index.getIntCompressResult());
                                 allocate1 = new byte[doubleCompressInt];
                                 allocate.position(
                                         +intCompressLength + 2

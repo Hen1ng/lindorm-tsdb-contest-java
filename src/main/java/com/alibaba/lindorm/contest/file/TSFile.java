@@ -6,6 +6,7 @@ import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.Context;
 import com.alibaba.lindorm.contest.util.RestartUtil;
 import com.alibaba.lindorm.contest.util.StaticsUtil;
+import com.github.luben.zstd.Zstd;
 
 import java.io.File;
 import java.io.RandomAccessFile;

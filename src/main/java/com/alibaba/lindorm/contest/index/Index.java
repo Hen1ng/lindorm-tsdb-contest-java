@@ -1,13 +1,11 @@
 package com.alibaba.lindorm.contest.index;
 
 
-import com.alibaba.lindorm.contest.compress.GzipCompress;
-import com.alibaba.lindorm.contest.file.TSFileService;
+import com.alibaba.lindorm.contest.compress.IntCompress;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Random;
 
 public class Index {
 
@@ -23,6 +21,16 @@ public class Index {
     private byte[] timeStampBytes;
 
     private byte[] doubleHeader;
+
+    public IntCompress.IntCompressResult getIntCompressResult() {
+        return intCompressResult;
+    }
+
+    public void setIntCompressResult(IntCompress.IntCompressResult intCompressResult) {
+        this.intCompressResult = intCompressResult;
+    }
+
+    private IntCompress.IntCompressResult intCompressResult;
 
     public byte[] getDoubleHeader() {
         return doubleHeader;
@@ -117,6 +125,7 @@ public class Index {
             , byte[] timeStampBytes
             , int bigStringOffset
             , byte[] doubleHeader
+            , IntCompress.IntCompressResult intCompressResult
     ) {
         this.offset = offset;
         this.maxTimestamp = maxTimestamp;
@@ -130,6 +139,7 @@ public class Index {
         this.timeStampBytes = timeStampBytes;
         this.bigStringOffset = bigStringOffset;
         this.doubleHeader = doubleHeader;
+        this.intCompressResult = intCompressResult;
     }
 
     public byte[] bytes() {
@@ -138,7 +148,8 @@ public class Index {
         if (aggBucket != null) {
             bytes = aggBucket.bytes();
         }
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length);
+        final byte[] bytes1 = intCompressResult.bytes();
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length + 2 + bytes1.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -154,6 +165,8 @@ public class Index {
         allocate.put(timeStampBytes);
         allocate.putShort((short) doubleHeader.length);
         allocate.put(doubleHeader);
+        allocate.putShort((short)bytes1.length);
+        allocate.put(bytes1);
         return allocate.array();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        return gzipCompress.compress(allocate.array());
@@ -187,6 +200,10 @@ public class Index {
         short doubleHeaderLength = wrap.getShort();
         byte[] doubleHeader = new byte[doubleHeaderLength];
         wrap.get(doubleHeader,0,doubleHeader.length);
+        final short aShort = wrap.getShort();
+        final byte[] bytes2 = new byte[aShort];
+        wrap.get(bytes2,0,bytes2.length);
+
         return new Index(
                 offset,
                 maxTimeStamp,
@@ -199,7 +216,8 @@ public class Index {
                 previousTimeStamp,
                 bytes1,
                 bigStringOffset,
-                doubleHeader
+                doubleHeader,
+                new IntCompress.IntCompressResult(bytes2)
         );
     }
 

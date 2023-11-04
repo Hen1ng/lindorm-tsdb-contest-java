@@ -128,7 +128,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "ddUuAM0ibh7AvXgo7";
+                String v = "zX0pHDsPLaqMBSRQX";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
@@ -163,8 +163,10 @@ public class QueryTest {
                 final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
                 final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
                 ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
-//                final TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "7double", 0, Long.MAX_VALUE, Aggregator.MAX);
-//                rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
+                TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "13", 0, 1000, Aggregator.MAX);
+                rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
+                timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "3", 0, 1000, Aggregator.MAX);
+                rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
 //                ExecutorService executorService1 = Executors.newFixedThreadPool(20);
 //                CountDownLatch countDownLatch1 = new CountDownLatch(20);
 //                executorService1.submit(() -> {
@@ -180,7 +182,7 @@ public class QueryTest {
 //                    countDownLatch1.countDown();
 //                });
 //                countDownLatch1.await();
-//                System.out.println(1);
+                System.out.println(1);
 //                tsdbEngineSample.shutdown();
             }
         } catch (Exception e) {
