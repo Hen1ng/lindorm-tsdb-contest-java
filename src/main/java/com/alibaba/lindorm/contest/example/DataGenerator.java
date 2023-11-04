@@ -141,10 +141,11 @@ public class DataGenerator {
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start + 3600 * 3] + randomTime;
         int i = random.nextInt(2);
+        final String s = columnsName[41];
         if (i == 0) {
-            return new TimeRangeAggregationRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG);
+            return new TimeRangeAggregationRequest("test", vin, s, timeLower, timeUpper, Aggregator.AVG);
         } else {
-            return new TimeRangeAggregationRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX);
+            return new TimeRangeAggregationRequest("test", vin, s, timeLower, timeUpper, Aggregator.MAX);
         }
     }
 
@@ -207,10 +208,10 @@ public class DataGenerator {
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
                 int batchSize = 10;
-                for (int i = 0; i < 3600; i++) {
+                for (int i = 0; i < 100; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 1; v++) {
+                        for (int v = 0; v < 10; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -253,8 +254,8 @@ public class DataGenerator {
             tsdbEngineSample.shutdown();
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-//            TimeRangeQuery(tsdbEngine);
-            DownSampleQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
+            AggQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -273,9 +274,9 @@ public class DataGenerator {
             ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
             for (Row row : rows) {
                 if (timeRangeAggregationRequest.getAggregator() == Aggregator.AVG) {
-                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
+//                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
                 } else {
-                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
+//                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
                 }
             }
             if (i % 100000 == 0) {

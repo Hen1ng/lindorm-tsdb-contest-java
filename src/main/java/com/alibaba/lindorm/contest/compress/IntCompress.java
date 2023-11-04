@@ -645,26 +645,20 @@ public class IntCompress {
 
     public static int[] getSingleColumn(ByteBuffer byteBuffer, int valueSize, int columnIndex, IntCompressResult intCompressResult) {
         try {
-            int offset = 0;
-            int length = 0;
+
             int originalSize = 0;
             int which = 0;
-
             int[] result = new int[valueSize * 40];
             if (split1.contains(columnIndex)) {
-                length = intCompressResult.splitLength[0];
+
                 originalSize = intCompressResult.beforeCompressLength[0];
                 which = 1;
             } else {
-                length = intCompressResult.splitLength[1];
-                offset = intCompressResult.splitLength[0];
+
                 originalSize = intCompressResult.beforeCompressLength[1];
                 which = 2;
             }
-            byteBuffer.position(offset);
-            final byte[] bytes = new byte[length];
-            byteBuffer.get(bytes, 0, length);
-            final byte[] decompress = Zstd.decompress(bytes, originalSize);
+            final byte[] decompress = Zstd.decompress(byteBuffer.array(), originalSize);
             final byte[] compressType = intCompressResult.compressType;
             final ByteBuffer wrap = ByteBuffer.wrap(decompress);
             List<Integer> list;
@@ -735,7 +729,7 @@ public class IntCompress {
                         continue;
                     }
                     // not use map
-                    length = wrap.getInt();
+                    int length = wrap.getInt();
                     byte[] bytes2 = new byte[length];
                     wrap.get(bytes2, 0, bytes2.length);
                     long[] longs = decompress2WithoutZstd(bytes2, valueSize);

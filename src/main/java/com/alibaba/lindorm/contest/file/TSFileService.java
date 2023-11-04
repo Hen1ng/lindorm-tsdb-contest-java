@@ -166,7 +166,7 @@ public class TSFileService {
                             value = new ColumnValue.IntegerColumn(ints1[i]);
                         } catch (Exception e) {
                             e.printStackTrace();
-                            System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                            System.out.println("getSingleValueByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                         }
                         if ("downSample".equals(queryType)) {
                             long compressEnd = System.nanoTime();
@@ -188,7 +188,8 @@ public class TSFileService {
                                 StaticsUtil.COMPRESS_DATA_TIME.addAndGet(compressEnd - compressStart);
                             }
                         } catch (Exception e) {
-                            System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                            e.printStackTrace();
+                            System.out.println("getSingleValueByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                         }
                     } else {
                         long compressStart = System.nanoTime();
@@ -317,6 +318,7 @@ public class TSFileService {
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
                             } catch (Exception e) {
+                                e.printStackTrace();
                                 System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
                         } else {
@@ -448,7 +450,7 @@ public class TSFileService {
                                 columns.put(requestedColumn, new ColumnValue.IntegerColumn(ints[off]));
 
                             } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
+                                System.out.println("getByIndex COLUMN_TYPE_INTEGER error, e:" + e + "index:" + index);
                             }
                         } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                             try {
@@ -463,7 +465,8 @@ public class TSFileService {
                                 int position = ((columnIndex - Constants.INT_NUMS) * valueSize + i);
                                 columns.put(requestedColumn, new ColumnValue.DoubleFloatColumn(doubles[position]));
                             } catch (Exception e) {
-                                System.out.println("getByIndex time range COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
+                                e.printStackTrace();
+                                System.out.println("getByIndex COLUMN_TYPE_DOUBLE_FLOAT error, e:" + e + "index:" + index);
                             }
                         } else {
                             if (isBigString(columnIndex)) {
@@ -520,7 +523,7 @@ public class TSFileService {
                                     int stringPosition = (stringNum * valueSize + i);
                                     columns.put(requestedColumn, new ColumnValue.StringColumn(stringBytes.get(stringPosition)));
                                 } catch (Exception e) {
-                                    System.out.println("getByIndex time range String error, e:" + e + "index:" + index);
+                                    System.out.println("getByIndex String error, e:" + e + "index:" + index);
                                 }
                             }
                         }
