@@ -3,7 +3,9 @@ package com.alibaba.lindorm.contest.file;
 import com.alibaba.lindorm.contest.compress.GzipCompress;
 import com.alibaba.lindorm.contest.compress.ZlibCompress;
 import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.Context;
 import com.alibaba.lindorm.contest.util.RestartUtil;
+import com.alibaba.lindorm.contest.util.StaticsUtil;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -32,6 +34,8 @@ public class TSFile {
     private File file;
     private byte[] array;
 
+    private RandomAccessFile rwFile;
+
     public TSFile(String filePath, int fileName, long initPosition) {
         try {
             this.fileName = fileName;
@@ -41,7 +45,8 @@ public class TSFile {
             this.position = new AtomicLong(0);
             this.file = new File(tsFilePath);
             this.lock = new ReentrantLock();
-            this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+            this.rwFile = new RandomAccessFile(file, "rw");
+            this.fileChannel = this.rwFile.getChannel();
             if (!file.exists()) {
                 file.createNewFile();
             }
@@ -49,7 +54,7 @@ public class TSFile {
                 if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
                     final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
                     final ByteBuffer allocate = ByteBuffer.allocate((int) position);
-                    getFromOffsetByFileChannel(allocate, initPosition);
+                    getFromOffsetByFileChannel(allocate, initPosition,null);
                     array = allocate.array();
                     final boolean delete = file.delete();
                     System.out.println("delete file " + fileName + "result " + delete);
@@ -78,13 +83,26 @@ public class TSFile {
         return -2;
     }
 
-    public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset) {
+    public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset, Context ctx) {
         try {
+            int remaining = byteBuffer.remaining();
+            long start = System.nanoTime();
             if (array != null) {
                 byteBuffer.put(array, (int) (offset - initPosition), byteBuffer.remaining());
+                long end = System.nanoTime();
+                if (ctx != null) {
+                    ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
+                    ctx.setHitArray(ctx.getHitArray() + 1);
+                    ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
+                }
                 return;
             }
             this.fileChannel.read(byteBuffer, offset - initPosition);
+            long end = System.nanoTime();
+            if (ctx != null) {
+                ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
+                ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
+            }
         } catch (Exception e) {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset + "initPosition " + initPosition);
             e.printStackTrace();
@@ -156,7 +174,7 @@ public class TSFile {
 
     public void totalCompressInShutDown() {
         final ByteBuffer allocate = ByteBuffer.allocate((int) (this.position.get() - initPosition));
-        getFromOffsetByFileChannel(allocate, initPosition);
+        getFromOffsetByFileChannel(allocate, initPosition,null);
         final byte[] array1 = allocate.array();
         final ZlibCompress gzipCompress = new ZlibCompress();
         final byte[] compress = gzipCompress.compress(array1);

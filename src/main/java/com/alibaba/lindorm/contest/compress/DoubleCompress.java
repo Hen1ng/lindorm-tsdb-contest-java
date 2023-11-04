@@ -16,17 +16,18 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 public class DoubleCompress {
-    public static ArrayList<Integer> doubleDelta = new ArrayList<>();
+
+    public static boolean[] doubleDeltaFlag =  new boolean[10];
     public static ArrayList<Integer> corillaList = new ArrayList<>();
 
     public static final ThreadLocal<double[]> TOTAL_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.FLOAT_NUMS * Constants.CACHE_VINS_LINE_NUMS]);
 
     static {
-        doubleDelta.add(0);
-        doubleDelta.add(1);
-        doubleDelta.add(2);
-        doubleDelta.add(5);
-        doubleDelta.add(8);
+        doubleDeltaFlag[0] = true;
+        doubleDeltaFlag[1] = true;
+        doubleDeltaFlag[2] = true;
+        doubleDeltaFlag[5] = true;
+        doubleDeltaFlag[8] = true;
 
 
         corillaList.add(3);
@@ -91,7 +92,7 @@ public class DoubleCompress {
                 wrap.position(total);
                 wrap.get(array);
                 double[] doubles = decode3(ByteBuffer.wrap(array), valueSize);
-                if (!doubleDelta.contains(count)) {
+                if (!doubleDeltaFlag[count]) {
                     DoubleDeltaDecompress(doubles, 0, doubles.length);
                 }
                 map.put(line, doubles);
@@ -231,7 +232,7 @@ public class DoubleCompress {
         int total = 0;
         for (int i = 0; i < count; i++) {
             ByteBuffer encode = null;
-            if (doubleDelta.contains(i)) {
+            if (doubleDeltaFlag[i]) {
                 DoubleDeltaCompress(values, i * valueSize, (i + 1) * valueSize);
                 encode = encode3(values, i * valueSize, (i + 1) * valueSize);
                 doubleDeltaBuffers.add(encode);
@@ -296,7 +297,7 @@ public class DoubleCompress {
         int corillaBytesLength = headerWrap.getInt();
 
         int length = 0;
-        if(doubleDelta.contains(index)){
+        if(doubleDeltaFlag[index]){
             length = doubleDeltaBytesLength;
         }else{
             length = corillaBytesLength;
@@ -309,22 +310,30 @@ public class DoubleCompress {
         double[] doubles = new double[valueSize * 10];
         for(int i=0;i<10;i++){
             double[] decode = null;
-            if(doubleDelta.contains(i)){
-                if(!doubleDelta.contains(index)){
+            if(doubleDeltaFlag[i]){
+                if(!doubleDeltaFlag[index]){
                     continue;
                 }
                 final int anInt = wrap.getShort();
+                if(i!=index){
+                    wrap.position(wrap.position()+anInt);
+                    continue;
+                }
                 byte[] array = new byte[anInt];
                 wrap.get(array);
                 decode = decode3(ByteBuffer.wrap(array), valueSize);
                 DoubleDeltaDecompress(decode, 0, decode.length);
             }else {
-                if (doubleDelta.contains(index)) {
+                if (doubleDeltaFlag[index]) {
                     continue;
                 }
                 if(corillaList.contains(i)){
                     final int anInt = wrap.getShort();
                     byte[] array = new byte[anInt];
+                    if(i!=index){
+                        wrap.position(wrap.position()+anInt);
+                        continue;
+                    }
                     wrap.get(array);
                     decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
                 }else {
@@ -370,7 +379,7 @@ public class DoubleCompress {
         int count = 0;
         while (doubleDeltaBytes.hasRemaining() || corillaBytes.hasRemaining()) {
             double[] decode = null;
-            if (doubleDelta.contains(count)) {
+            if (doubleDeltaFlag[count]) {
                 final int anInt = doubleDeltaBytes.getShort();
                 byte[] array = new byte[anInt];
                 doubleDeltaBytes.get(array);
@@ -437,7 +446,7 @@ public class DoubleCompress {
             int doubleDeltaOffset = wrap.getInt();
             int corrilaLength = wrap.getInt();
             ByteBuffer byteBuffer = null;
-            if(doubleDelta.contains(i)){
+            if(doubleDeltaFlag[i]){
                 byteBuffer = wrap1;
             }else{
                 wrap1.position(wrap1.position()+doubleDeltaOffset);

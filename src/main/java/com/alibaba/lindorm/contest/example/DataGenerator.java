@@ -261,8 +261,9 @@ public class DataGenerator {
             }
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
+            AggQuery(tsdbEngine);
 //            TimeRangeQuery(tsdbEngine);
-            DownSampleQuery(tsdbEngine);
+//            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -281,9 +282,9 @@ public class DataGenerator {
             ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
             for (Row row : rows) {
                 if (timeRangeAggregationRequest.getAggregator() == Aggregator.AVG) {
-                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
+//                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
                 } else {
-                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
+//                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
                 }
             }
             if (i % 100000 == 0) {
@@ -375,7 +376,7 @@ public class DataGenerator {
 
     public static void DownSampleQuery(TSDBEngineImpl tsdbEngine) throws IOException {
         System.out.println("DownSample Quey Begin =============");
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 2000; i++) {
             TimeRangeDownsampleRequest timeRangeDownsampleRequest = genTimeRangeDownsampleRequest();
             ArrayList<Row> rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
             ArrayList<Row> ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);

@@ -508,8 +508,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         long gap = System.nanoTime() - start1;
         StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
-        if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
-            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns");
+        if (aggQueryTimes.getAndIncrement() % 2000 == 0) {
+            MemoryUtil.printGCInfo();
+            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns" + ctx);
         }
         return rows;
     }
