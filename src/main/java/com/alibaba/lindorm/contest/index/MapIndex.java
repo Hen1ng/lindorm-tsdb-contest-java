@@ -119,6 +119,7 @@ public class MapIndex {
         // 先压缩vin
 
         long indexFileLength = 0;
+        long beforeLength = 0;
         for (int i = 0; i < INDEX_ARRAY.length; i+=Constants.COMPRESS_BATCH_SIZE) {
             List<ByteBuffer> byteBuffers = new ArrayList<>();
             int totalLength = 0;
@@ -150,6 +151,7 @@ public class MapIndex {
                 totalLength+=allocate.array().length;
             }
             ByteBuffer allocate = ByteBuffer.allocate(totalLength);
+            beforeLength += totalLength;
             for (ByteBuffer byteBuffer : byteBuffers) {
                 byteBuffer.flip();
                 allocate.put(byteBuffer);
@@ -164,7 +166,7 @@ public class MapIndex {
             allocate1.flip();
             fileChannel.write(allocate1);
         }
-        System.out.println("INDEX FILE LEN : " + indexFileLength + " time : " + (System.currentTimeMillis() - start) + " ms");
+        System.out.println("index compress Before Length: " + beforeLength + "INDEX FILE LEN : " + indexFileLength + " time : " + (System.currentTimeMillis() - start) + " ms");
     }
 
 //    public static void saveMapToFile(File file) {

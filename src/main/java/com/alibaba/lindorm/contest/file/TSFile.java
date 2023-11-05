@@ -27,8 +27,6 @@ public class TSFile {
     private FileChannel fileChannel;
     private AtomicLong position;
     private long initPosition;
-
-    private int offsetLine;
     private Lock lock;
     private long fileSize;
     private int fileName;
@@ -51,16 +49,16 @@ public class TSFile {
             if (!file.exists()) {
                 file.createNewFile();
             }
-            if (!RestartUtil.IS_FIRST_START) {
-                if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
-                    final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
-                    final ByteBuffer allocate = ByteBuffer.allocate((int) position);
-                    getFromOffsetByFileChannel(allocate, initPosition,null);
-                    array = allocate.array();
-                    final boolean delete = file.delete();
-                    System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
-                }
-            }
+//            if (!RestartUtil.IS_FIRST_START) {
+//                if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
+//                    final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
+//                    final ByteBuffer allocate = ByteBuffer.allocate((int) position);
+//                    getFromOffsetByFileChannel(allocate, initPosition,null);
+//                    array = allocate.array();
+//                    final boolean delete = file.delete();
+//                    System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
+//                }
+//            }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
         } catch (Exception e) {
             System.out.println("create TSFile error, e" + e);

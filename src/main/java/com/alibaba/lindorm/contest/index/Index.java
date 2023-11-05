@@ -13,6 +13,16 @@ public class Index {
     private long maxTimestamp;
     private long minTimestamp;
 
+    public long getIntOffset() {
+        return intOffset;
+    }
+
+    public void setIntOffset(long intOffset) {
+        this.intOffset = intOffset;
+    }
+
+    private long intOffset;
+
     private int intLength;
     private int doubleLength;
 
@@ -114,6 +124,7 @@ public class Index {
 
 
     public Index(long offset
+                 , long intOffset
             , long maxTimestamp
             , long minTimestamp
             , int length
@@ -128,6 +139,7 @@ public class Index {
             , IntCompress.IntCompressResult intCompressResult
     ) {
         this.offset = offset;
+        this.intOffset = intOffset;
         this.maxTimestamp = maxTimestamp;
         this.minTimestamp = minTimestamp;
         this.length = length;
@@ -149,10 +161,11 @@ public class Index {
             bytes = aggBucket.bytes();
         }
         final byte[] bytes1 = intCompressResult.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 3 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length + 2 + bytes1.length);
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 4 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length + 2 + bytes1.length);
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
+        allocate.putLong(intOffset);
         allocate.putLong(maxTimestamp);
         allocate.putLong(minTimestamp);
         allocate.putInt(valueSize);
@@ -186,6 +199,7 @@ public class Index {
             aggBucket = AggBucket.uncompress(aggBytes);
         }
         long offset = wrap.getLong();
+        long intOffset = wrap.getLong();
         long maxTimeStamp = wrap.getLong();
         long minTimeStamp = wrap.getLong();
         int valueSize = wrap.getInt();
@@ -206,6 +220,7 @@ public class Index {
 
         return new Index(
                 offset,
+                intOffset,
                 maxTimeStamp,
                 minTimeStamp,
                 length,
