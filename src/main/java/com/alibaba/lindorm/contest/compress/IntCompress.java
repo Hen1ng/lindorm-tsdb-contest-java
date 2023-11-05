@@ -230,7 +230,7 @@ public class IntCompress {
 //        System.out.println("compress rate : " + 1.0d * byteLength / (data.length * 4));
     }
 
-    public static final ThreadLocal<long[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
+//    public static final ThreadLocal<long[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
 
     public static int UpperBoundByte(int valueSize) {
         return ((valueSize + 7) / 8);

@@ -30,7 +30,6 @@ import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
  */
 public class MemoryTable {
 
-    private static final ThreadLocal<Map<String, ColumnValue>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(() -> new HashMap<>(60));
     public ExecutorService fixThreadPool;
     private Lock bufferValuesLock;
 
@@ -42,7 +41,7 @@ public class MemoryTable {
     private Queue<Integer> freeList;
     private List<Value>[] bufferValues;
     private final List<Value>[] values;
-    private final long[] valuesLastUpdateTimeStamp;
+//    private final long[] valuesLastUpdateTimeStamp;
 
 
     private final int size;
@@ -56,7 +55,7 @@ public class MemoryTable {
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
         this.values = new ArrayList[size];
-        valuesLastUpdateTimeStamp = new long[5000];
+//        valuesLastUpdateTimeStamp = new long[5000];
 //        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];

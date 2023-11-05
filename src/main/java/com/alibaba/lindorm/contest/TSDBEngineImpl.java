@@ -32,7 +32,6 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 
 public class TSDBEngineImpl extends TSDBEngine {
 
-//    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;

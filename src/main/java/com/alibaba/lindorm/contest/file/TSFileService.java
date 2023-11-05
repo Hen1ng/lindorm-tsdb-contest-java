@@ -28,15 +28,11 @@ import static com.alibaba.lindorm.contest.util.Constants.isBigString;
 
 public class TSFileService {
 
-    public static final ThreadLocal<ByteBuffer> TOTAL_INT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 4));
-    public static final ThreadLocal<ByteBuffer> TOTAL_DOUBLE_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_LONG_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(Constants.CACHE_VINS_LINE_NUMS * 8));
     public static final ThreadLocal<ByteBuffer> TOTAL_STRING_LENGTH_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocate(Constants.CACHE_VINS_LINE_NUMS * Constants.STRING_NUMS * 4));
     public static final ThreadLocal<ByteBuffer> TOTAL_DIRECT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(1024 * 6 * 10));
     public static final ThreadLocal<ByteBuffer> TOTAL_INT_DIRECT_BUFFER = ThreadLocal.withInitial(() -> ByteBuffer.allocateDirect(1024 * 6 * 10));
     public static final ThreadLocal<ArrayList<Row>> LIST_THREAD_LOCAL = ThreadLocal.withInitial(ArrayList::new);
-
-    public static final ThreadLocal<ArrayList<ColumnValue>> LIST_THREAD_VALUE_LOCAL = ThreadLocal.withInitial(ArrayList::new);
 
     public static final ThreadLocal<GzipCompress> GZIP_COMPRESS_THREAD_LOCAL = ThreadLocal.withInitial(GzipCompress::new);
     public static final ThreadLocal<int[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new int[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
@@ -578,10 +574,6 @@ public class TSFileService {
             AggBucket aggBucket = bucketArrayFactory.getAggBucket();
             writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
-            ByteBuffer intBuffer;
-            ByteBuffer doubleBuffer;
-            ByteBuffer longBuffer;
-            ByteBuffer stringLengthBuffer;
             ByteBuffer[] stringList = new ByteBuffer[8 * lineNum];
             ByteBuffer[] bigStringList = new ByteBuffer[2 * lineNum];
             AtomicInteger bigStringLength = new AtomicInteger();
@@ -590,17 +582,9 @@ public class TSFileService {
             int[] ints;
             AtomicInteger longPosition = new AtomicInteger();
             if (lineNum == Constants.CACHE_VINS_LINE_NUMS) {
-                intBuffer = TOTAL_INT_BUFFER.get();
-                doubleBuffer = TOTAL_DOUBLE_BUFFER.get();
-                longBuffer = TOTAL_LONG_BUFFER.get();
-                stringLengthBuffer = TOTAL_STRING_LENGTH_BUFFER.get();
                 ints = INT_ARRAY_BUFFER.get();
                 doubles = DOUBLE_ARRAY_BUFFER.get();
                 longs = LONG_ARRAY_BUFFER.get();
-                intBuffer.clear();
-                doubleBuffer.clear();
-                longBuffer.clear();
-                stringLengthBuffer.clear();
             } else {
                 ints = new int[lineNum * Constants.INT_NUMS];
                 doubles = new double[lineNum * Constants.FLOAT_NUMS];
