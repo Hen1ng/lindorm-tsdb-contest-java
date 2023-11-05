@@ -52,11 +52,14 @@ public class TSFileService {
     private final IntFile[] intFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
 
-    private final BucketArrayFactory bucketArrayFactory = new BucketArrayFactory((180000000 / Constants.CACHE_VINS_LINE_NUMS) + 5000);
+    private BucketArrayFactory bucketArrayFactory;
 
     public TSFileService(String file) {
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
         this.intFiles = new IntFile[Constants.TS_FILE_NUMS];
+        if (RestartUtil.IS_FIRST_START) {
+            bucketArrayFactory = new BucketArrayFactory(Constants.TOTAL_BUCKET + 100);
+        }
         for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
@@ -90,19 +93,19 @@ public class TSFileService {
     private AtomicLong atomicLong = new AtomicLong(0);
 
     public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, int columnIndex, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap, String queryType, Map<Long, Long> queryTimeMap) {
-        if ("downSample".equals(queryType)) {
-            if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
-                System.out.println("getSingleValueByIndex times : " + StaticsUtil.GET_SINGPLE_VALUE_TIMES.get() + " ns");
-                System.out.println("getSingleValueByIndex hitCacheTimes : " + atomicLong.get() + " ns");
-                System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME + " ns");
-                System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
-                System.out.println("getSingleValueByIndex file size : " + StaticsUtil.READ_FILE_SIZE);
-                System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME + " ns");
-                System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES + " ns");
-                System.out.println("getSingleValueByIndex FIRST_READ_TIME : " + StaticsUtil.FIRST_READ_TIME.get() + " ns");
-                System.out.println("getSingleValueByIndex SECOND_READ_TIME : " + StaticsUtil.SECOND_READ_TIME.get() + " ns");
-            }
-        }
+//        if ("downSample".equals(queryType)) {
+//            if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
+//                System.out.println("getSingleValueByIndex times : " + StaticsUtil.GET_SINGPLE_VALUE_TIMES.get() + " ns");
+//                System.out.println("getSingleValueByIndex hitCacheTimes : " + atomicLong.get() + " ns");
+//                System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME + " ns");
+//                System.out.println("getSingleValueByIndex cost read time : " + StaticsUtil.READ_DATA_TIME);
+//                System.out.println("getSingleValueByIndex file size : " + StaticsUtil.READ_FILE_SIZE);
+//                System.out.println("getSingleValueByIndex cost decompress time : " + StaticsUtil.COMPRESS_DATA_TIME + " ns");
+//                System.out.println("getSingleValueByIndex cost value time : " + StaticsUtil.GET_VALUE_TIMES + " ns");
+//                System.out.println("getSingleValueByIndex FIRST_READ_TIME : " + StaticsUtil.FIRST_READ_TIME.get() + " ns");
+//                System.out.println("getSingleValueByIndex SECOND_READ_TIME : " + StaticsUtil.SECOND_READ_TIME.get() + " ns");
+//            }
+//        }
         long start = System.nanoTime();
         ctx.addAccessTime();
         ArrayList<ColumnValue> rowArrayList = new ArrayList<>();
@@ -152,9 +155,9 @@ public class TSFileService {
                 long endRead = System.nanoTime();
                 StaticsUtil.READ_FILE_SIZE.addAndGet(length);
                 StaticsUtil.READ_DATA_TIME.addAndGet(endRead - startRead);
-                if(StaticsUtil.GET_SINGPLE_VALUE_TIMES.get() % 500000 == 0){
-                    System.out.println("read file size : " + length +" read file time : " +(endRead-startRead));
-                }
+//                if(StaticsUtil.GET_SINGPLE_VALUE_TIMES.get() % 500000 == 0){
+//                    System.out.println("read file size : " + length +" read file time : " +(endRead-startRead));
+//                }
             }
 
             int i = 0;//多少行
@@ -857,7 +860,7 @@ public class TSFileService {
             }
             countDownLatch.await();
             System.out.println("loadBucket cost: " + (System.currentTimeMillis() - startTime) + " ms");
-            MemoryUtil.printJVMHeapMemory();
+
         } catch (Exception e) {
             e.printStackTrace();
         }

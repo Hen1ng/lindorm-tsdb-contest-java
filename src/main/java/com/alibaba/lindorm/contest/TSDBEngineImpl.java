@@ -32,7 +32,7 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 
 public class TSDBEngineImpl extends TSDBEngine {
 
-    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+//    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private final AtomicLong upsertTimes;
     private final AtomicLong executeLatestQueryTimes;
     private final AtomicLong executeLatestQueryVinsSize;
@@ -95,6 +95,8 @@ public class TSDBEngineImpl extends TSDBEngine {
         this.executeLatestQueryVinsSize = new AtomicLong(0);
         this.executeAggregateQueryTimes = new AtomicLong(0);
         this.executeDownsampleQueryTimes = new AtomicLong(0);
+        System.out.println("TSDBEngineImpl init finish");
+        MemoryUtil.printJVMHeapMemory();
     }
 
     @Override
@@ -107,21 +109,24 @@ public class TSDBEngineImpl extends TSDBEngine {
 //        MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
+        System.out.println("vin and schema load finish");
         MemoryUtil.printJVMHeapMemory();
         MapIndex.loadMapFromFileunCompress(indexFile);
-        for (int i = 0; i < 40; i++) {
-            StaticsUtil.columnInfos.add(new ColumnInfo());
-        }
         if (RestartUtil.IS_FIRST_START) {
 
         } else {
-            System.out.println("start load");
+            System.out.println("start load bucket");
             MemoryUtil.printJVMHeapMemory();
             fileService.loadBucket();
             MapIndex.loadBigBucket();
+            System.out.println("start load last");
+            MemoryUtil.printJVMHeapMemory();
             memoryTable.loadLastTsToMemory();
+            System.out.println("start load int");
             MemoryUtil.printJVMHeapMemory();
             fileService.loadInt();
+            System.out.println("load int finish ");
+            MemoryUtil.printJVMHeapMemory();
         }
         System.gc();
         MemoryUtil.printMemory();
@@ -516,10 +521,10 @@ public class TSDBEngineImpl extends TSDBEngine {
         long gap = System.nanoTime() - start1;
         StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
         StaticsUtil.AGG_TOTAL_READ_FILE_TIME.getAndAdd(readFileCost);
-        if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
-            StaticsUtil.printCPU();
-            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns" + "AGG_TOTAL_READ_FILE_TIME " + StaticsUtil.AGG_TOTAL_READ_FILE_TIME.get() + ctx);
-        }
+//        if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
+//            StaticsUtil.printCPU();
+//            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns" + "AGG_TOTAL_READ_FILE_TIME " + StaticsUtil.AGG_TOTAL_READ_FILE_TIME.get() + ctx);
+//        }
         return rows;
     }
 
@@ -815,19 +820,19 @@ public class TSDBEngineImpl extends TSDBEngine {
             long endTime = System.nanoTime();
             long gap = endTime - beginTime;
             StaticsUtil.DOWNSAMPLE_TOTAL_TIME.getAndAdd(gap);
-            if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
-                if (StaticsUtil.START_COUNT_IOPS != 0) {
-                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
-                }
-//                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
-//                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
-//                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
-                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns" );
-                StaticsUtil.printCPU();
-                System.out.println("IPOS: " + StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement() * 1.0d /(System.currentTimeMillis() - StaticsUtil.START_COUNT_IOPS));
-
-//                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
-            }
+//            if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
+//                if (StaticsUtil.START_COUNT_IOPS != 0) {
+//                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
+//                }
+////                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
+////                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
+////                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
+////                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns" );
+////                StaticsUtil.printCPU();
+////                System.out.println("IPOS: " + StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement() * 1.0d /(System.currentTimeMillis() - StaticsUtil.START_COUNT_IOPS));
+//
+////                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
+//            }
             return rows;
         } catch (Exception e) {
             e.printStackTrace();
@@ -987,6 +992,15 @@ public class TSDBEngineImpl extends TSDBEngine {
     }
 
     public static void main(String[] args) {
-        System.out.println(1);
+        File dataDir = new File("data_dir_test");
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
+        final TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
+        try {
+            new CountDownLatch(1).await();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
