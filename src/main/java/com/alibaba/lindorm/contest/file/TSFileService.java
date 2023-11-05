@@ -13,9 +13,11 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.github.luben.zstd.Zstd;
 
+import java.awt.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -855,6 +857,7 @@ public class TSFileService {
             }
             countDownLatch.await();
             System.out.println("loadBucket cost: " + (System.currentTimeMillis() - startTime) + " ms");
+            MemoryUtil.printJVMHeapMemory();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -870,5 +873,13 @@ public class TSFileService {
         }
     }
 
+    public void loadInt() {
+        long start = System.currentTimeMillis();
+        for (IntFile intFile : intFiles) {
+            intFile.loadInt();;
+        }
+        System.out.println("load int cost" + (System.currentTimeMillis() - start) + " ms");
+        MemoryUtil.printJVMHeapMemory();
+    }
 }
 

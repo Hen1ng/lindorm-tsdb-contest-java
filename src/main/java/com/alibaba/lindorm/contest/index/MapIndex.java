@@ -5,6 +5,7 @@ import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.MemoryUtil;
 import com.alibaba.lindorm.contest.util.Pair;
 import com.github.luben.zstd.Zstd;
 
@@ -192,6 +193,7 @@ public class MapIndex {
 
     public static void loadMapFromFileunCompress(File file)
             throws IOException {
+        long totalSize = 0;
         FileChannel fileChannel = new RandomAccessFile(file, "r").getChannel();
         ByteBuffer intBuffer = ByteBuffer.allocate(4);
         while (fileChannel.read(intBuffer) > 0) {
@@ -204,6 +206,7 @@ public class MapIndex {
             byte[] bytes2 = new byte[compressLength - 4];
             dataBuffer.get(bytes2,0,bytes2.length);
             byte[] bytes = Zstd.decompress(bytes2, anInt1);
+            totalSize += bytes.length;
             final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
             while (byteBuffer.hasRemaining()){
                 byte[] vinArray = new byte[17];
@@ -223,8 +226,8 @@ public class MapIndex {
             }
             intBuffer.flip();
         }
-        System.out.println("load Index into memory size : " + INDEX_ARRAY.length);
-
+        System.out.println("load Index into memory size : " + INDEX_ARRAY.length + "totalSize " + totalSize) ;
+        MemoryUtil.printJVMHeapMemory();
     }
 
     public static void loadBigBucket() {
@@ -233,7 +236,7 @@ public class MapIndex {
             BigBucket bigBucket = new BigBucket();
             while (j < INDEX_ARRAY[i].size()){
                 bigBucket.addBucket(INDEX_ARRAY[i].get(j));
-                if(j%10==0){
+                if(j % 100 == 0) {
                     BUCKET_ARRAY[i].add(bigBucket);
                     bigBucket = new BigBucket();
                 }

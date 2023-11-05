@@ -100,12 +100,14 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public void connect() throws IOException {
         System.out.println("connect start...");
+        MemoryUtil.printJVMHeapMemory();
         InetAddress localhost = InetAddress.getLocalHost();
         System.out.println("host: " + localhost.getHostAddress());
         long start = System.currentTimeMillis();
 //        MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
+        MemoryUtil.printJVMHeapMemory();
         MapIndex.loadMapFromFileunCompress(indexFile);
         for (int i = 0; i < 40; i++) {
             StaticsUtil.columnInfos.add(new ColumnInfo());
@@ -113,9 +115,13 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (RestartUtil.IS_FIRST_START) {
 
         } else {
+            System.out.println("start load");
+            MemoryUtil.printJVMHeapMemory();
             fileService.loadBucket();
             MapIndex.loadBigBucket();
             memoryTable.loadLastTsToMemory();
+            MemoryUtil.printJVMHeapMemory();
+            fileService.loadInt();
         }
         System.gc();
         MemoryUtil.printMemory();

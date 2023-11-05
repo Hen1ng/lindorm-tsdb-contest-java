@@ -38,21 +38,24 @@ public class IntFile {
             if (!file.exists()) {
                 file.createNewFile();
             }
-            if (!RestartUtil.IS_FIRST_START) {
-                if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
-                    final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
-                    final ByteBuffer allocate = ByteBuffer.allocate((int) position);
-                    getFromOffsetByFileChannel(allocate, initPosition);
-                    array = allocate.array();
-                    final boolean delete = file.delete();
-                    System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
-                }
-            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    public void loadInt() {
+        if (!RestartUtil.IS_FIRST_START) {
+            if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
+                final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
+                final ByteBuffer allocate = ByteBuffer.allocate((int) position);
+                getFromOffsetByFileChannel(allocate, initPosition);
+                array = allocate.array();
+                final boolean delete = file.delete();
+                System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
+            }
+        }
+    }
     public long append(ByteBuffer byteBuffer) {
         this.lock.lock();
         long currentPos = this.position.get();

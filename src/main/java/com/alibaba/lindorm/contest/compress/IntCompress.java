@@ -17,21 +17,21 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class IntCompress {
-    static Composition codec = new Composition(new NewPFDS9(), new VariableByte());
+//    static Composition codec = new Composition(new NewPFDS9(), new VariableByte());
 
-    static int[] testNumReal = new int[8400];
+//    static int[] testNumReal = new int[8400];
     static int originLength;
-    static int[] testNum2 = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 513, 1025};
+//    static int[] testNum2 = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 513, 1025};
     public static ThreadLocal<BitSet> SHORT_ARRTY_TYPE_THREAD_LOCAL = ThreadLocal.withInitial(() -> BitSet.valueOf(new byte[2]));
 
-    static long[] testNum4 = new long[1575];
+//    static long[] testNum4 = new long[1575];
 
-    static {
-        Random random = new Random();
-        for (int i = 0; i < 1575; i++) {
-            testNum4[i] = Math.abs(random.nextInt(30000));
-        }
-    }
+//    static {
+//        Random random = new Random();
+//        for (int i = 0; i < 1575; i++) {
+//            testNum4[i] = Math.abs(random.nextInt(30000));
+//        }
+//    }
 
     public static void setBit(int index, byte[] bytes) {
         int byteIndex = index / 8; // 每个字节有8位
@@ -167,11 +167,11 @@ public class IntCompress {
 //                System.out.println("index i : " + i + " data :" + data[i] + " decompress : " + decompress[i]);
 //            }
 //        }
-        long[] longs1 = new long[testNumReal.length];
-        for (int i = 0; i < longs1.length; i++) {
-            longs1[i] = testNumReal[i];
-        }
-        int[] data = testNumReal.clone();
+//        long[] longs1 = new long[testNumReal.length];
+//        for (int i = 0; i < longs1.length; i++) {
+//            longs1[i] = testNumReal[i];
+//        }
+//        int[] data = testNumReal.clone();
 //        int[] data1 = testNumReal.clone();
 //        preProcess(data1, 210);
 //        int[][] splitArray = splitArray(data1, 210, 100 * 35);
@@ -188,25 +188,25 @@ public class IntCompress {
 //        recoveryProcess(data1, 210);
 //
 //        System.out.println(Arrays.equals(data1,data));
-        final IntCompressResult intCompressResult = compress4(data, 210);
-        final byte[] bytes = intCompressResult.data;
-        long byteLength = bytes.length;
-//        final int[] output = new int[data.length];
-        final int[] longs = decompress4V2(bytes, 210, intCompressResult);
+//        final IntCompressResult intCompressResult = compress4(data, 210);
+//        final byte[] bytes = intCompressResult.data;
+//        long byteLength = bytes.length;
+////        final int[] output = new int[data.length];
+//        final int[] longs = decompress4V2(bytes, 210, intCompressResult);
 //        final byte[] bytes1 = compressZstd(data1);
 //        for (int i = 0; i < longs.length; i++) {
 //            if (longs[i] != testNumReal[i]) {
 //                System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
 //            }
 //        }
-        boolean a = Arrays.equals(longs, testNumReal);
-//        for (int i = 0; i < 40; i++) {
-            int columnIndex = 15;
-            final int[] singleColumn = getSingleColumn(ByteBuffer.wrap(bytes), 210, columnIndex, intCompressResult);
-            final boolean equals = ArrayUtils.equals(testNumReal, 210 * columnIndex, +210 * (columnIndex + 1), singleColumn);
-            if (!equals) {
-                System.out.println("wrong result, column index : " + columnIndex);
-            }
+//        boolean a = Arrays.equals(longs, testNumReal);
+////        for (int i = 0; i < 40; i++) {
+//            int columnIndex = 15;
+//            final int[] singleColumn = getSingleColumn(ByteBuffer.wrap(bytes), 210, columnIndex, intCompressResult);
+//            final boolean equals = ArrayUtils.equals(testNumReal, 210 * columnIndex, +210 * (columnIndex + 1), singleColumn);
+//            if (!equals) {
+//                System.out.println("wrong result, column index : " + columnIndex);
+//            }
 //        }
 
 //
@@ -226,8 +226,8 @@ public class IntCompress {
 //        final byte[] decompress2 = ZstdCompress.decompress(compress2);
 //        final byte[] compress3 = gzipCompress.compress(compress2);
 //        final boolean equals = Arrays.equals(testNum3, longs);
-        System.out.println(a);
-        System.out.println("compress rate : " + 1.0d * byteLength / (data.length * 4));
+//        System.out.println(a);
+//        System.out.println("compress rate : " + 1.0d * byteLength / (data.length * 4));
     }
 
     public static final ThreadLocal<long[]> INT_ARRAY_BUFFER = ThreadLocal.withInitial(() -> new long[Constants.CACHE_VINS_LINE_NUMS * Constants.INT_NUMS]);
@@ -244,8 +244,8 @@ public class IntCompress {
 
     public static ArrayList<Integer> split1 = new ArrayList<>(10);
     public static ArrayList<Integer> split2 = new ArrayList<>(10);
-    public static ArrayList<Integer> split3 = new ArrayList<>(10);
-    public static ArrayList<Integer> split4 = new ArrayList<>(10);
+//    public static ArrayList<Integer> split3 = new ArrayList<>(10);
+//    public static ArrayList<Integer> split4 = new ArrayList<>(10);
     public static int[] relation = new int[40];
 
     static {
