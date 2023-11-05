@@ -86,6 +86,9 @@ public class TSFile {
 
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset, Context ctx) {
         try {
+            if (StaticsUtil.START_COUNT_IOPS != 0) {
+                StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement();
+            }
             int remaining = byteBuffer.remaining();
             long start = System.nanoTime();
             if (array != null) {

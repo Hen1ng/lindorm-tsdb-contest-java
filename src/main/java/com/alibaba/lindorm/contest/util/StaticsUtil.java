@@ -1,5 +1,7 @@
 package com.alibaba.lindorm.contest.util;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,6 +47,32 @@ public class StaticsUtil {
     public static AtomicLong DOWNSAMPLE_TOTAL_TIME = new AtomicLong(0);
 
 
+    public static AtomicLong TIME_RANGE_READ_FILE_SIZE = new AtomicLong(0);
+    public static AtomicLong TIME_RANGE_READ_TIME = new AtomicLong(0);
+
+
+    public static AtomicLong DOWN_SAMPLE_IOPS = new AtomicLong(0);
+
+    public static long START_COUNT_IOPS = 0;
+
     public static int MAX_INT = Integer.MIN_VALUE;
     public static int MIN_INT = Integer.MAX_VALUE;
+
+    public static void printCPU() {
+        try {
+            String line;
+            Process process = Runtime.getRuntime().exec("top -b -n1");
+            BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            while ((line = input.readLine()) != null) {
+                if (line.contains("Cpu(s):")) {
+                    // 提取CPU使用率
+                    System.out.println(line);
+                    break;
+                }
+            }
+            input.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
 }

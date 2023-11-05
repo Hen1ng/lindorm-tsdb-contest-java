@@ -258,13 +258,16 @@ public class TSFileService {
             final int length = index.getLength();
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
+            long start = System.nanoTime();
             if (containsBigString) {
 //                dataBuffer = ByteBuffer.allocate(length);
                 dataBuffer = TOTAL_DIRECT_BUFFER.get();
                 dataBuffer.clear();
                 dataBuffer.position(0);
                 dataBuffer.limit(length);
+                StaticsUtil.TIME_RANGE_READ_FILE_SIZE.getAndAdd(length);
                 tsFile.getFromOffsetByFileChannel(dataBuffer, offset,null);
+                StaticsUtil.TIME_RANGE_READ_TIME.getAndAdd((System.nanoTime() - start));
                 dataBuffer.flip();
                 if (bigStringBytes == null) {
                     int bigStringLength = dataBuffer.getInt(index.getBigStringOffset());
@@ -279,7 +282,9 @@ public class TSFileService {
                 dataBuffer.clear();
                 dataBuffer.position(0);
                 dataBuffer.limit(index.getBigStringOffset());
+                StaticsUtil.TIME_RANGE_READ_FILE_SIZE.getAndAdd(index.getBigStringOffset());
                 tsFile.getFromOffsetByFileChannel(dataBuffer, offset,null);
+                StaticsUtil.TIME_RANGE_READ_TIME.getAndAdd((System.nanoTime() - start));
                 dataBuffer.flip();
             }
             dataBuffer.position(0);

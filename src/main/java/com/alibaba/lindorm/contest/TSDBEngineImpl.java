@@ -242,8 +242,9 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
         }
         if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
-            MemoryUtil.printJVMHeapMemory();
+//            MemoryUtil.printJVMHeapMemory();
             System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
+            System.out.printf("TIME_RANGE_READ_FILE_SIZE " + StaticsUtil.TIME_RANGE_READ_FILE_SIZE.get() + "TIME_RANGE_READ_TIME " + StaticsUtil.TIME_RANGE_READ_TIME.get());
         }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedColumns());
@@ -510,7 +511,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
         StaticsUtil.AGG_TOTAL_READ_FILE_TIME.getAndAdd(readFileCost);
         if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
-            MemoryUtil.printGCInfo();
+            StaticsUtil.printCPU();
             System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns" + "AGG_TOTAL_READ_FILE_TIME " + StaticsUtil.AGG_TOTAL_READ_FILE_TIME.get() + ctx);
         }
         return rows;
@@ -809,10 +810,16 @@ public class TSDBEngineImpl extends TSDBEngine {
             long gap = endTime - beginTime;
             StaticsUtil.DOWNSAMPLE_TOTAL_TIME.getAndAdd(gap);
             if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
+                if (StaticsUtil.START_COUNT_IOPS != 0) {
+                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
+                }
 //                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
 //                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
 //                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
-                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns");
+                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns" );
+                StaticsUtil.printCPU();
+                System.out.println("IPOS: " + StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement() * 1.0d /(System.currentTimeMillis() - StaticsUtil.START_COUNT_IOPS));
+
 //                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
             }
             return rows;
