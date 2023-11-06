@@ -1,4 +1,4 @@
-//package com.alibaba.lindorm.contest.util;
+package com.alibaba.lindorm.contest.util;//package com.alibaba.lindorm.contest.util;
 //
 //import java.lang.reflect.Field;
 //import java.lang.reflect.Method;

@@ -6,6 +6,16 @@ import java.util.Map;
 
 public class Value {
 
+    public ColumnValue[] getColumnValues() {
+        return columnValues;
+    }
+
+    public void setColumnValues(ColumnValue[] columnValues) {
+        this.columnValues = columnValues;
+    }
+
+    ColumnValue[] columnValues;
+
     public Value(long timestamp, Map<String, ColumnValue> columns) {
         this.timestamp = timestamp;
         this.columns = columns;

@@ -35,8 +35,8 @@ public class FilePosition {
         }
     }
 
-    public void save(TSFile[] tsFiles) {
-        for (TSFile tsFile : tsFiles) {
+    public void save(IntFile[] tsFiles) {
+        for (IntFile tsFile : tsFiles) {
             final long l = tsFile.getPosition().get();
             mappedByteBuffer.putLong(l);
         }

@@ -12,10 +12,7 @@ import com.sun.source.doctree.SinceTree;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
@@ -44,7 +41,7 @@ public class MemoryTable {
     private Queue<Integer> freeList;
     private List<Value>[] bufferValues;
     private final List<Value>[] values;
-    private final long[] valuesLastUpdateTimeStamp;
+//    private final long[] valuesLastUpdateTimeStamp;
 
 
     private final int size;
@@ -58,7 +55,7 @@ public class MemoryTable {
     public MemoryTable(int size, TSFileService tsFileService) {
         this.size = size;
         this.values = new ArrayList[size];
-        valuesLastUpdateTimeStamp = new long[5000];
+//        valuesLastUpdateTimeStamp = new long[5000];
 //        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
@@ -180,36 +177,64 @@ public class MemoryTable {
         return null;
     }
 
+    public synchronized void print(Map<String, ColumnValue> columns,  Set<String> requestedColumns ) {
+        System.out.println("query columns");
+        for (String requestedColumn : requestedColumns) {
+            System.out.print(requestedColumn + ",");
+        }
+        System.out.println("result columns");
+        for (Map.Entry<String, ColumnValue> entry : columns.entrySet()) {
+            System.out.println(entry.getKey() + " :" + entry.getValue());
+        }
+
+    }
+    public Row getLastRow(Vin vin, int[] queryColumns, Set<String> requestedColumns ) {
+        try {
+            Integer i = VinDictMap.get(vin);
+            if (i == null) {
+                return null;
+            }
+            final List<Value> value1 = values[i];
+            Value value = value1.get(0);
+            final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
+            int j = 0;
+            for (String requestedColumn : requestedColumns) {
+                columns.put(requestedColumn, value.getColumnValues()[queryColumns[j]]);
+                j++;
+            }
+//            print(columns, requestedColumns);
+            return new Row(vin, value.getTimestamp(), columns);
+        } catch (Exception e) {
+            e.printStackTrace();;
+        }
+        return null;
+    }
+
     public Row getFromMemoryTable(Vin vin, Set<String> requestedColumns, int slot) {
-        long start = System.currentTimeMillis();
-        queryLastTimes.getAndIncrement();
-        long totalStringLength = 0;
+//        long start = System.currentTimeMillis();
+//        queryLastTimes.getAndIncrement();
+//        long totalStringLength = 0;
         try {
             Value value = values[slot].get(0);
-            Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
+            final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
             for (String requestedColumn : requestedColumns) {
-                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
-                    final ByteBuffer stringValue = value.getColumns().get(requestedColumn).getStringValue();
-                    final ByteBuffer allocate = ByteBuffer.allocate(stringValue.capacity());
-                    totalStringLength += stringValue.capacity();
-                    int position = stringValue.position();
-                    int limit = stringValue.limit();
-                    allocate.put(stringValue);
-                    stringValue.limit(limit);
-                    stringValue.position(position);
-                    columns.put(requestedColumn, new ColumnValue.StringColumn(allocate.flip()));
-                } else {
+//                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
+//                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
+//                    final ByteBuffer stringValue = value.getColumns().get(requestedColumn).getStringValue();
+//                    final ByteBuffer compact = stringValue.slice();
+//                    columns.put(requestedColumn, new ColumnValue.StringColumn(compact));
+//                } else {
                     columns.put(requestedColumn, value.getColumns().get(requestedColumn));
-                }
+//                }
             }
             return new Row(vin, value.getTimestamp(), columns);
         } finally {
-            if (queryLastTimes.get() % 300000000 == 0) {
-                System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
-            }
+//            if (queryLastTimes.get() % 300000000 == 0) {
+//                System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
+//            }
         }
     }
+
 
     public ArrayList<Row> getTimeRangeRow(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns) {
         long start = System.currentTimeMillis();
@@ -227,7 +252,7 @@ public class MemoryTable {
             timeRangeRowFromMemoryTable.addAll(timeRangeRowFromTsFile);
             return timeRangeRowFromMemoryTable;
         } finally {
-            if (queryTimeRangeTimes.get() % 500000 == 0) {
+            if (queryTimeRangeTimes.get() % 1000000 == 0) {
                 System.out.println("getTimeRangeRow cost: " + (System.currentTimeMillis() - start) + " ms");
             }
 //            spinLockArray[lock].readLock().unlock();
@@ -332,16 +357,21 @@ public class MemoryTable {
         return result;
     }
 
+    private final AtomicLong executeTimeRangeQueryTimes = new AtomicLong(0);
+
     private ArrayList<Row> getTimeRangeRowFromTsFile(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns, int vinIndex) {
         ArrayList<Row> rowArrayList = new ArrayList<>();
         try {
             final List<Index> indexList = MapIndex.get(vinIndex, timeLowerBound, timeUpperBound);
             for (Index index : indexList) {
-                final Integer integer = VinDictMap.get(vin);
-                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
+//                final Integer integer = VinDictMap.get(vin);
+                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, vinIndex);
                 if (!byIndex.isEmpty()) {
                     rowArrayList.addAll(byIndex);
                 }
+            }
+            if (executeTimeRangeQueryTimes.getAndIncrement() % 200000 == 0) {
+                System.out.println("getTimeRangeRowFromTsFile indexList size " + indexList.size() + "interval:" + (timeUpperBound - timeLowerBound));
             }
         } catch (Exception e) {
             System.out.println("getTimeRangeRowFromTsFile error, e" + e);
@@ -410,6 +440,7 @@ public class MemoryTable {
             System.out.println("loadLastTsToMemory start");
             long start = System.currentTimeMillis();
             final Set<String> requestedColumns = SchemaUtil.getSchema().getColumnTypeMap().keySet();
+            int total = 0;
             for (int i = 0; i < INDEX_ARRAY.length; i++) {
                 Pair<Index, Long> pair = MapIndex.getLast(i);
                 final Index index = pair.getLeft();
@@ -423,9 +454,18 @@ public class MemoryTable {
                 }
                 final List<Value> valueSortedList = this.values[i];
                 final Value value = new Value(timestamp, row.getColumns());
+                ColumnValue[] columnValues = new ColumnValue[60];
+                for (Map.Entry<String, ColumnValue> entry : row.getColumns().entrySet()) {
+                    final String key = entry.getKey();
+                    final ColumnValue value1 = entry.getValue();
+                    final int indexByColumn = SchemaUtil.getIndexByColumn(key);
+                    columnValues[indexByColumn] = value1;
+                }
+                value.setColumnValues(columnValues);
                 valueSortedList.add(value);
+                total += 1;
             }
-            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms");
+            System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms" + "total " + total);
 //            start = System.currentTimeMillis();
 //            ExecutorService executorService = Executors.newFixedThreadPool(200);
 //            int i = 0;
@@ -449,8 +489,8 @@ public class MemoryTable {
         }
     }
 
-    public static void main(String[] args) {
-        double maxDouble = -Double.MAX_VALUE;
-        System.out.println(maxDouble > 0);
-    }
+//    public static void main(String[] args) {
+//        double maxDouble = -Double.MAX_VALUE;
+//        System.out.println(maxDouble > 0);
+//    }
 }

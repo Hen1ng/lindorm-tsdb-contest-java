@@ -2,7 +2,9 @@ package com.alibaba.lindorm.contest.example;
 
 import com.alibaba.lindorm.contest.TSDBEngineImpl;
 import com.alibaba.lindorm.contest.index.AggBucket;
+import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
+import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.structs.*;
 import com.alibaba.lindorm.contest.util.MemoryUtil;
 
@@ -20,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class DataGenerator {
 
-    public static String[] columnsName = {"QZZS", "ZDWDZXTH", "JYDZ", "FDJGZZS", "QXTZGWD", "ZGWDZXTH", "DW", "QDDJGS", "QQZGND", "ZGDYDCDTDH", "QDDJXH", "ZDDYDCDTDH", "DCDC", "RLDCRLXHL", "DJKZQDY", "DCDTDYZGZ", "ZGDYDCZXTDH", "YXMS", "DWZT", "RLDCDY", "QTGZLB", "QQZGYLCGQDH", "GYDCDCZT", "RLDCDL", "LATITUDE", "DJKZQDL", "QXTZGWDTZDH", "ZDWDTZXH", "KCDCNZZGZDMLB", "CDZT", "QDDJZS", "RLXHL", "QDDJZT", "LONGITUDE", "FDJGZLB", "QDDJGZDMLB", "DCDTDYZDZ", "QQZGNDCGQDH", "LJLC", "ZDWDZ", "QDDJZJ", "ZGBJDJ", "QDDJGZZS", "ZDL", "ZDDYDCZXTDH", "KCDCNZZGZZS", "SOC", "ZDY", "ZGWDTZXH", "QDDJWD", "CS", "RLDCTZGS", "QDDJKZWD", "JUBK", "ZGWDZ", "QTGZZS", "QQZGYL", "TYBJBZ", "CLZT", "FDJZT"};
+    public static String[] columnsName = {"QZZS", "ZDWDZXTH", "JYDZ", "FDJGZZS", "QXTZGWD", "ZGWDZXTH", "DW", "QDDJGS", "QQZGND", "ZGDYDCDTDH", "QDDJXH", "ZDDYDCDTDH", "DCDC", "RLDCRLXHL", "DJKZQDY", "DCDTDYZGZ", "ZGDYDCZXTDH", "YXMS", "DWZT", "RLDCDY", "QTGZLB", "QQZGYLCGQDH", "GYDCDCZT", "RLDCDL", "LATITUDE", "DJKZQDL", "QXTZGWDTZDH", "ZDWDTZXH", "KCDCNZZGZDMLB", "CDZT", "QDDJZS", "RLXHL", "QDDJZT", "LONGITUDE", "FDJGZLB", "QDDJGZDMLB", "DCDTDYZDZ", "QQZGNDCGQDH", "LJLC", "ZDWDZ", "QDDJZJ", "ZGBJDJ", "QDDJGZZS", "ZDL", "ZDDYDCZXTDH", "KCDCNZZGZZS", "SOC", "ZDY", "ZGWDTZXH", "QDDJWD", "CS", "RLDCTZGS", "QDDJKZWD", "FDJZT", "ZGWDZ", "CLZT", "QQZGYL", "TYBJBZ", "ORNI", "JUBK"};
 
     public static int INT_NUM = 40;
     public static int DOUBLE_NUM = 10;
@@ -65,14 +67,21 @@ public class DataGenerator {
         rowFactory.timeStamp = System.currentTimeMillis();
         Map<String, ColumnValue> columns = new HashMap<>();
         for (int i = 0; i < INT_NUM; i++) {
-            rowFactory.ints[i] = random.nextInt(1000);
+            rowFactory.ints[i] = random.nextInt(2);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
             rowFactory.doubles[i - INT_NUM] = random.nextInt(10);
         }
         for (int i = INT_NUM + DOUBLE_NUM; i < INT_NUM + DOUBLE_NUM + STRING_NUM; i++) {
             int length = 10;
-            String str = random.nextInt(4) + "asd";
+            String str;
+            if(i == 58){
+                str = generateRandomString(30);
+            }else if(i==59){
+                str = generateRandomString(100);
+            }else {
+                str = random.nextInt(4) + "asd";
+            }
             rowFactory.byteBuffers[i - INT_NUM - DOUBLE_NUM] = str;
         }
         return rowFactory;
@@ -98,7 +107,9 @@ public class DataGenerator {
         Set<String> requestedColumns = new HashSet<>(Arrays.asList(columnsName));
         Vin vin = vins[random.nextInt(1)];
         Set<String> request = new HashSet<>();
-        request.add("QZZS");
+        for(int i=0;i<60;i++){
+            request.add(columnsName[i]);
+        }
         int time = random.nextInt(36000 - 300);
         long timeLower = timeStamp[time];
         long timeUpper = timeStamp[time + 300];
@@ -134,10 +145,11 @@ public class DataGenerator {
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start + 3600 * 3] + randomTime;
         int i = random.nextInt(2);
+        final String s = columnsName[41];
         if (i == 0) {
-            return new TimeRangeAggregationRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG);
+            return new TimeRangeAggregationRequest("test", vin, s, timeLower, timeUpper, Aggregator.AVG);
         } else {
-            return new TimeRangeAggregationRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX);
+            return new TimeRangeAggregationRequest("test", vin, s, timeLower, timeUpper, Aggregator.MAX);
         }
     }
 
@@ -149,17 +161,18 @@ public class DataGenerator {
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start + 3600] + randomTime;
         int i = random.nextInt(4);
+        String columnName = columnsName[random.nextInt(40)];
         if (i == 1) {
-            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 2) {
-            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 3) {
-            return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
         }
-        return new TimeRangeDownsampleRequest("test", vin, "QZZS", timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+        return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
     }
 
-    public static void main(String[] args) {
+    public static void  main(String[] args) {
         initTimeStamp(16492012515000L);
         vins = new Vin[VIN_NUMS];
         for (int i = 0; i < VIN_NUMS; i++) {
@@ -203,7 +216,7 @@ public class DataGenerator {
                 for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 1; v++) {
+                        for (int v = 0; v < 10; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -244,10 +257,14 @@ public class DataGenerator {
                 executorService.shutdownNow();  // 如果当前线程被中断，也尝试强制关闭线程池
             }
             tsdbEngineSample.shutdown();
+            for (List<Index> indices : MapIndex.INDEX_ARRAY) {
+                indices.clear();
+            }
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
-//            TimeRangeQuery(tsdbEngine);
-            AggQuery(tsdbEngine);
+//            AggQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
+//            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -266,9 +283,9 @@ public class DataGenerator {
             ArrayList<Row> rows = tsdbEngine.executeAggregateQuery(timeRangeAggregationRequest);
             for (Row row : rows) {
                 if (timeRangeAggregationRequest.getAggregator() == Aggregator.AVG) {
-                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
+//                    System.out.println(row.getColumns().get("QZZS").getDoubleFloatValue());
                 } else {
-                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
+//                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
                 }
             }
             if (i % 100000 == 0) {
@@ -298,8 +315,9 @@ public class DataGenerator {
             TimeRangeQueryRequest latestQueryRequest = genTimeRangeQueryRequest();
             ArrayList<Row> rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
             for (Row row : rows) {
-                int qzzs = row.getColumns().get("QZZS").getIntegerValue();
-                System.out.println(qzzs);
+                for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
+                    System.out.println(stringColumnValueEntry.getValue());
+                }
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 
@@ -359,7 +377,7 @@ public class DataGenerator {
 
     public static void DownSampleQuery(TSDBEngineImpl tsdbEngine) throws IOException {
         System.out.println("DownSample Quey Begin =============");
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 20000; i++) {
             TimeRangeDownsampleRequest timeRangeDownsampleRequest = genTimeRangeDownsampleRequest();
             ArrayList<Row> rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
             ArrayList<Row> ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
@@ -368,16 +386,14 @@ public class DataGenerator {
                 ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
                 rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
             }
+            for (Row row : rows) {
+                System.out.println(row);
+            }
             for (int j = 0; j < rows.size(); j++) {
                 Row row = rows.get(j);
                 Row ansRow = ans.get(j);
                 if (row.getTimestamp() != ansRow.getTimestamp()) {
                     System.out.println("timeStamp error");
-                }
-                if (!row.getColumns().get("QZZS").equals(ansRow.getColumns().get("QZZS"))) {
-                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("QZZS") + " but got : " + row.getColumns().get("QZZS"));
-                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
-                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
                 }
             }
             if (i % 100 == 0) {

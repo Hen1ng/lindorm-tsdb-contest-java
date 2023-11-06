@@ -5,6 +5,7 @@ import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.MemoryUtil;
 import com.alibaba.lindorm.contest.util.Pair;
 import com.github.luben.zstd.Zstd;
 
@@ -119,6 +120,7 @@ public class MapIndex {
         // 先压缩vin
 
         long indexFileLength = 0;
+        long beforeLength = 0;
         for (int i = 0; i < INDEX_ARRAY.length; i+=Constants.COMPRESS_BATCH_SIZE) {
             List<ByteBuffer> byteBuffers = new ArrayList<>();
             int totalLength = 0;
@@ -150,6 +152,7 @@ public class MapIndex {
                 totalLength+=allocate.array().length;
             }
             ByteBuffer allocate = ByteBuffer.allocate(totalLength);
+            beforeLength += totalLength;
             for (ByteBuffer byteBuffer : byteBuffers) {
                 byteBuffer.flip();
                 allocate.put(byteBuffer);
@@ -164,7 +167,7 @@ public class MapIndex {
             allocate1.flip();
             fileChannel.write(allocate1);
         }
-        System.out.println("INDEX FILE LEN : " + indexFileLength + " time : " + (System.currentTimeMillis() - start) + " ms");
+        System.out.println("index compress Before Length: " + beforeLength + "INDEX FILE LEN : " + indexFileLength + " time : " + (System.currentTimeMillis() - start) + " ms");
     }
 
 //    public static void saveMapToFile(File file) {
@@ -190,6 +193,7 @@ public class MapIndex {
 
     public static void loadMapFromFileunCompress(File file)
             throws IOException {
+        long totalSize = 0;
         FileChannel fileChannel = new RandomAccessFile(file, "r").getChannel();
         ByteBuffer intBuffer = ByteBuffer.allocate(4);
         while (fileChannel.read(intBuffer) > 0) {
@@ -202,6 +206,7 @@ public class MapIndex {
             byte[] bytes2 = new byte[compressLength - 4];
             dataBuffer.get(bytes2,0,bytes2.length);
             byte[] bytes = Zstd.decompress(bytes2, anInt1);
+            totalSize += bytes.length;
             final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
             while (byteBuffer.hasRemaining()){
                 byte[] vinArray = new byte[17];
@@ -221,12 +226,17 @@ public class MapIndex {
             }
             intBuffer.flip();
         }
+        System.out.println("load Index into memory size : " + INDEX_ARRAY.length + "totalSize " + totalSize) ;
+        MemoryUtil.printJVMHeapMemory();
+    }
+
+    public static void loadBigBucket() {
         for(int i=0;i<INDEX_ARRAY.length;i++){
             int j = 0;
             BigBucket bigBucket = new BigBucket();
             while (j < INDEX_ARRAY[i].size()){
                 bigBucket.addBucket(INDEX_ARRAY[i].get(j));
-                if(j%10==0){
+                if(j % 100 == 0) {
                     BUCKET_ARRAY[i].add(bigBucket);
                     bigBucket = new BigBucket();
                 }
@@ -236,9 +246,8 @@ public class MapIndex {
                 BUCKET_ARRAY[i].add(bigBucket);
             }
         }
-        System.out.println("load Index into memory size : " + INDEX_ARRAY.length);
-
     }
+
 
 //    public static void loadMapFromFile(File file)
 //            throws IOException {

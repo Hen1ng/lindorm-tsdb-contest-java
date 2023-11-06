@@ -14,6 +14,7 @@ public class SchemaUtil {
     private static final TreeMap<String, ColumnValue.ColumnType> FLOAT_MAP = new TreeMap<>();
     public static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
     private static final String[] INDEX_ARRAY = new String[60];
+    public static final int[] COLUMNS_INDEX_ARRAY = new int[60];
     public static final Map<String, Set<Integer>> maps = new ConcurrentHashMap();
 
 
@@ -50,7 +51,7 @@ public class SchemaUtil {
             i++;
         }
         for (String key : STRING_MAP.keySet()) {
-            if ("JUBK".equals(key)) {
+            if ("JUBK".equals(key) || "ORNI".equals(key)) {
                 continue;
             }
             INDEX_ARRAY[i] = key;
@@ -58,13 +59,21 @@ public class SchemaUtil {
             System.out.println("key: " + key + " index : " + i);
             i++;
         }
+        INDEX_ARRAY[i] = "ORNI";
+        COLUMNS_INDEX.put("ORNI", i);
+        System.out.println("key: " + "ORNI" + " index : " + i);
+        i++;
         INDEX_ARRAY[i] = "JUBK";
         COLUMNS_INDEX.put("JUBK", i);
         System.out.println("key: " + "JUBK" + " index : " + i);
         for (String s : INDEX_ARRAY) {
             maps.put(s, new HashSet<>());
         }
-
+        int j = 0;
+        for (String key : schema.getColumnTypeMap().keySet()) {
+            COLUMNS_INDEX_ARRAY[j] = COLUMNS_INDEX.get(key);
+            j++;
+        }
     }
 
 
@@ -127,6 +136,11 @@ public class SchemaUtil {
             Constants.setFloatNums(doubleNums);
             Constants.setIntNums(intNums);
         }
-//        file.delete();
+        int j = 0;
+        for (String key : schema1.getColumnTypeMap().keySet()) {
+            COLUMNS_INDEX_ARRAY[j] = COLUMNS_INDEX.get(key);
+            j++;
+        }
+        file.delete();
     }
 }

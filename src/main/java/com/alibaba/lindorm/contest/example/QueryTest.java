@@ -1,10 +1,12 @@
 package com.alibaba.lindorm.contest.example;
 
 import com.alibaba.lindorm.contest.TSDBEngineImpl;
+import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.*;
 import com.alibaba.lindorm.contest.util.BytesUtil;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -66,7 +68,19 @@ public class QueryTest {
                 String key = i + "String" + sb;
                 if (i == 3) {
                     key = "JUBK";
-                    ByteBuffer buffer = ByteBuffer.wrap(BytesUtil.getRandomString(100).getBytes(StandardCharsets.UTF_8));
+                    String s = "";
+                    for (int i1 = 0; i1 < 100; i1++) {
+                        s+="x";
+                    }
+                    ByteBuffer buffer = ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
+                    columns.put(key, new ColumnValue.StringColumn(buffer));
+                } else if (i == 5) {
+                    key = "ORNI";
+                    String s = "";
+                    for (int i1 = 0; i1 < 30; i1++) {
+                        s+="s";
+                    }
+                    ByteBuffer buffer = ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
                     columns.put(key, new ColumnValue.StringColumn(buffer));
                 } else {
                     ByteBuffer buffer = ByteBuffer.wrap(key.getBytes(StandardCharsets.UTF_8));
@@ -86,9 +100,9 @@ public class QueryTest {
                 long start = System.currentTimeMillis();
                 for (int i = 0; i < threadNum; i++) {
                     new Thread(() -> {
-                        for (int j = 0; j < 1; j++) {
+                        for (int j = 0; j < 10; j++) {
                             List<Row> rowList = new ArrayList<>();
-                            for (int i1 = 0; i1 < 1; i1++) {
+                            for (int i1 = 0; i1 < 10; i1++) {
                                 Vin vin = vins[random.nextInt(20)];
                                 final long andIncrement = atomicLong.getAndIncrement();
                                 Map<String, ColumnValue> columns1 = new HashMap<>();
@@ -114,31 +128,62 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "D6s4sX0z3mXc5PjWL";
+                String v = "j4zyA3QKUQfphOdPk";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
                 Set<String> requestedColumns = new HashSet<>();
-                requestedColumns.add("5String543210");
-                requestedColumns.add("JUBK");
+//                requestedColumns.add("5String543210");
+//                requestedColumns.add("JUBK");
                 requestedColumns.add("0String0");
                 requestedColumns.add("0double");
                 requestedColumns.add("7double");
                 requestedColumns.add("1");
                 requestedColumns.add("2");
                 requestedColumns.add("33");
+                requestedColumns.add("34");
+                requestedColumns.add("35");
+                requestedColumns.add("0");
                 requestedColumns.add("9double");
+                final Random random1 = new Random();
+                List<String> queryList = new ArrayList<>();
+                queryList.add("0String0");
+                queryList.add("0double");
+                queryList.add("7double");
+                queryList.add("1");
+                queryList.add("2");
+                queryList.add("33");
+                queryList.add("34");
+                queryList.add("35");
+                queryList.add("0");
+                queryList.add("9double");
+                final ArrayList<Vin> vins1 = new ArrayList<>(VinDictMap.getVinDictMap().keySet());
 
                 final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
                 final ArrayList<Row> rows = tsdbEngineSample.executeLatestQuery(latestQueryRequest);
                 final TimeRangeQueryRequest timeRangeQueryRequest = new TimeRangeQueryRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), requestedColumns, 0, Long.MAX_VALUE);
                 ArrayList<Row> rowArrayList = tsdbEngineSample.executeTimeRangeQuery(timeRangeQueryRequest);
-                final TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "7double", 0, Long.MAX_VALUE, Aggregator.MAX);
+                TimeRangeAggregationRequest timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "13", 0, 1000, Aggregator.MAX);
                 rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
-                final TimeRangeDownsampleRequest timeRangeDownsampleRequest = new TimeRangeDownsampleRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "7double", 9120000L, 10923000L, Aggregator.AVG, 1000L, new CompareExpression(new ColumnValue.DoubleFloatColumn(0.7d), CompareExpression.CompareOp.EQUAL));
-                rowArrayList = tsdbEngineSample.executeDownsampleQuery(timeRangeDownsampleRequest);
+                timeRangeAggregationRequest = new TimeRangeAggregationRequest("", new Vin(v.getBytes(StandardCharsets.UTF_8)), "3", 0, 1000, Aggregator.MAX);
+                rowArrayList = tsdbEngineSample.executeAggregateQuery(timeRangeAggregationRequest);
+//                ExecutorService executorService1 = Executors.newFixedThreadPool(20);
+//                CountDownLatch countDownLatch1 = new CountDownLatch(20);
+//                executorService1.submit(() -> {
+//                    for (int i = 0; i < 1000000; i++) {
+//                        try {
+//                            Vin vin = vins1.get(random1.nextInt(vins1.size()));
+//                            final TimeRangeDownsampleRequest timeRangeDownsampleRequest = new TimeRangeDownsampleRequest("", vin, "7double", 0, 50000, Aggregator.AVG, 5000L, new CompareExpression(new ColumnValue.DoubleFloatColumn(0.7d), CompareExpression.CompareOp.EQUAL));
+//                            ArrayList<Row> rowArrayList = tsdbEngineSample.executeDownsampleQuery(timeRangeDownsampleRequest);
+//                        } catch (IOException e) {
+//                            throw new RuntimeException(e);
+//                        }
+//                    }
+//                    countDownLatch1.countDown();
+//                });
+//                countDownLatch1.await();
                 System.out.println(1);
-                tsdbEngineSample.shutdown();
+//                tsdbEngineSample.shutdown();
             }
         } catch (Exception e) {
             System.out.println("executeLatestQuery error" + e);

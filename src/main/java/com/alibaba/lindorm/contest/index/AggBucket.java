@@ -1,7 +1,9 @@
 package com.alibaba.lindorm.contest.index;
 
 import com.alibaba.lindorm.contest.compress.GzipCompress;
+import com.alibaba.lindorm.contest.compress.ZstdInner;
 import com.alibaba.lindorm.contest.file.TSFileService;
+import com.github.luben.zstd.Zstd;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -12,17 +14,19 @@ public class AggBucket {
     // double :  10 double + 10 double
     // all bytes : (40+60*2)*4=640B
     //
-    int[] iMax,iMin;
-    double[] iSum,dMax,dSum,dMin;
-    public AggBucket(){
+    int[] iMax, iMin;
+    long[] iSum;
+    double[]  dMax, dSum, dMin;
+
+    public AggBucket() {
         iMax = new int[40];
-        iSum = new double[40];
+        iSum = new long[40];
         iMin = new int[40];
         dMax = new double[10];
         dSum = new double[10];
         dMin = new double[10];
-        for(int i=0;i<40;i++){
-            if(i<10){
+        for (int i = 0; i < 40; i++) {
+            if (i < 10) {
                 dMax[i] = -Double.MAX_VALUE;
                 dMin[i] = Double.MAX_VALUE;
                 dSum[i] = 0;
@@ -32,14 +36,15 @@ public class AggBucket {
             iMin[i] = Integer.MAX_VALUE;
         }
     }
-    public byte[] bytes(){
+
+    public byte[] bytes() {
         ByteBuffer allocate = ByteBuffer.allocate(80 * 4 + 70 * 8);
-        for(int i=0;i<40;i++){
+        for (int i = 0; i < 40; i++) {
             allocate.putInt(iMax[i]);
             allocate.putInt(iMin[i]);
-            allocate.putDouble(iSum[i]);
+            allocate.putLong(iSum[i]);
         }
-        for(int i=0;i<10;i++){
+        for (int i = 0; i < 10; i++) {
             allocate.putDouble(dMax[i]);
             allocate.putDouble(dMin[i]);
             allocate.putDouble(dSum[i]);
@@ -48,17 +53,18 @@ public class AggBucket {
 //        return gzipCompress.compress(allocate.array());
         return allocate.array();
     }
-    public static AggBucket uncompress(byte[] bytes){
+
+    public static AggBucket uncompress(byte[] bytes) {
         AggBucket aggBucket = new AggBucket();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        byte[] bytes1 = gzipCompress.deCompress(bytes);
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
-        for(int i=0;i<40;i++){
+        for (int i = 0; i < 40; i++) {
             aggBucket.iMax[i] = wrap.getInt();
             aggBucket.iMin[i] = wrap.getInt();
-            aggBucket.iSum[i] = wrap.getDouble();
+            aggBucket.iSum[i] = wrap.getLong();
         }
-        for(int i=0;i<10;i++){
+        for (int i = 0; i < 10; i++) {
             aggBucket.dMax[i] = wrap.getDouble();
             aggBucket.dMin[i] = wrap.getDouble();
             aggBucket.dSum[i] = wrap.getDouble();
@@ -66,31 +72,42 @@ public class AggBucket {
         return aggBucket;
     }
 
-    public int getiMin(int index){return iMin[index];}
-    public double getdMin(int index){return dMin[index-40];}
+    public int getiMin(int index) {
+        return iMin[index];
+    }
+
+    public double getdMin(int index) {
+        return dMin[index - 40];
+    }
+
     public int getiMax(int index) {
         return iMax[index];
     }
-    public double getdMax(int index){
-        return dMax[index-40];
-    }
-    public double getiSum(int index){
-        return iSum[index];
-    }
-    public  double getdSum(int index){
-        return dSum[index-40];
+
+    public double getdMax(int index) {
+        return dMax[index - 40];
     }
 
-    public void updateInt(int value, int index){
+    public long getiSum(int index) {
+        return iSum[index];
+    }
+
+    public double getdSum(int index) {
+        return dSum[index - 40];
+    }
+
+    public void updateInt(int value, int index) {
         iSum[index] += value;
-        iMax[index] = Math.max(iMax[index],value);
-        iMin[index] = Math.min(iMin[index],value);
+        iMax[index] = Math.max(iMax[index], value);
+        iMin[index] = Math.min(iMin[index], value);
     }
-    public void updateDouble(double value,int index){
-        dSum[index-40] += value;
-        dMax[index-40] = Math.max(dMax[index-40],value);
-        dMin[index-40] = Math.min(dMin[index-40],value);
+
+    public void updateDouble(double value, int index) {
+        dSum[index - 40] += value;
+        dMax[index - 40] = Math.max(dMax[index - 40], value);
+        dMin[index - 40] = Math.min(dMin[index - 40], value);
     }
+
     // 转换为 ByteBuffer
     @Override
     public String toString() {
@@ -155,7 +172,7 @@ public class AggBucket {
         // Parse iSum array
         String[] iSumParts = parts[2].split("\\|");
         for (int i = 0; i < iSumParts.length; i++) {
-            bucket.iSum[i] = Double.parseDouble(iSumParts[i]);
+            bucket.iSum[i] = Long.parseLong(iSumParts[i]);
         }
 
         // Parse dMax array
@@ -198,8 +215,8 @@ public class AggBucket {
 
     public static void main(String[] args) {
         AggBucket aggBucket = new AggBucket();
-        aggBucket.updateInt(1,2);
-        aggBucket.updateInt(4,5);
+        aggBucket.updateInt(1, 2);
+        aggBucket.updateInt(4, 5);
 
         String string = aggBucket.toString();
         byte[] bytes = aggBucket.bytes();
