@@ -161,7 +161,7 @@ public class DataGenerator {
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start + 3600] + randomTime;
         int i = random.nextInt(4);
-        String columnName = columnsName[1+random.nextInt(10)];
+        String columnName = columnsName[random.nextInt(40)];
         if (i == 1) {
             return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 2) {
@@ -263,7 +263,7 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-            TimeRangeQuery(tsdbEngine);
+//            TimeRangeQuery(tsdbEngine);
             DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
@@ -377,7 +377,7 @@ public class DataGenerator {
 
     public static void DownSampleQuery(TSDBEngineImpl tsdbEngine) throws IOException {
         System.out.println("DownSample Quey Begin =============");
-        for (int i = 0; i < 2000; i++) {
+        for (int i = 0; i < 20000; i++) {
             TimeRangeDownsampleRequest timeRangeDownsampleRequest = genTimeRangeDownsampleRequest();
             ArrayList<Row> rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
             ArrayList<Row> ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
@@ -386,18 +386,16 @@ public class DataGenerator {
                 ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
                 rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
             }
-//            for (int j = 0; j < rows.size(); j++) {
-//                Row row = rows.get(j);
-//                Row ansRow = ans.get(j);
-//                if (row.getTimestamp() != ansRow.getTimestamp()) {
-//                    System.out.println("timeStamp error");
-//                }
-////                if (!row.getColumns().get("SOC").equals(ansRow.getColumns().get("SOC"))) {
-////                    System.out.println("ans wrong expect : " + ansRow.getColumns().get("SOC") + " but got : " + row.getColumns().get("SOC"));
-////                    ans = tsdbEngine.executeDownsampleQueryByBucket(timeRangeDownsampleRequest);
-////                    rows = tsdbEngine.executeDownsampleQuery(timeRangeDownsampleRequest);
-////                }
-//            }
+            for (Row row : rows) {
+                System.out.println(row);
+            }
+            for (int j = 0; j < rows.size(); j++) {
+                Row row = rows.get(j);
+                Row ansRow = ans.get(j);
+                if (row.getTimestamp() != ansRow.getTimestamp()) {
+                    System.out.println("timeStamp error");
+                }
+            }
             if (i % 100 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }

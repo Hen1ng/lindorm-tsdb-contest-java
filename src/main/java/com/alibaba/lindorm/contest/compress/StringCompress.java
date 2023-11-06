@@ -217,7 +217,6 @@ public class StringCompress {
                         for (int i = start; i < start + valueSize; i++) {
                             final ByteBuffer byteBuffer = stringList[i];
                             CountAndLength countAndLength = set.get(hashCode(byteBuffer.array()));
-
                             setTwoBit(bitSet, index1, countAndLength.count);
                             index1++;
                         }
@@ -544,10 +543,11 @@ public class StringCompress {
         byte[] compress = compressResult.compressedData;
         shorts = compressResult.stringLengthArray;
         byte[] bytes2 = IntCompress.compressShort(shorts, 230);
-        System.out.println("compress1 rate single : " + (1.0 * compress1.length) / (length1));
+        System.out.println("compress short rate : " +(1.0*bytes2.length)/(shorts.length*2));
+//        System.out.println("compress1 rate single : " + (1.0 * compress1.length) / (length1));
 //        System.out.println("compress3 rate single : " + (1.0 * compress3.length) / (length3));
-        System.out.println("compress4 rate single : " + (1.0 * compress4.length) / (length4));
-        System.out.println("compress6 rate single : " + (1.0 * compress6.length) / (length6));
+//        System.out.println("compress4 rate single : " + (1.0 * compress4.length) / (length4));
+//        System.out.println("compress6 rate single : " + (1.0 * compress6.length) / (length6));
 //        System.out.println("compress10 rate single : " + (1.0 * compress10.length) / (length10));
         System.out.println("compressAll rate : " + (1.0 * compress.length + bytes2.length) / (totalLength));
 //        System.out.println("compress rate : " + (1.0 * compress.length + compress6.length + compress3.length + compress4.length + bytes2.length) / (totalLength + length6 + length3 + length4));

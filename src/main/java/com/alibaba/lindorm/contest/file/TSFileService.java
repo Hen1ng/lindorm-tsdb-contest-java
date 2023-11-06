@@ -164,7 +164,7 @@ public class TSFileService {
 //                                int intCompressLength = dataBuffer.getShort();
 //                                dataBuffer.position(2);
 //                                dataBuffer.limit(intCompressLength + 2);
-                                ints1 = IntCompress.decompressOrigin(dataBuffer.array(),valueSize);
+                                ints1 = IntCompress.decompressOriginBySingle(dataBuffer.array(),valueSize,columnIndex);
 //                                ints1 = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), columnIndex, intCompressLength);
                             }
 //                            final int[] ints1 = intMap.get(columnIndex);
