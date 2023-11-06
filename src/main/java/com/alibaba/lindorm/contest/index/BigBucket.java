@@ -9,13 +9,14 @@ public class BigBucket {
     private long maxTimestamp;
     private long minTimestamp;
     int[] iMax, iMin;
-    double[] iSum, dMax, dSum, dMin;
+    long[] iSum;
+    double[] dMax, dSum, dMin;
     int valueSize = 0;
 
     public BigBucket() {
         indexList = new ArrayList<>();
         iMax = new int[40];
-        iSum = new double[40];
+        iSum = new long[40];
         iMin = new int[40];
         dMax = new double[10];
         dSum = new double[10];
@@ -111,7 +112,7 @@ public class BigBucket {
         return dMax[index - 40];
     }
 
-    public double getiSum(int index) {
+    public long getiSum(int index) {
         return iSum[index];
     }
 

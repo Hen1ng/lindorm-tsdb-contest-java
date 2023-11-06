@@ -15,11 +15,12 @@ public class AggBucket {
     // all bytes : (40+60*2)*4=640B
     //
     int[] iMax, iMin;
-    double[] iSum, dMax, dSum, dMin;
+    long[] iSum;
+    double[]  dMax, dSum, dMin;
 
     public AggBucket() {
         iMax = new int[40];
-        iSum = new double[40];
+        iSum = new long[40];
         iMin = new int[40];
         dMax = new double[10];
         dSum = new double[10];
@@ -41,7 +42,7 @@ public class AggBucket {
         for (int i = 0; i < 40; i++) {
             allocate.putInt(iMax[i]);
             allocate.putInt(iMin[i]);
-            allocate.putDouble(iSum[i]);
+            allocate.putLong(iSum[i]);
         }
         for (int i = 0; i < 10; i++) {
             allocate.putDouble(dMax[i]);
@@ -61,7 +62,7 @@ public class AggBucket {
         for (int i = 0; i < 40; i++) {
             aggBucket.iMax[i] = wrap.getInt();
             aggBucket.iMin[i] = wrap.getInt();
-            aggBucket.iSum[i] = wrap.getDouble();
+            aggBucket.iSum[i] = wrap.getLong();
         }
         for (int i = 0; i < 10; i++) {
             aggBucket.dMax[i] = wrap.getDouble();
@@ -87,7 +88,7 @@ public class AggBucket {
         return dMax[index - 40];
     }
 
-    public double getiSum(int index) {
+    public long getiSum(int index) {
         return iSum[index];
     }
 
@@ -171,7 +172,7 @@ public class AggBucket {
         // Parse iSum array
         String[] iSumParts = parts[2].split("\\|");
         for (int i = 0; i < iSumParts.length; i++) {
-            bucket.iSum[i] = Double.parseDouble(iSumParts[i]);
+            bucket.iSum[i] = Long.parseLong(iSumParts[i]);
         }
 
         // Parse dMax array

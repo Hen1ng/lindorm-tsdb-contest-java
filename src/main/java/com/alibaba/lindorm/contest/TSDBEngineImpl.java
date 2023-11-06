@@ -383,7 +383,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         switch (aggregator) {
             case AVG:
                 int size = 0;
-                double intSum = 0;
+                long intSum = 0;
                 double doubleSum = 0;
                 for (BigBucket bigBucket : bigBuckets) {
                     if (bigBucket.getMinTimestamp() >= aggregationReq.getTimeLowerBound() && bigBucket.getMaxTimestamp() <= aggregationReq.getTimeUpperBound() - 1) {
@@ -437,7 +437,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                 size += timeRangeColumnValue.size();
                 if (columnIndex < Constants.INT_NUMS) {
                     Map<String, ColumnValue> columns = new HashMap<>(1);
-                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(intSum / size));
+                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(1.0*intSum / size));
                     rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
                 } else if (columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                     Map<String, ColumnValue> columns = new HashMap<>(1);
@@ -520,8 +520,8 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.exit(-1);
         }
         long gap = System.nanoTime() - start1;
-        StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
-        StaticsUtil.AGG_TOTAL_READ_FILE_TIME.getAndAdd(readFileCost);
+//        StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
+//        StaticsUtil.AGG_TOTAL_READ_FILE_TIME.getAndAdd(readFileCost);
 //        if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
 //            StaticsUtil.printCPU();
 //            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns" + "AGG_TOTAL_READ_FILE_TIME " + StaticsUtil.AGG_TOTAL_READ_FILE_TIME.get() + ctx);
@@ -637,7 +637,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                         int integerValue = columnFilter.getValue().getIntegerValue();
                         switch (aggregator) {
                             case AVG:
-                                double sum = 0;
+                                long sum = 0;
                                 int size = 0;
                                 for (Index index : indices) {
                                     if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getiMin(columnIndex) > integerValue) {
@@ -663,7 +663,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                                 if (size == 0) {
                                     columns.put(columnName, new ColumnValue.DoubleFloatColumn(Double.NEGATIVE_INFINITY));
                                 } else {
-                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(sum / size));
+                                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(1.0*sum / size));
                                 }
                                 break;
                             case MAX:
