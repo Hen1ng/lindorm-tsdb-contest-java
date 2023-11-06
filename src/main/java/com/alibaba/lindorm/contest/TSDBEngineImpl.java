@@ -13,6 +13,7 @@ import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.index.BigBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
+import com.alibaba.lindorm.contest.memory.DoubleCache;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.*;
@@ -822,9 +823,10 @@ public class TSDBEngineImpl extends TSDBEngine {
             long gap = endTime - beginTime;
             StaticsUtil.DOWNSAMPLE_TOTAL_TIME.getAndAdd(gap);
             if (executeDownsampleQueryTimes.getAndIncrement() % 200000 == 0) {
-                if (StaticsUtil.START_COUNT_IOPS != 0) {
-                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
-                }
+                System.out.println("DoubleCache cacheNums" + DoubleCache.cacheNums.get());
+//                if (StaticsUtil.START_COUNT_IOPS != 0) {
+//                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
+//                }
 //                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
 //                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
 //                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
