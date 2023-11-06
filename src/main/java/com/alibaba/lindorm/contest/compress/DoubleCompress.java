@@ -274,7 +274,7 @@ public class DoubleCompress {
                 allocate.putShort((short) buffer.array().length);
                 allocate.put(buffer.array());
             }
-            byte[] compress = Zstd.compress(allocate.array(),6);
+            byte[] compress = Zstd.compress(allocate.array(),3);
             corillaBytes = ByteBuffer.allocate(compress.length + 4);
             corillaBytes.putInt(allocate.array().length);
             corillaBytes.put(compress);

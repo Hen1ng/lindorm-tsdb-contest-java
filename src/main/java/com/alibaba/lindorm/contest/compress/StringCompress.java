@@ -535,8 +535,12 @@ public class StringCompress {
             System.out.println(length);
         }
         final ByteBuffer allocate = ByteBuffer.allocate(totalLength);
+        ByteBuffer[] byteBuffers = new ByteBuffer[stringList.size()];
+        for (int i = 0; i < stringList.size(); i++) {
+            byteBuffers[i] = stringList.get(i);
+        }
         short[] shorts = null;
-        CompressResult compressResult = compress1(null, 230);
+        CompressResult compressResult = compress1(byteBuffers, 230);
         byte[] compress = compressResult.compressedData;
         shorts = compressResult.stringLengthArray;
         byte[] bytes2 = IntCompress.compressShort(shorts, 230);

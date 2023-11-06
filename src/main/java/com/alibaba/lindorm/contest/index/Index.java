@@ -124,7 +124,7 @@ public class Index {
 
 
     public Index(long offset
-                 , long intOffset
+            , long intOffset
             , long maxTimestamp
             , long minTimestamp
             , int length
@@ -160,8 +160,8 @@ public class Index {
         if (aggBucket != null) {
             bytes = aggBucket.bytes();
         }
-        final byte[] bytes1 = intCompressResult.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 4 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length + 2 + bytes1.length);
+//        final byte[] bytes1 = intCompressResult.bytes();
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 4 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length );
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -178,8 +178,6 @@ public class Index {
         allocate.put(timeStampBytes);
         allocate.putShort((short) doubleHeader.length);
         allocate.put(doubleHeader);
-        allocate.putShort((short)bytes1.length);
-        allocate.put(bytes1);
         return allocate.array();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        return gzipCompress.compress(allocate.array());
@@ -213,10 +211,7 @@ public class Index {
         wrap.get(bytes1, 0, bytes1.length);
         short doubleHeaderLength = wrap.getShort();
         byte[] doubleHeader = new byte[doubleHeaderLength];
-        wrap.get(doubleHeader,0,doubleHeader.length);
-        final short aShort = wrap.getShort();
-        final byte[] bytes2 = new byte[aShort];
-        wrap.get(bytes2,0,bytes2.length);
+        wrap.get(doubleHeader, 0, doubleHeader.length);
 
         return new Index(
                 offset,
@@ -232,7 +227,7 @@ public class Index {
                 bytes1,
                 bigStringOffset,
                 doubleHeader,
-                new IntCompress.IntCompressResult(bytes2)
+                null
         );
     }
 

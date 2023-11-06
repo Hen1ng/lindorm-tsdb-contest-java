@@ -114,6 +114,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         if (RestartUtil.IS_FIRST_START) {
 
         } else {
+            System.out.println("start load int");
+            MemoryUtil.printJVMHeapMemory();
+            fileService.loadInt();
             System.out.println("start load bucket");
             MemoryUtil.printJVMHeapMemory();
             fileService.loadBucket();
@@ -121,9 +124,6 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.out.println("start load last");
             MemoryUtil.printJVMHeapMemory();
             memoryTable.loadLastTsToMemory();
-            System.out.println("start load int");
-            MemoryUtil.printJVMHeapMemory();
-            fileService.loadInt();
             System.out.println("load int finish ");
             MemoryUtil.printJVMHeapMemory();
         }
@@ -158,6 +158,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         System.out.println("compress indexFile size: " + indexFile.length());
         System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
         System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
+
 //        for (String s : SchemaUtil.maps.keySet()) {
 //            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
 //        }
@@ -363,6 +364,7 @@ public class TSDBEngineImpl extends TSDBEngine {
     }
 
     private final AtomicLong aggQueryTimes = new AtomicLong(0);
+
     public ArrayList<Row> executeAggregateQueryByBucket(TimeRangeAggregationRequest aggregationReq) throws IOException {
         long start1 = System.nanoTime();
         ArrayList<Row> rows = new ArrayList<>();
@@ -819,19 +821,19 @@ public class TSDBEngineImpl extends TSDBEngine {
             long endTime = System.nanoTime();
             long gap = endTime - beginTime;
             StaticsUtil.DOWNSAMPLE_TOTAL_TIME.getAndAdd(gap);
-//            if (executeDownsampleQueryTimes.getAndIncrement() % 100000 == 0) {
-//                if (StaticsUtil.START_COUNT_IOPS != 0) {
-//                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
-//                }
-////                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
-////                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
-////                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
-////                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns" );
-////                StaticsUtil.printCPU();
-////                System.out.println("IPOS: " + StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement() * 1.0d /(System.currentTimeMillis() - StaticsUtil.START_COUNT_IOPS));
-//
-////                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
-//            }
+            if (executeDownsampleQueryTimes.getAndIncrement() % 200000 == 0) {
+                if (StaticsUtil.START_COUNT_IOPS != 0) {
+                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
+                }
+//                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
+//                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
+//                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
+//                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns" );
+//                StaticsUtil.printCPU();
+//                System.out.println("IPOS: " + StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement() * 1.0d /(System.currentTimeMillis() - StaticsUtil.START_COUNT_IOPS));
+
+//                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
+            }
             return rows;
         } catch (Exception e) {
             e.printStackTrace();

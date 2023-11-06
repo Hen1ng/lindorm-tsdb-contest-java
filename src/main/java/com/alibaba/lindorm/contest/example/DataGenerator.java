@@ -67,7 +67,7 @@ public class DataGenerator {
         rowFactory.timeStamp = System.currentTimeMillis();
         Map<String, ColumnValue> columns = new HashMap<>();
         for (int i = 0; i < INT_NUM; i++) {
-            rowFactory.ints[i] = random.nextInt(1000);
+            rowFactory.ints[i] = random.nextInt(2);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
             rowFactory.doubles[i - INT_NUM] = random.nextInt(10);
@@ -107,7 +107,7 @@ public class DataGenerator {
         Set<String> requestedColumns = new HashSet<>(Arrays.asList(columnsName));
         Vin vin = vins[random.nextInt(1)];
         Set<String> request = new HashSet<>();
-        for(int i=40;i<51;i++){
+        for(int i=0;i<60;i++){
             request.add(columnsName[i]);
         }
         int time = random.nextInt(36000 - 300);
@@ -161,18 +161,18 @@ public class DataGenerator {
         long timeLower = timeStamp[start] + randomTime;
         long timeUpper = timeStamp[start + 3600] + randomTime;
         int i = random.nextInt(4);
-        String columnName = columnsName[40+random.nextInt(10)];
+        String columnName = columnsName[1+random.nextInt(10)];
         if (i == 1) {
-            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 2) {
-            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
         } else if (i == 3) {
-            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
         }
-        return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.DoubleFloatColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+        return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
     }
 
-    public static void main(String[] args) {
+    public static void  main(String[] args) {
         initTimeStamp(16492012515000L);
         vins = new Vin[VIN_NUMS];
         for (int i = 0; i < VIN_NUMS; i++) {
@@ -213,7 +213,7 @@ public class DataGenerator {
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataDir + "/300WrandomRowFactory.dat"))) {
 //                out.writeInt(3000000);
                 int batchSize = 10;
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
                         for (int v = 0; v < 10; v++) {
@@ -263,7 +263,7 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-//            TimeRangeQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();

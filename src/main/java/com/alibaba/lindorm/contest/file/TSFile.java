@@ -68,15 +68,15 @@ public class TSFile {
     public long append(ByteBuffer byteBuffer) {
         this.lock.lock();
         long currentPos = this.position.get();
+        byteBuffer.flip();
+        int remaining = byteBuffer.remaining();
+        long andAdd = this.position.getAndAdd(remaining);
+        this.lock.unlock();
         try {
-            byteBuffer.flip();
-            int remaining = byteBuffer.remaining();
             fileChannel.write(byteBuffer, currentPos);
-            return initPosition + this.position.getAndAdd(remaining);
+            return initPosition + andAdd;
         } catch (Exception e) {
             System.out.println("TSFile append error, e" + e + "currentPos" + currentPos);
-        } finally {
-            this.lock.unlock();
         }
         System.out.println("TSFile not enough, return -2");
         return -2;
