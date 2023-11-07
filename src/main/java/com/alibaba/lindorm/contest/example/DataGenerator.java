@@ -67,7 +67,7 @@ public class DataGenerator {
         rowFactory.timeStamp = System.currentTimeMillis();
         Map<String, ColumnValue> columns = new HashMap<>();
         for (int i = 0; i < INT_NUM; i++) {
-            rowFactory.ints[i] = random.nextInt(2);
+            rowFactory.ints[i] = random.nextInt(64);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
             rowFactory.doubles[i - INT_NUM] = random.nextInt(10);
@@ -163,13 +163,13 @@ public class DataGenerator {
         int i = random.nextInt(4);
         String columnName = columnsName[random.nextInt(40)];
         if (i == 1) {
-            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt(45)), CompareExpression.CompareOp.GREATER));
         } else if (i == 2) {
-            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.GREATER));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt(45)), CompareExpression.CompareOp.GREATER));
         } else if (i == 3) {
-            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+            return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.AVG, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt(45)), CompareExpression.CompareOp.EQUAL));
         }
-        return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt()), CompareExpression.CompareOp.EQUAL));
+        return new TimeRangeDownsampleRequest("test", vin, columnName, timeLower, timeUpper, Aggregator.MAX, 10000, new CompareExpression(new ColumnValue.IntegerColumn(random.nextInt(45)), CompareExpression.CompareOp.EQUAL));
     }
 
     public static void  main(String[] args) {
@@ -216,7 +216,7 @@ public class DataGenerator {
                 for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 10; v++) {
+                        for (int v = 0; v < 100; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -263,8 +263,8 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-            TimeRangeQuery(tsdbEngine);
-//            DownSampleQuery(tsdbEngine);
+//            TimeRangeQuery(tsdbEngine);
+            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file

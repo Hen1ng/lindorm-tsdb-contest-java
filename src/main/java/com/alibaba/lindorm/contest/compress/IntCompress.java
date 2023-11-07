@@ -178,7 +178,7 @@ public class IntCompress {
 //        int[] data = testNumReal.clone();
 //        int[] data1 = testNumReal.clone();
 //        preProcess(data1, 210);
-//        int[][] splitArray = splitArray(data1, 210, 100 * 35);
+//        int[][] splitArray = splitArray(data, 210, 100 * 35);
 //        int index = 0;
 //        for (int[] ints : splitArray) {
 ////            toGapArray(ints);
@@ -192,10 +192,12 @@ public class IntCompress {
 //        recoveryProcess(data1, 210);
 //
 //        System.out.println(Arrays.equals(data1,data));
-        byte[] bytes = compressOrigin(data, 210);
-        long byteLength = bytes.length;
+//        IntCompressResult intCompressResult = compress4(data, 210);
+        byte[] compressed = compressOrigin(data, 210);
+        long byteLength = compressed.length;
 ////        final int[] output = new int[data.length];
-        final int[] longs = decompressOrigin(bytes, 210);
+//        final int[] longs = decompress4V2(intCompressResult.data, 210, intCompressResult);
+        int[] longs = decompressOrigin(compressed, 210);
 //        final byte[] bytes1 = compressZstd(data1);
         for (int i = 0; i < longs.length; i++) {
             if (longs[i] != testNumReal[i]) {
@@ -263,6 +265,8 @@ public class IntCompress {
         subSet.add(new Pair<>(12, 39));
         subSet.add(new Pair<>(34, 39));
         subSet.add(new Pair<>(11, 39));
+        subSet.add(new Pair<>(39, 20));
+
         dependencyFinder = new DependencyFinder(subSet);
 
         relation[3] = 4;
@@ -289,25 +293,25 @@ public class IntCompress {
 
 
         /*split3*/
-        split2.add(0);
-        split2.add(1);
-        split2.add(2);
-        split2.add(5);
-        split2.add(6);
-        split2.add(7);
+        split1.add(0);
+        split1.add(1);
+        split1.add(2);
+        split1.add(5);
+        split1.add(6);
+        split1.add(7);
         split2.add(8);
-        split2.add(9);
-        split2.add(10);
-        split2.add(13);
-        split2.add(14);
-        split2.add(16);
+        split1.add(9);
+        split1.add(10);
+        split1.add(13);
+        split1.add(14);
+        split1.add(16);
         split2.add(17);
         split2.add(18);
         split2.add(21);
         split2.add(22);
-        split2.add(23);
+        split1.add(23);
         split2.add(24);
-        split2.add(25);
+        split1.add(25);
         split2.add(26);
 
         /*split4*/
@@ -325,6 +329,7 @@ public class IntCompress {
 
         notFirstDelta = new ArrayList<>();
 
+//        notFirstDelta.add(20);
 
         notSecondDelta = new ArrayList<>();
 
@@ -332,7 +337,7 @@ public class IntCompress {
         notSecondDelta.add(0);
 //        notSecondDelta.add(2);
         notSecondDelta.add(4);
-//        notSecondDelta.add(5);
+        notSecondDelta.add(5);
         notSecondDelta.add(3);
 
         notSecondDelta.add(6);
@@ -369,8 +374,6 @@ public class IntCompress {
 //        notSecondDelta.add(37);
 //        notSecondDelta.add(38);
         notSecondDelta.add(39);
-        divSet = new ArrayList<>();
-        divSet.add(19);
 
     }
 
@@ -446,12 +449,23 @@ public class IntCompress {
                 pre = tmp;
             }
         }
+//        int[][] splitArray = splitArray(ints, 210, 100 * 35);
+//        int index = 0;
+//        for (int[] ints1 : splitArray) {
+////            toGapArray(ints);
+//            System.out.printf("%d:", index++);
+//            for (int anInt : ints1) {
+//                System.out.printf("%10d,", anInt);
+//            }
+//            System.out.println("");
+//        }
+
     }
 
-    public static void recoverProcessBySingple(int[] ints,int valueSize,int index,Set<Integer> dependencies){
+    public static void recoverProcessBySingple(int[] ints, int valueSize, int index, Set<Integer> dependencies) {
         for (int i = 0; i < 40; i++) {
             if (notSecondDelta.contains(i)) continue;
-            if (!dependencies.contains(i))continue;
+            if (!dependencies.contains(i)) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
             for (int j = start + 2; j < end; j++) {
@@ -465,7 +479,7 @@ public class IntCompress {
         while (!stack.isEmpty()) {
             Pair<Integer, Integer> pop = stack.pop();
             Integer left = pop.getLeft();
-            if(!dependencies.contains(left))continue;
+            if (!dependencies.contains(left)) continue;
             int start = pop.getLeft() * valueSize;
             int end = start + valueSize;
             int subIndex = pop.getRight();
@@ -536,7 +550,7 @@ public class IntCompress {
                     invMap.put(count, ints[start]);
                     count++;
                 }
-                if (map.size() > 4) {
+                if (map.size() > 64) {
                     isUseMap = false;
                     break;
                 }
@@ -976,13 +990,11 @@ public class IntCompress {
         preProcess(ints, valueSize);
         while (start < length) {
             int count = 0;
-            Map<Integer, Integer> map = new HashMap<>();
-            Map<Integer, Integer> invMap = new HashMap<>();
+            Map<Integer, Integer> map = new HashMap<>(65);
             boolean isUseMap = true;
             for (int index = start + 1; index < start + valueSize; index++) {
-                if (isUseMap && !map.containsKey(ints[index])) {
+                if (!map.containsKey(ints[index])) {
                     map.put(ints[index], count);
-                    invMap.put(count, ints[start]);
                     count++;
                 }
                 if (map.size() > 1) {
@@ -994,16 +1006,17 @@ public class IntCompress {
                 setBit(batchIndex, compressType);
                 // write dict
                 byte dictSize = (byte) map.size();
-                if (dictSize > 16) dictSize = 64;
-                else if (dictSize > 4) dictSize = 16;
+                int dd = dictSize;
+                if (dictSize > 16) dd = 64;
+                else if (dictSize > 4) dd = 16;
 //                else if (dictSize > 4) dictSize = 8;
-                else if (dictSize > 2) dictSize = 4;
+                else if (dictSize > 2) dd = 4;
                 int bitSize = valueSize;
-                if (dictSize == 64) bitSize *= 8;
-                if (dictSize == 16) bitSize *= 4;
-                if (dictSize == 8) bitSize *= 3;
-                if (dictSize == 4) bitSize *= 2;
-                if (dictSize == 1) bitSize = 0;
+                if (dd == 64) bitSize *= 8;
+                if (dd == 16) bitSize *= 4;
+                if (dd == 8) bitSize *= 3;
+                if (dd == 4) bitSize *= 2;
+                if (dd == 1) bitSize = 0;
                 ByteBuffer allocate = ByteBuffer.allocate(4 + 1 + dictSize * 4 + UpperBoundByte(bitSize));
                 allocate.putInt(ints[start]);
                 // put dictSize
@@ -1022,7 +1035,7 @@ public class IntCompress {
                 }
                 // put index value
                 if (dictSize != 0) {
-                    if (dictSize == 2) {
+                    if (dd == 2) {
                         byte[] bitSet = new byte[UpperBoundByte(bitSize)];
                         for (int j = start + 1; j < start + valueSize; j++) {
                             Integer i = map.get(ints[j]);
@@ -1031,21 +1044,21 @@ public class IntCompress {
                             }
                         }
                         allocate.put(bitSet);
-                    } else if (dictSize == 4) {
+                    } else if (dd == 4) {
                         byte[] bitSet = new byte[UpperBoundByte(bitSize)];
                         for (int j = start + 1; j < start + valueSize; j++) {
                             Integer i = map.get(ints[j]);
                             setTwoBit(bitSet, j - start, i);
                         }
                         allocate.put(bitSet);
-                    } else if (dictSize == 16) {
+                    } else if (dd == 16) {
                         byte[] bitSet = new byte[UpperBoundByte(bitSize)];
                         for (int j = start + 1; j < start + valueSize; j++) {
                             Integer i = map.get(ints[j]);
                             setFourBit(bitSet, j - start, i);
                         }
                         allocate.put(bitSet);
-                    } else if (dictSize == 64) {
+                    } else if (dd == 64) {
                         byte[] bitSet = new byte[UpperBoundByte(bitSize)];
                         for (int j = start + 1; j < start + valueSize; j++) {
                             int i = map.get(ints[j]);
@@ -1079,7 +1092,7 @@ public class IntCompress {
         for (ByteBuffer byteBuffer : arrayList) {
             allocate.put(byteBuffer.array());
         }
-        byte[] compress = Zstd.compress(allocate.array(), 2);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
 //        byte[] compress = allocate.array();
         ByteBuffer buffer = ByteBuffer.allocate(4 + compress.length);
         buffer.putInt(allocate.array().length);
@@ -1108,62 +1121,67 @@ public class IntCompress {
                 int bitSize = valueSize;
                 if (!dependencies.contains(i)) {
                     int offset1 = 0;
-                    switch (dictSize) {
+                    int dd = dictSize;
+                    if (dictSize > 16) dd = 64;
+                    else if (dictSize > 4) dd = 16;
+//                else if (dictSize > 4) dictSize = 8;
+                    else if (dictSize > 2) dd = 4;
+                    switch (dd) {
                         case 1:
                             offset1 += 4;
                             break;
                         case 2:
-                            offset1 += 2 * 4 + UpperBoundByte(bitSize);
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize);
                             break;
                         case 4:
-                            offset1 += 4 * 4 + UpperBoundByte(bitSize * 2);
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize * 2);
                             break;
                         case 16:
-                            offset1 += 16 * 4 + UpperBoundByte(bitSize * 4);
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize * 4);
                             break;
                         case 64:
-                            offset1 += 64 * 4 + UpperBoundByte(bitSize * 8);
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize * 8);
                             break;
                     }
-                    wrap1.position(wrap.position() + offset1);
+                    wrap1.position(wrap1.position() + offset1);
                     continue;
                 }
-                List<Integer> dict = new ArrayList<>();
+                int[] dict = new int[dictSize];
                 for (int j = 0; j < dictSize; j++) {
                     int anInt1 = wrap1.getInt();
-                    dict.add(anInt1);
+                    dict[j] = anInt1;
                 }
                 if (dictSize == 1) {
                     for (int j = 1; j < valueSize; j++) {
-                        result[i * valueSize + j] = dict.get(0);
+                        result[i * valueSize + j] = dict[0];
                     }
                 } else if (dictSize == 2) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         boolean bit1 = getBit(j, indexBit);
-                        result[i * valueSize + j] = bit1 ? dict.get(1) : dict.get(0);
+                        result[i * valueSize + j] = bit1 ? dict[1] : dict[0];
                     }
                 } else if (dictSize == 4) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize * 2)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         int ix = getTwoBit(indexBit, j);
-                        result[i * valueSize + j] = dict.get(ix);
+                        result[i * valueSize + j] = dict[ix];
                     }
                 } else if (dictSize == 16) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize * 4)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         int ix = getFourBit(indexBit, j);
-                        result[i * valueSize + j] = dict.get(ix);
+                        result[i * valueSize + j] = dict[ix];
                     }
                 } else if (dictSize == 64) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize * 8)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         int ix = indexBit[j];
-                        result[i * valueSize + j] = dict.get(ix);
+                        result[i * valueSize + j] = dict[ix];
                     }
                 }
             } else {
@@ -1182,7 +1200,7 @@ public class IntCompress {
                 }
             }
         }
-        recoverProcessBySingple(result, valueSize,index,dependencies);
+        recoverProcessBySingple(result, valueSize, index, dependencies);
         return result;
     }
 
@@ -1204,38 +1222,44 @@ public class IntCompress {
                 int firstInt = wrap1.getInt();
                 result[i * valueSize] = firstInt;
                 byte dictSize = wrap1.get();
+                int dd = dictSize;
+                if (dictSize > 16) dd = 64;
+                else if (dictSize > 4) dd = 16;
+//                else if (dictSize > 4) dictSize = 8;
+                else if (dictSize > 2) dd = 4;
                 List<Integer> dict = new ArrayList<>();
                 for (int j = 0; j < dictSize; j++) {
                     int anInt1 = wrap1.getInt();
                     dict.add(anInt1);
                 }
+
                 int bitSize = valueSize;
-                if (dictSize == 1) {
+                if (dd == 1) {
                     for (int j = 1; j < valueSize; j++) {
                         result[i * valueSize + j] = dict.get(0);
                     }
-                } else if (dictSize == 2) {
+                } else if (dd == 2) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         boolean bit1 = getBit(j, indexBit);
                         result[i * valueSize + j] = bit1 ? dict.get(1) : dict.get(0);
                     }
-                } else if (dictSize == 4) {
+                } else if (dd == 4) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize * 2)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         int ix = getTwoBit(indexBit, j);
                         result[i * valueSize + j] = dict.get(ix);
                     }
-                } else if (dictSize == 16) {
+                } else if (dd == 16) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize * 4)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
                         int ix = getFourBit(indexBit, j);
                         result[i * valueSize + j] = dict.get(ix);
                     }
-                } else if (dictSize == 64) {
+                } else if (dd == 64) {
                     byte[] indexBit = new byte[UpperBoundByte(bitSize * 8)];
                     wrap1.get(indexBit, 0, indexBit.length);
                     for (int j = 1; j < valueSize; j++) {
@@ -1263,10 +1287,10 @@ public class IntCompress {
     public static int[] decompress4V2(byte[] bytes, int valueSize, IntCompressResult intCompressResult) {
         try {
             ByteBuffer wrap = ByteBuffer.wrap(bytes);
-//        int anInt = wrap.getInt();
-//        byte[] bytes1 = new byte[bytes.length - 4];
-//        wrap.get(bytes1, 0, bytes1.length);
-//        byte[] decompress = bytes1;
+//            int anInt = wrap.getInt();
+//            byte[] bytes1 = new byte[bytes.length - 4];
+//            wrap.get(bytes1, 0, bytes1.length);
+//            byte[] decompress = bytes1;
             int[] result = new int[valueSize * 40];
             final byte[] compressType = intCompressResult.compressType;
             final short i1 = intCompressResult.splitLength[0];
@@ -1275,7 +1299,6 @@ public class IntCompress {
             ArrayUtils.copy(bytes, 0, bytes1, 0, i1);
             byte[] decompress = Zstd.decompress(bytes1, intCompressResult.beforeCompressLength[0]);
             ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
-
             for (Integer i : split1) {
                 boolean bit = getBit(i, compressType);
                 if (bit) {
@@ -1601,7 +1624,7 @@ public class IntCompress {
                 }
             }
         }
-        byte[] compress = Zstd.compress(allocate.array(), 6);
+        byte[] compress = Zstd.compress(allocate.array(), 3);
         ByteBuffer allocate1 = ByteBuffer.allocate(4 + compress.length);
         allocate1.putInt(allocate.array().length);
         allocate1.put(compress);

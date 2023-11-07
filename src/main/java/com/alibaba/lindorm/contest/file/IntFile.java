@@ -52,7 +52,7 @@ public class IntFile {
                 getFromOffsetByFileChannel(allocate, initPosition);
                 array = allocate.array();
                 final boolean delete = file.delete();
-                System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
+//                System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
             }
         }
     }

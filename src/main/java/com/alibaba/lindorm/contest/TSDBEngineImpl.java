@@ -637,7 +637,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                         int integerValue = columnFilter.getValue().getIntegerValue();
                         switch (aggregator) {
                             case AVG:
-                                long sum = 0;
+                                double sum = 0;
                                 int size = 0;
                                 for (Index index : indices) {
                                     if (index.getMinTimestamp() >= startTime && index.getMaxTimestamp() <= endTime - 1 && index.getAggBucket().getiMin(columnIndex) > integerValue) {

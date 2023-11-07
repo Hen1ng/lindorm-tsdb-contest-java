@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
+import static com.alibaba.lindorm.contest.index.MapIndex.put;
 import static com.alibaba.lindorm.contest.util.Constants.isBigString;
 
 
@@ -90,7 +91,7 @@ public class TSFileService {
 
     public ArrayList<ColumnValue> getSingleValueByIndex(Vin vin, long timeLowerBound, long timeUpperBound, Index index, int columnIndex, int j, Map<Long, ByteBuffer> map, Context ctx, Map<Long, TSDBEngineImpl.CacheData> cacheDataMap, String queryType, Map<Long, Long> queryTimeMap) {
         if ("downSample".equals(queryType)) {
-            if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 1000000 == 0) {
+            if (StaticsUtil.GET_SINGPLE_VALUE_TIMES.addAndGet(1) % 4000000 == 0) {
                 System.out.println("getSingleValueByIndex times : " + StaticsUtil.GET_SINGPLE_VALUE_TIMES.get() + " ns");
                 System.out.println("getSingleValueByIndex hitCacheTimes : " + atomicLong.get() + " ns");
                 System.out.println("getSingleValueByIndex cost all time : " + StaticsUtil.SINGLEVALUE_TOTAL_TIME + " ns");
@@ -161,18 +162,8 @@ public class TSFileService {
                         long compressStart = System.nanoTime();
                         try {
                             if (ints1 == null) {
-//                                int intCompressLength = dataBuffer.getShort();
-//                                dataBuffer.position(2);
-//                                dataBuffer.limit(intCompressLength + 2);
                                 ints1 = IntCompress.decompressOriginBySingle(dataBuffer.array(),valueSize,columnIndex);
-//                                ints1 = IntCompress.getByLineNum(dataBuffer, index.getValueSize(), columnIndex, intCompressLength);
                             }
-//                            final int[] ints1 = intMap.get(columnIndex);
-//                            if (cacheDataMap != null) {
-//                                final TSDBEngineImpl.CacheData cacheData = new TSDBEngineImpl.CacheData(ints1, null);
-//                                cacheDataMap.put(index.getOffset(), cacheData);
-//                            }
-
                             int off = columnIndex * valueSize + i;
                             value = new ColumnValue.IntegerColumn(ints1[off]);
                         } catch (Exception e) {
@@ -566,9 +557,9 @@ public class TSFileService {
      */
     public void write(Vin vin, List<Value> valueList, int lineNum, int j) {
         try {
+            writeTimes.addAndGet(1);
             long start = System.nanoTime();
             AggBucket aggBucket = bucketArrayFactory.getAggBucket();
-            writeTimes.getAndIncrement();
             int m = j % Constants.TS_FILE_NUMS;
             ByteBuffer[] stringList = new ByteBuffer[8 * lineNum];
             ByteBuffer[] bigStringList = new ByteBuffer[2 * lineNum];
@@ -714,13 +705,18 @@ public class TSFileService {
                 System.out.println("write append error" + e);
             }
             long append = System.nanoTime();
+            StaticsUtil.WRITE_TOTAL_COST.addAndGet(System.nanoTime()-start);
+            StaticsUtil.WRITE_PREPART_TIME.addAndGet(prepareDataTime-start);
+            StaticsUtil.WRITE_COMPRESS_TIME.addAndGet(compressTime-prepareDataTime);
+            StaticsUtil.WRITE_PUT_TIME.addAndGet(putTime-compressTime);
+            StaticsUtil.WRITE_APPEND_TIME.addAndGet(append-putTime);
             if (writeTimes.get() % 100000 == 0) {
-                System.out.println("write total cost: " + (System.nanoTime() - start) + " ns"
+                System.out.println("write total cost: " + (StaticsUtil.WRITE_TOTAL_COST.get()) + " ns"
                         + " write size: " + total
-                        + " prepareData time " + (prepareDataTime - start) + " ns"
-                        + " compress time " + (compressTime - prepareDataTime) + " ns"
-                        + " put time " + (putTime - compressTime) + " ns"
-                        + " append time " + (append - putTime) + " ns"
+                        + " prepareData time " + (StaticsUtil.WRITE_PREPART_TIME.get()) + " ns"
+                        + " compress time " + (StaticsUtil.WRITE_COMPRESS_TIME.get()) + " ns"
+                        + " put time " + (StaticsUtil.WRITE_PUT_TIME.get()) + " ns"
+                        + " append time " + (StaticsUtil.WRITE_APPEND_TIME.get()) + " ns"
                 );
             }
         } catch (Exception e) {

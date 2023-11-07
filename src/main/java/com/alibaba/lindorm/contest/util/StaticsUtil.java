@@ -38,6 +38,13 @@ public class StaticsUtil {
 
     public static AtomicLong GET_SINGPLE_VALUE_TIMES = new AtomicLong(0);
     public static AtomicLong GET_VALUE_TIMES = new AtomicLong(0);
+
+    public static AtomicLong WRITE_TOTAL_COST = new AtomicLong();
+    public static AtomicLong WRITE_PREPART_TIME = new AtomicLong();
+    public static AtomicLong WRITE_COMPRESS_TIME = new AtomicLong();
+    public static AtomicLong WRITE_PUT_TIME = new AtomicLong();
+    public static AtomicLong WRITE_APPEND_TIME = new AtomicLong();
+
     public static int MAX_IDLE_BUFFER = Integer.MAX_VALUE;
 
     public static AtomicLong FIRST_READ_TIME = new AtomicLong(0);

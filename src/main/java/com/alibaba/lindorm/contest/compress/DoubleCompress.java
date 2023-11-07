@@ -259,7 +259,7 @@ public class DoubleCompress {
                 allocate.putShort((short) doubleDeltaBuffer.array().length);
                 allocate.put(doubleDeltaBuffer.array());
             }
-            byte[] compress = Zstd.compress(allocate.array(),6);
+            byte[] compress = Zstd.compress(allocate.array(),3);
             doubleDeltaBytes = ByteBuffer.allocate(compress.length + 4);
             doubleDeltaBytes.putInt(allocate.array().length);
             doubleDeltaBytes.put(compress);
@@ -274,7 +274,7 @@ public class DoubleCompress {
                 allocate.putShort((short) buffer.array().length);
                 allocate.put(buffer.array());
             }
-            byte[] compress = Zstd.compress(allocate.array(),3);
+            byte[] compress = Zstd.compress(allocate.array(),6);
             corillaBytes = ByteBuffer.allocate(compress.length + 4);
             corillaBytes.putInt(allocate.array().length);
             corillaBytes.put(compress);
