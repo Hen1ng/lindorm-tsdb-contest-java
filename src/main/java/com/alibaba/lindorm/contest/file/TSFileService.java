@@ -111,7 +111,46 @@ public class TSFileService {
             byte[] longBytes = index.getTimeStampBytes();
             final int valueSize = index.getValueSize();
             long[] decompress = LongCompress.decompress(longBytes, longPrevious, valueSize);
+            double[] doubles = null;
+            int[] ints1 = null;
             ColumnValue value;
+            if (cacheDataMap != null) {
+                TSDBEngineImpl.CacheData cacheData = cacheDataMap.get(index.getOffset());
+                if (columnIndex < Constants.INT_NUMS) {
+                    if (cacheData != null) {
+                        ArrayList<ColumnValue> arrayList = new ArrayList<>(32);
+                        ints1 = cacheData.ints;
+                        int i = 0;
+                        for (long aLong : decompress) {
+                            if (aLong >= timeLowerBound && aLong < timeUpperBound) {
+                                int off = columnIndex * valueSize + i;
+                                value = new ColumnValue.IntegerColumn(ints1[off]);
+                                arrayList.add(value);
+                            }
+                            i++;
+                        }
+                        if (!arrayList.isEmpty()) {
+                            return arrayList;
+                        }
+                    }
+                } else {
+                    if (cacheData != null) {
+                        ArrayList<ColumnValue> arrayList = new ArrayList<>(32);
+                        doubles = cacheData.doubles;
+                        int i = 0;
+                        for (long aLong : decompress) {
+                            if (aLong >= timeLowerBound && aLong < timeUpperBound) {
+                                value = new ColumnValue.DoubleFloatColumn(doubles[i]);
+                                arrayList.add(value);
+                            }
+                            i++;
+                        }
+                        if (!arrayList.isEmpty()) {
+                            return arrayList;
+                        }
+                    }
+                }
+            }
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
             final IntFile intFile = getIntFileByIndex(m);
@@ -152,8 +191,6 @@ public class TSFileService {
             }
 
             int i = 0;//多少行
-            double[] doubles = null;
-            int[] ints1 = null;
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     long startGetValue = System.nanoTime();
@@ -163,6 +200,10 @@ public class TSFileService {
                         try {
                             if (ints1 == null) {
                                 ints1 = IntCompress.decompressOriginBySingle(dataBuffer.array(),valueSize,columnIndex);
+                                if (cacheDataMap != null) {
+                                    final TSDBEngineImpl.CacheData cacheData = new TSDBEngineImpl.CacheData(ints1, null);
+                                    cacheDataMap.put(index.getOffset(), cacheData);
+                                }
                             }
                             int off = columnIndex * valueSize + i;
                             value = new ColumnValue.IntegerColumn(ints1[off]);

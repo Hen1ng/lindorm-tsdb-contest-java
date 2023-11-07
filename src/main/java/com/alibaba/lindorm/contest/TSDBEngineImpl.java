@@ -569,7 +569,7 @@ public class TSDBEngineImpl extends TSDBEngine {
             int i = 0;
             Context ctx = new Context(0, 0);
             Map<Long, ByteBuffer> bufferMap = null;
-            Map<Long, CacheData> cacheDataMap = null;
+            Map<Long, CacheData> cacheDataMap = new HashMap<>(32);
             Map<Long, Long> queryTimeMap = null;
             long readFileTime = 0;
             while (timeLowerBound + i * interval < timeUpperBound) {

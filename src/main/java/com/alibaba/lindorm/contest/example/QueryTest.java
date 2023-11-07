@@ -128,7 +128,7 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "j4zyA3QKUQfphOdPk";
+                String v = "8JzeYo8G0LSnf5Y6o";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
@@ -145,6 +145,7 @@ public class QueryTest {
                 requestedColumns.add("35");
                 requestedColumns.add("0");
                 requestedColumns.add("9double");
+                requestedColumns.add("ORNI");
                 final Random random1 = new Random();
                 List<String> queryList = new ArrayList<>();
                 queryList.add("0String0");
@@ -157,6 +158,7 @@ public class QueryTest {
                 queryList.add("35");
                 queryList.add("0");
                 queryList.add("9double");
+                queryList.add("ORNI");
                 final ArrayList<Vin> vins1 = new ArrayList<>(VinDictMap.getVinDictMap().keySet());
 
                 final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);
