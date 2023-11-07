@@ -216,7 +216,7 @@ public class DataGenerator {
                 for (int i = 0; i < 3600; i++) {
                     ArrayList<Row> rows = new ArrayList<>();
                     for (int j = 0; j < 10; j++) {
-                        for (int v = 0; v < 100; v++) {
+                        for (int v = 0; v < 1; v++) {
                             RowFactory rowFactory = randomRowFactory();
                             rowFactory.vin = vins[v];
 //                    out.writeObject(rowFactory);
@@ -263,7 +263,7 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-//            TimeRangeQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
             DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
@@ -288,7 +288,7 @@ public class DataGenerator {
 //                    System.out.println(row.getColumns().get("QZZS").getIntegerValue());
                 }
             }
-            if (i % 100000 == 0) {
+            if (i % 10000 == 0) {
                 MemoryUtil.printJVMHeapMemory();
             }
         }
@@ -311,13 +311,13 @@ public class DataGenerator {
     public static void TimeRangeQuery(TSDBEngineImpl tsdbEngine) throws IOException {
         System.out.println("LastVinQuery Begin =============");
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 100000; i++) {
             TimeRangeQueryRequest latestQueryRequest = genTimeRangeQueryRequest();
             ArrayList<Row> rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
             for (Row row : rows) {
-                for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
-                    System.out.println(stringColumnValueEntry.getValue());
-                }
+//                for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
+//                    System.out.println(stringColumnValueEntry.getValue());
+//                }
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 

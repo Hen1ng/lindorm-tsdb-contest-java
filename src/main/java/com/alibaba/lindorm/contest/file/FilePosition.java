@@ -27,7 +27,7 @@ public class FilePosition {
             this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, Constants.TS_FILE_NUMS * 2 * 8);
             if (!RestartUtil.IS_FIRST_START) {
                 FILE_POSITION_ARRAY = new long[Constants.TS_FILE_NUMS];
-                FILE_POSITION_ARRAY = new long[Constants.TS_FILE_NUMS];
+                TS_FILE_POSITION_ARRAY = new long[Constants.TS_FILE_NUMS];
                 for (int i = 0; i < Constants.TS_FILE_NUMS; i++) {
                     FILE_POSITION_ARRAY[i] = mappedByteBuffer.getLong();
                 }
