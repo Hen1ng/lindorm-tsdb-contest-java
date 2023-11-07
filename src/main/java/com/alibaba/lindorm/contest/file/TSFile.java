@@ -33,6 +33,8 @@ public class TSFile {
     private File file;
     private byte[] array;
 
+    private ByteBuffer directByteBuffer;
+
     private RandomAccessFile rwFile;
 
     public TSFile(String filePath, int fileName, long initPosition) {
@@ -49,16 +51,14 @@ public class TSFile {
             if (!file.exists()) {
                 file.createNewFile();
             }
-//            if (!RestartUtil.IS_FIRST_START) {
-//                if (fileName < Constants.LOAD_FILE_TO_MEMORY_NUM) {
-//                    final long position = FilePosition.FILE_POSITION_ARRAY[fileName];
-//                    final ByteBuffer allocate = ByteBuffer.allocate((int) position);
-//                    getFromOffsetByFileChannel(allocate, initPosition,null);
-//                    array = allocate.array();
-//                    final boolean delete = file.delete();
-//                    System.out.println("delete file " + fileName + "result " + delete + " array length" + array.length);
-//                }
-//            }
+            if (!RestartUtil.IS_FIRST_START) {
+                if (fileName < Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM) {
+                    final long position = FilePosition.TS_FILE_POSITION_ARRAY[fileName];
+                    directByteBuffer = ByteBuffer.allocateDirect((int) position);
+                    getFromOffsetByFileChannel(directByteBuffer, initPosition,null);
+                    System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity());
+                }
+            }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
         } catch (Exception e) {
             System.out.println("create TSFile error, e" + e);
@@ -96,6 +96,13 @@ public class TSFile {
                     ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
                     ctx.setHitArray(ctx.getHitArray() + 1);
                     ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
+                }
+                return;
+            }
+            if (directByteBuffer != null) {
+                directByteBuffer.position((int) (offset - initPosition));
+                for (int i = 0; i < remaining; i++) {
+                    byteBuffer.put(directByteBuffer.get());
                 }
                 return;
             }
