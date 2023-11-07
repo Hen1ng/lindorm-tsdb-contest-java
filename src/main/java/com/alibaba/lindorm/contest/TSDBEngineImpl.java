@@ -181,7 +181,7 @@ public class TSDBEngineImpl extends TSDBEngine {
                     return null;
                 });
                 final Future<Void> submit4 = executorService1.submit(() -> {
-                    filePosition.save(fileService.getIntFiles());
+                    filePosition.save(fileService.getIntFiles(), fileService.getTsFiles());
                     return null;
                 });
                 submit2.get();
