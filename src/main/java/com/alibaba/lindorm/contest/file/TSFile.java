@@ -55,7 +55,7 @@ public class TSFile {
                 if (fileName < Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM) {
                     final long position = FilePosition.TS_FILE_POSITION_ARRAY[fileName];
                     directByteBuffer = ByteBuffer.allocateDirect((int) position);
-                    getFromOffsetByFileChannel(directByteBuffer, initPosition,null);
+                    getByFileChannel(directByteBuffer, initPosition);
                     System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity());
                 }
             }
@@ -80,6 +80,14 @@ public class TSFile {
         }
         System.out.println("TSFile not enough, return -2");
         return -2;
+    }
+
+    public void getByFileChannel(ByteBuffer byteBuffer, long offset) {
+        try {
+            this.fileChannel.read(byteBuffer, offset - initPosition);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset, Context ctx) {
