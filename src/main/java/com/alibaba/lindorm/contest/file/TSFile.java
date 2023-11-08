@@ -54,9 +54,10 @@ public class TSFile {
             if (!RestartUtil.IS_FIRST_START) {
                 if (fileName < Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM) {
                     final long position = FilePosition.TS_FILE_POSITION_ARRAY[fileName];
-                    directByteBuffer = ByteBuffer.allocateDirect((int) position);
-                    getByFileChannel(directByteBuffer, initPosition);
-                    System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity());
+                    ByteBuffer byteBuffer = ByteBuffer.allocateDirect((int) position);
+                    getByFileChannel(byteBuffer, initPosition);
+                    directByteBuffer = byteBuffer.asReadOnlyBuffer();
+                    System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity() + "limit : " + directByteBuffer.limit() + "position : " +position);
                 }
             }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
@@ -108,9 +109,11 @@ public class TSFile {
                 return;
             }
             if (directByteBuffer != null) {
-                directByteBuffer.position((int) (offset - initPosition));
-                directByteBuffer.limit(directByteBuffer.position() + remaining);
-                byteBuffer.put(directByteBuffer);
+                ByteBuffer duplicate = directByteBuffer.duplicate();
+                duplicate.position((int) (offset - initPosition));
+                for(int i=0;i<remaining;i++){
+                    byteBuffer.put(duplicate.get());
+                }
                 return;
             }
             this.fileChannel.read(byteBuffer, offset - initPosition);

@@ -354,12 +354,7 @@ public class DoubleCompress {
     // 解压全部
     public static double[] decode2(ByteBuffer byteBuffer, int doubleNum, int valueSize,byte[] header) throws IOException {
         double[] doubles;
-        if (valueSize == Constants.CACHE_VINS_LINE_NUMS) {
-            doubles = TOTAL_THREAD_LOCAL.get();
-            Arrays.fill(doubles, 0);
-        } else {
-            doubles = new double[doubleNum];
-        }
+        doubles = new double[doubleNum];
         ByteBuffer headerWrap = ByteBuffer.wrap(header);
         int doubleDeltaBytesLength = headerWrap.getInt();
         int corillaBytesLength = headerWrap.getInt();

@@ -70,7 +70,7 @@ public class DataGenerator {
             rowFactory.ints[i] = random.nextInt(64);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
-            rowFactory.doubles[i - INT_NUM] = random.nextInt(10);
+            rowFactory.doubles[i - INT_NUM] = 0.1+random.nextDouble();
         }
         for (int i = INT_NUM + DOUBLE_NUM; i < INT_NUM + DOUBLE_NUM + STRING_NUM; i++) {
             int length = 10;
@@ -263,8 +263,8 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-//            TimeRangeQuery(tsdbEngine);
-            DownSampleQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
+//            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -308,28 +308,35 @@ public class DataGenerator {
         System.out.println("Agg Quey end ============= ALL RIGHT");
     }
 
-    public static void TimeRangeQuery(TSDBEngineImpl tsdbEngine) throws IOException {
+    public static void TimeRangeQuery(TSDBEngineImpl tsdbEngine) throws IOException, InterruptedException {
         System.out.println("LastVinQuery Begin =============");
         ExecutorService executorService1 = Executors.newFixedThreadPool(1);
+        long start = System.currentTimeMillis();
         for (int i = 0; i < 100000; i++) {
-            TimeRangeQueryRequest latestQueryRequest = genTimeRangeQueryRequest();
-            ArrayList<Row> rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
-            for (Row row : rows) {
-//                for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
-//                    System.out.println(stringColumnValueEntry.getValue());
-//                }
+                TimeRangeQueryRequest latestQueryRequest = genTimeRangeQueryRequest();
+                ArrayList<Row> rows = null;
+                try {
+                    rows = tsdbEngine.executeTimeRangeQuery(latestQueryRequest);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                for (Row row : rows) {
+//                    for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
+//                        System.out.println(stringColumnValueEntry.getValue());
+//                    }
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 
-            }
-            if (i % 100000 == 0) {
-                MemoryUtil.printJVMHeapMemory();
+                }
+            if (i % 1000 == 0) {
+                System.out.println(i+"  cost time :" +(System.currentTimeMillis()-start));
+//                MemoryUtil.printJVMHeapMemory();
             }
         }
         executorService1.shutdown();
         try {
             // 等待线程池终止，但最多等待5秒
-            if (!executorService1.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!executorService1.awaitTermination(100, TimeUnit.SECONDS)) {
                 System.out.println("Some tasks were not terminated yet!");
                 executorService1.shutdownNow();  // 尝试强制关闭所有正在执行的任务
             } else {

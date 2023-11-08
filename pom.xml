@@ -41,7 +41,7 @@
             <artifactId>zstd-jni</artifactId>
             <version>1.5.5-2</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/thirdlibs/zstd-jni-1.5.5-10.jar</systemPath>
+            <systemPath>${project.basedir}/thirdlibs/zstd-jni-1.5.5-2.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
