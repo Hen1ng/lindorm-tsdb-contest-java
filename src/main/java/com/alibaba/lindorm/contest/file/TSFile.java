@@ -51,14 +51,14 @@ public class TSFile {
             if (!file.exists()) {
                 file.createNewFile();
             }
-//            if (!RestartUtil.IS_FIRST_START) {
-//                if (fileName < Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM) {
-//                    final long position = FilePosition.TS_FILE_POSITION_ARRAY[fileName];
-//                    directByteBuffer = ByteBuffer.allocateDirect((int) position);
-//                    getByFileChannel(directByteBuffer, initPosition);
-//                    System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity());
-//                }
-//            }
+            if (!RestartUtil.IS_FIRST_START) {
+                if (fileName < Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM) {
+                    final long position = FilePosition.TS_FILE_POSITION_ARRAY[fileName];
+                    directByteBuffer = ByteBuffer.allocateDirect((int) position);
+                    getByFileChannel(directByteBuffer, initPosition);
+                    System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity());
+                }
+            }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
         } catch (Exception e) {
             System.out.println("create TSFile error, e" + e);
@@ -109,9 +109,8 @@ public class TSFile {
             }
             if (directByteBuffer != null) {
                 directByteBuffer.position((int) (offset - initPosition));
-                for (int i = 0; i < remaining; i++) {
-                    byteBuffer.put(directByteBuffer.get());
-                }
+                directByteBuffer.limit(directByteBuffer.position() + remaining);
+                byteBuffer.put(directByteBuffer);
                 return;
             }
             this.fileChannel.read(byteBuffer, offset - initPosition);
