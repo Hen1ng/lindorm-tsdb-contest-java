@@ -16,7 +16,7 @@ public class AggBucket {
     //
     int[] iMax, iMin;
     long[] iSum;
-    double[]  dMax, dSum, dMin;
+    double[] dMax, dSum, dMin;
 
     public AggBucket() {
         iMax = new int[40];
@@ -96,10 +96,31 @@ public class AggBucket {
         return dSum[index - 40];
     }
 
+    public void updateIntByBatch(int[] values, int valueSize) {
+        for (int index = 0; index < 40; index++) {
+            for (int j = 0; j < valueSize; j++) {
+                int value = values[index*valueSize+j];
+                iSum[index] += value;
+                iMax[index] = Math.max(iMax[index], value);
+                iMin[index] = Math.min(iMin[index], value);
+            }
+        }
+    }
+
     public void updateInt(int value, int index) {
         iSum[index] += value;
         iMax[index] = Math.max(iMax[index], value);
         iMin[index] = Math.min(iMin[index], value);
+    }
+
+    public void updateDoubleByBatch(double[] values, int valueSize) {
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < valueSize; j++) {
+                dSum[i] += values[i * valueSize + j];
+                dMax[i] = Math.max(dMax[i], values[i * valueSize + j]);
+                dMin[i] = Math.min(dMin[i], values[i * valueSize + j]);
+            }
+        }
     }
 
     public void updateDouble(double value, int index) {
