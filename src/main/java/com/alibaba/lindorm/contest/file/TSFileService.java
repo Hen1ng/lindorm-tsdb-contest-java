@@ -13,7 +13,6 @@ import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.github.luben.zstd.Zstd;
 
-import java.awt.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -23,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
-import static com.alibaba.lindorm.contest.index.MapIndex.put;
 import static com.alibaba.lindorm.contest.util.Constants.isBigString;
 
 
@@ -47,6 +45,7 @@ public class TSFileService {
     }
 
     private final IntFile[] intFiles;
+    private BigStringFile[] bigStringFiles;
     private final AtomicLong writeTimes = new AtomicLong(0);
 
     private BucketArrayFactory bucketArrayFactory;
@@ -56,6 +55,7 @@ public class TSFileService {
         this.executorService = Executors.newFixedThreadPool(48);
         this.tsFiles = new TSFile[Constants.TS_FILE_NUMS];
         this.intFiles = new IntFile[Constants.TS_FILE_NUMS];
+        this.bigStringFiles = new BigStringFile[Constants.TS_FILE_NUMS];
         if (RestartUtil.IS_FIRST_START) {
             bucketArrayFactory = new BucketArrayFactory(Constants.TOTAL_BUCKET + 100);
         }
@@ -63,6 +63,7 @@ public class TSFileService {
             long initPosition = (long) i * Constants.TS_FILE_SIZE;
             tsFiles[i] = new TSFile(file, i, initPosition);
             intFiles[i] = new IntFile(file, i, initPosition);
+            bigStringFiles[i] = new BigStringFile(file, i, initPosition);
         }
     }
 
@@ -79,6 +80,10 @@ public class TSFileService {
 
     public IntFile getIntFileByIndex(int i) {
         return intFiles[i];
+    }
+
+    public BigStringFile getBigFileByIndex(int i) {
+        return bigStringFiles[i];
     }
 
     public int getHashCodeByByteArray(byte[] bytes) {
@@ -318,7 +323,7 @@ public class TSFileService {
         for (short i1 : decompress1) {
             stringLengthBuffer.putShort(i1);
         }
-        int stringLength = index.getBigStringOffset() - (
+        int stringLength = index.getLength() - (
                 +doubleCompressInt + 2
                         + everyStringLength + 2
         );
@@ -346,35 +351,38 @@ public class TSFileService {
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
             final IntFile intFile = getIntFileByIndex(m);
+            final BigStringFile bigStringFile = getBigFileByIndex(m);
             long start = System.nanoTime();
             if (containsBigString) {
 //                dataBuffer = ByteBuffer.allocate(length);
-                dataBuffer = TOTAL_DIRECT_BUFFER.get();
-                dataBuffer.clear();
-                dataBuffer.position(0);
-                dataBuffer.limit(length);
+                final long bigStringAppend = index.getBigStringAppend();
+//                dataBuffer = TOTAL_DIRECT_BUFFER.get();
+//                dataBuffer.clear();
+//                dataBuffer.position(0);
+//                dataBuffer.limit(index.getBigStringLength());
+                dataBuffer = ByteBuffer.allocate(index.getBigStringLength());
                 StaticsUtil.TIME_RANGE_READ_FILE_SIZE.getAndAdd(length);
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset, null);
+                bigStringFile.getByFileChannel(dataBuffer, bigStringAppend);
                 StaticsUtil.TIME_RANGE_READ_TIME.getAndAdd((System.nanoTime() - start));
-                dataBuffer.flip();
+//                dataBuffer.flip();
                 if (bigStringBytes == null) {
-                    int bigStringLength = dataBuffer.getInt(index.getBigStringOffset());
-                    bigStringBytes = new byte[bigStringLength];
-                    dataBuffer.position(index.getBigStringOffset() + 4);
-                    dataBuffer.get(bigStringBytes, 0, bigStringLength);
+                    bigStringBytes = dataBuffer.array();
+//                    int bigStringLength = dataBuffer.getInt(index.getBigStringLength());
+//                    bigStringBytes = new byte[bigStringLength];
+//                    dataBuffer.position(index.getBigStringLength() + 4);
+//                    dataBuffer.get(bigStringBytes, 0, bigStringLength);
 //                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 130);
                 }
-            } else {
-//                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
-                dataBuffer = TOTAL_DIRECT_BUFFER.get();
-                dataBuffer.clear();
-                dataBuffer.position(0);
-                dataBuffer.limit(index.getBigStringOffset());
-                StaticsUtil.TIME_RANGE_READ_FILE_SIZE.getAndAdd(index.getBigStringOffset());
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset, null);
-                StaticsUtil.TIME_RANGE_READ_TIME.getAndAdd((System.nanoTime() - start));
-                dataBuffer.flip();
             }
+//                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
+            dataBuffer = TOTAL_DIRECT_BUFFER.get();
+            dataBuffer.clear();
+            dataBuffer.position(0);
+            dataBuffer.limit(index.getLength());
+            StaticsUtil.TIME_RANGE_READ_FILE_SIZE.getAndAdd(index.getLength());
+            tsFile.getFromOffsetByFileChannel(dataBuffer, offset, null);
+            StaticsUtil.TIME_RANGE_READ_TIME.getAndAdd((System.nanoTime() - start));
+            dataBuffer.flip();
             dataBuffer.position(0);
             long longPrevious = index.getPreviousTimeStamp();
             byte[] longBytes = index.getTimeStampBytes();
@@ -394,9 +402,10 @@ public class TSFileService {
                 if (intsFuture == null && columnIndex < Constants.INT_NUMS) {
                     intsFuture = executorService.submit(() -> decompressInts(index, intFile));
                 } else if (doubleFuture == null && columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
+                    ByteBuffer finalDataBuffer = dataBuffer;
                     doubleFuture = executorService.submit(() -> {
                         try {
-                            return decompressDoubles(index, dataBuffer.asReadOnlyBuffer().duplicate(), doubleCompressInt, valueSize);
+                            return decompressDoubles(index, finalDataBuffer.asReadOnlyBuffer().duplicate(), doubleCompressInt, valueSize);
                         } catch (IOException e) {
                             e.printStackTrace();
                             throw new RuntimeException(e);
@@ -409,9 +418,10 @@ public class TSFileService {
                         bigstringFuture = executorService.submit(() -> Zstd.decompress(finalBigStringBytes, valueSize * 130));
                     } else {
                         if (stringFuture != null) continue;
+                        ByteBuffer finalDataBuffer1 = dataBuffer;
                         stringFuture = executorService.submit(() -> {
                             try {
-                                return decompressString(index, dataBuffer.asReadOnlyBuffer().duplicate(), doubleCompressInt);
+                                return decompressString(index, finalDataBuffer1.asReadOnlyBuffer().duplicate(), doubleCompressInt);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
@@ -545,24 +555,24 @@ public class TSFileService {
             int m = j % Constants.TS_FILE_NUMS;
             final TSFile tsFile = getTsFileByIndex(m);
             final IntFile intFile = getIntFileByIndex(m);
+            final BigStringFile bigStringFile = getBigFileByIndex(m);
             ByteBuffer dataBuffer;
             byte[] bigStringBytes = null;
             if (containsBigString) {
-                dataBuffer = ByteBuffer.allocate(length);
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset, null);
+                dataBuffer = ByteBuffer.allocate(index.getBigStringLength());
+                bigStringFile.getByFileChannel(dataBuffer, index.getBigStringAppend());
                 dataBuffer.flip();
-                int bigStringLength = dataBuffer.getInt(index.getBigStringOffset());
+//                int bigStringLength = dataBuffer.getInt(index.getBigStringLength());
                 if (bigStringBytes == null) {
-                    bigStringBytes = new byte[bigStringLength];
-                    dataBuffer.position(index.getBigStringOffset() + 4);
-                    dataBuffer.get(bigStringBytes, 0, bigStringLength);
-                    bigStringBytes = Zstd.decompress(bigStringBytes, valueSize * 130);
+//                    bigStringBytes = new byte[bigStringLength];
+//                    dataBuffer.position(index.getBigStringLength() + 4);
+//                    dataBuffer.get(bigStringBytes, 0, bigStringLength);
+                    bigStringBytes = Zstd.decompress(dataBuffer.array(), valueSize * 130);
                 }
-            } else {
-                dataBuffer = ByteBuffer.allocate(index.getBigStringOffset());
-                tsFile.getFromOffsetByFileChannel(dataBuffer, offset, null);
-                dataBuffer.flip();
             }
+            dataBuffer = ByteBuffer.allocate(length);
+            tsFile.getFromOffsetByFileChannel(dataBuffer, offset, null);
+            dataBuffer.flip();
             dataBuffer.position(0);
             long longPrevious = index.getPreviousTimeStamp();
             byte[] longBytes = index.getTimeStampBytes();
@@ -642,7 +652,7 @@ public class TSFileService {
                                     }
                                 }
                                 if (stringBytes == null) {
-                                    int stringLength = index.getBigStringOffset() - (
+                                    int stringLength = index.getLength() - (
 
 
                                             +doubleCompressInt + 2
@@ -779,8 +789,8 @@ public class TSFileService {
 //                    compress2.length + 2 //int
                     +(2 + compressDouble.length) //double
                             + stringLengthArrayCompress.length + 2 //string长度记录
-                            + stringCompress.length //string存储string
-                            + stringCompress1.length + 4; //string存储string
+                            + stringCompress.length; //string存储string
+//                            + stringCompress1.length + 4; //string存储string
             long compressTime = System.nanoTime();
             ByteBuffer byteBuffer = TOTAL_DIRECT_BUFFER.get();
             ByteBuffer intByteBuffer = TOTAL_INT_DIRECT_BUFFER.get();
@@ -807,16 +817,18 @@ public class TSFileService {
             byteBuffer.put(stringLengthArrayCompress);
             byteBuffer.put(stringCompress);
 
-            int bigOffset = byteBuffer.position();
-            byteBuffer.putInt(stringCompress1.length);
-            byteBuffer.put(stringCompress1);
+//            int bigOffset = byteBuffer.position();
+            final ByteBuffer bigStringBuffer = ByteBuffer.allocateDirect(stringCompress1.length);
+            bigStringBuffer.put(stringCompress1);
 
             long putTime = System.nanoTime();
             try {
                 TSFile tsFile = getTsFileByIndex(m);
                 IntFile intFile = getIntFileByIndex(m);
+                BigStringFile bigStringFile = getBigFileByIndex(m);
                 final long append = tsFile.append(byteBuffer);
                 final long intAppend = intFile.append(intByteBuffer);
+                final long bigStringAppend = bigStringFile.append(bigStringBuffer);
                 final Index index = new Index(append
                         , intAppend
                         , maxTimestamp
@@ -828,9 +840,10 @@ public class TSFileService {
                         , 2 + compress2.length + 2 + compressDouble.length
                         , previousLong
                         , compress1
-                        , bigOffset
+                        , stringCompress1.length
                         , doubleHeader
-                        , null);
+                        , null
+                        , bigStringAppend);
                 MapIndex.put(j, index);
                 valueList.clear();
             } catch (Exception e) {
@@ -921,7 +934,7 @@ public class TSFileService {
                                 int[] ints = IntCompress.decompressOrigin(wrap.array(), index.getValueSize());
 
                                 //double
-                                final int bigStringOffset = index.getBigStringOffset();
+                                final int bigStringOffset = index.getLength();
                                 final long offset = index.getOffset();
                                 final ByteBuffer allocate = ByteBuffer.allocate(bigStringOffset);
                                 tsFileByIndex.getFromOffsetByFileChannel(allocate, offset, null);

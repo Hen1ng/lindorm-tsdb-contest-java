@@ -116,11 +116,21 @@ public class Index {
 
     private int length;
 
-    public int getBigStringOffset() {
-        return bigStringOffset;
+    public int getBigStringLength() {
+        return bigStringLength;
     }
 
-    private int bigStringOffset;
+    private int bigStringLength;
+
+    public long getBigStringAppend() {
+        return bigStringAppend;
+    }
+
+    public void setBigStringAppend(long bigStringAppend) {
+        this.bigStringAppend = bigStringAppend;
+    }
+
+    private long bigStringAppend;
 
 
     public Index(long offset
@@ -137,6 +147,7 @@ public class Index {
             , int bigStringOffset
             , byte[] doubleHeader
             , IntCompress.IntCompressResult intCompressResult
+            , long bigStringAppend
     ) {
         this.offset = offset;
         this.intOffset = intOffset;
@@ -149,9 +160,10 @@ public class Index {
         this.doubleLength = doubleLength;
         this.previousTimeStamp = previousTimeStamp;
         this.timeStampBytes = timeStampBytes;
-        this.bigStringOffset = bigStringOffset;
+        this.bigStringLength = bigStringOffset;
         this.doubleHeader = doubleHeader;
         this.intCompressResult = intCompressResult;
+        this.bigStringAppend = bigStringAppend;
     }
 
     public byte[] bytes() {
@@ -161,7 +173,7 @@ public class Index {
             bytes = aggBucket.bytes();
         }
 //        final byte[] bytes1 = intCompressResult.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 4 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length );
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 5 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length );
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -172,12 +184,13 @@ public class Index {
         allocate.putInt(length);
         allocate.putInt(intLength);
         allocate.putInt(doubleLength);
-        allocate.putInt(bigStringOffset);
+        allocate.putInt(bigStringLength);
         allocate.putLong(previousTimeStamp);
         allocate.putShort((short) timeStampBytes.length);
         allocate.put(timeStampBytes);
         allocate.putShort((short) doubleHeader.length);
         allocate.put(doubleHeader);
+        allocate.putLong(this.bigStringAppend);
         return allocate.array();
 //        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
 //        return gzipCompress.compress(allocate.array());
@@ -212,6 +225,7 @@ public class Index {
         short doubleHeaderLength = wrap.getShort();
         byte[] doubleHeader = new byte[doubleHeaderLength];
         wrap.get(doubleHeader, 0, doubleHeader.length);
+        final long bigStringAppend = wrap.getLong();
 
         return new Index(
                 offset,
@@ -227,7 +241,8 @@ public class Index {
                 bytes1,
                 bigStringOffset,
                 doubleHeader,
-                null
+                null,
+                bigStringAppend
         );
     }
 
