@@ -255,8 +255,9 @@ public class TSDBEngineImpl extends TSDBEngine {
         }
         if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
 //            MemoryUtil.printJVMHeapMemory();
-            System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
-            System.out.printf("TIME_RANGE_READ_FILE_SIZE " + StaticsUtil.TIME_RANGE_READ_FILE_SIZE.get() + "TIME_RANGE_READ_TIME " + StaticsUtil.TIME_RANGE_READ_TIME.get());
+            System.out.println("TIMERANGE_TOTAL_TIME : "+StaticsUtil.TIMERANGE_TOTAL_TIME+"  TIMERANGE_UNCOMPRESS_TIME:"+StaticsUtil.TIMERANGE_UNCOMPRESS_TIME+" TIMERANGE_READ_TIME:" +StaticsUtil.TIMERANGE_READ_TIME);
+//            System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
+//            System.out.printf("TIME_RANGE_READ_FILE_SIZE " + StaticsUtil.TIME_RANGE_READ_FILE_SIZE.get() + "TIME_RANGE_READ_TIME " + StaticsUtil.TIME_RANGE_READ_TIME.get());
         }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedColumns());

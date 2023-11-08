@@ -339,6 +339,7 @@ public class TSFileService {
     }
 
     public ArrayList<Row> getByIndexV2(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
+        long startTime = System.nanoTime();
         ArrayList<Row> rowArrayList = LIST_THREAD_LOCAL.get();
         rowArrayList.clear();
         boolean containsBigString = requestedColumns.contains(Constants.bigStringColumn) || requestedColumns.contains(Constants.bigStringColumn1);
@@ -438,9 +439,11 @@ public class TSFileService {
             if (stringFuture != null) {
                 stringBytes = stringFuture.get();
             }
-            if(bigstringFuture !=null){
+            if (bigstringFuture != null) {
                 bigStringBytes = bigstringFuture.get();
             }
+            long decompressEnd = System.nanoTime();
+            StaticsUtil.TIMERANGE_UNCOMPRESS_TIME.addAndGet(decompressEnd-readTime);
             for (long aLong : decompress) {
                 if (aLong >= timeLowerBound && aLong < timeUpperBound) {
                     Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
@@ -474,52 +477,9 @@ public class TSFileService {
                                     off = 30 * valueSize + i * 100;
                                     bigStringSize = 100;
                                 }
-//                                byte[] dest = new byte[bigStringSize];
-//                                ArrayUtils.copy(bigStringBytes, off, dest, 0, bigStringSize);
-//                                columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(dest)));
                                 assert bigStringBytes != null;
                                 columns.put(requestedColumn, new ColumnValue.StringColumn(ByteBuffer.wrap(bigStringBytes, off, bigStringSize)));
                             } else {
-//                                if(stringBytes==null){
-//                                    if(stringFuture != null){
-//                                        stringBytes = stringFuture.get();
-//                                    }else{
-//                                        System.out.println("stringFuture is null");
-//                                    }
-//                                }
-//                                if (stringLengthBuffer == null) {
-//                                    everyStringLength = dataBuffer.getShort(
-//
-//                                            +doubleCompressInt + 2);
-//                                    final byte[] bytes = new byte[everyStringLength - 4];
-//                                    dataBuffer.position(
-//
-//                                            +doubleCompressInt + 2
-//                                                    + 2);
-//                                    int totalLength = dataBuffer.getInt();
-//                                    dataBuffer.get(bytes, 0, bytes.length);
-//                                    final short[] decompress1 = IntCompress.decompressShort(bytes, index.getValueSize(), totalLength);
-//                                    stringLengthBuffer = ByteBuffer.allocateDirect(decompress1.length * 2);
-//                                    for (short i1 : decompress1) {
-//                                        stringLengthBuffer.putShort(i1);
-//                                    }
-//                                }
-//                                if (stringBytes == null) {
-//                                    int stringLength = index.getBigStringOffset() - (
-//
-//                                            +doubleCompressInt + 2
-//                                                    + everyStringLength + 2
-//                                    );
-//                                    byte[] bytes = new byte[stringLength - 4];
-//                                    dataBuffer.position(
-//
-//                                            +doubleCompressInt + 2
-//                                                    + everyStringLength + 2
-//                                    );
-//                                    int totalLength = dataBuffer.getInt();
-//                                    dataBuffer.get(bytes, 0, bytes.length);
-//                                    stringBytes = StringCompress.decompress1(bytes, stringLengthBuffer, index.getValueSize(), totalLength);
-//                                }
                                 try {
                                     int stringNum = columnIndex - (Constants.INT_NUMS + Constants.FLOAT_NUMS);
                                     int stringPosition = (stringNum * valueSize + i);
@@ -540,6 +500,8 @@ public class TSFileService {
 //            System.out.println("getByIndexV2 e"  + " containsBigString: " + containsBigString + "index.getBigStringOffset()" + index.getBigStringOffset() + "data limit" + dataBuffer.limit() + "data position" + dataBuffer.position() + "data capacity" + dataBuffer.capacity() );
             System.exit(-1);
         }
+        long end = System.nanoTime();
+        StaticsUtil.TIMERANGE_TOTAL_TIME.addAndGet(end-startTime);
         return rowArrayList;
     }
 
@@ -761,7 +723,10 @@ public class TSFileService {
                 });
                 l++;
             }
-
+//            if (aggBucket != null) {
+//                aggBucket.updateDoubleByBatch(doubles, valueSize);
+//                aggBucket.updateIntByBatch(ints, valueSize);
+//            }
             long prepareDataTime = System.nanoTime();
             //压缩string
             CompressResult compressResult = StringCompress.compress1(stringList, lineNum);
