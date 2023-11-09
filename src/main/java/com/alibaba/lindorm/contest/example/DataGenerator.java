@@ -263,8 +263,8 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-//            TimeRangeQuery(tsdbEngine);
-            DownSampleQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
+//            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
