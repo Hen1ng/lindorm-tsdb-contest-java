@@ -107,8 +107,12 @@ public class DataGenerator {
         Set<String> requestedColumns = new HashSet<>(Arrays.asList(columnsName));
         Vin vin = vins[random.nextInt(1)];
         Set<String> request = new HashSet<>();
-        for(int i=0;i<60;i++){
-            request.add(columnsName[i]);
+        for(int i=0;i<4;i++){
+            request.add(columnsName[random.nextInt(40)]);
+            request.add(columnsName[random.nextInt(10)+40]);
+            if(i<2){
+                request.add(columnsName[random.nextInt(10)+50]);
+            }
         }
         int time = random.nextInt(36000 - 300);
         long timeLower = timeStamp[time];
@@ -321,9 +325,9 @@ public class DataGenerator {
                     throw new RuntimeException(e);
                 }
                 for (Row row : rows) {
-                    for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
-                        System.out.println(stringColumnValueEntry.getValue());
-                    }
+//                    for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
+//                        System.out.println(stringColumnValueEntry.getValue());
+//                    }
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 

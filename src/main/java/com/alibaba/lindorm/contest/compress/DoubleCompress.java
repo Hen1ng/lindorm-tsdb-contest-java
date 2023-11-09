@@ -18,6 +18,8 @@ import java.util.*;
 public class DoubleCompress {
 
     public static boolean[] doubleDeltaFlag = new boolean[10];
+
+    public static boolean[] corillaListFlag = new boolean[10];
     public static ArrayList<Integer> corillaList = new ArrayList<>();
 
     public static final ThreadLocal<double[]> TOTAL_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.FLOAT_NUMS * Constants.CACHE_VINS_LINE_NUMS]);
@@ -29,6 +31,10 @@ public class DoubleCompress {
         doubleDeltaFlag[5] = true;
         doubleDeltaFlag[8] = true;
 
+        corillaListFlag[3] = true;
+        corillaListFlag[4] = true;
+        corillaListFlag[6] = true;
+        corillaListFlag[7] = true;
 
         corillaList.add(3);
 //        corillaList.add(4);
@@ -200,7 +206,7 @@ public class DoubleCompress {
             doubles[i - start] = values[i + 1] - values[i];
         }
         for (int i = 0; i < 10; i++) {
-            if (corillaList.contains(i)) {
+            if (corillaListFlag[i]) {
                 start = i * valueSize;
                 end = (i + 1) * valueSize;
                 double p = i == 3 ? 10000 : -100000;
@@ -236,7 +242,7 @@ public class DoubleCompress {
                 DoubleDeltaCompress(values, i * valueSize, (i + 1) * valueSize);
                 encode = encode3(values, i * valueSize, (i + 1) * valueSize);
                 doubleDeltaBuffers.add(encode);
-            } else if (corillaList.contains(i)) {
+            } else if (corillaListFlag[i]) {
                 DeltaCompress(values, i * valueSize, (i + 1) * valueSize, doubles);
                 encode = encodeCorilla(values, i * valueSize, (i + 1) * valueSize);
                 corillaBuffers.add(encode);
@@ -327,7 +333,7 @@ public class DoubleCompress {
                 if (doubleDeltaFlag[index]) {
                     continue;
                 }
-                if (corillaList.contains(i)) {
+                if (corillaListFlag[i]) {
                     final int anInt = wrap.getShort();
                     byte[] array = new byte[anInt];
                     if (i != index) {
@@ -352,6 +358,17 @@ public class DoubleCompress {
     }
 
     public static double[] decode2ByColumns(ByteBuffer byteBuffer, int doubleNum, int valueSize, byte[] header, Set<Integer> columns) throws IOException {
+
+        boolean isContainDoubleDelta = false;
+        boolean isContainCorilla = false;
+        for (Integer column : columns) {
+            if (doubleDeltaFlag[column]) isContainDoubleDelta = true;
+            else {
+                isContainCorilla = true;
+            }
+        }
+        ByteBuffer doubleDeltaBytes = null;
+        ByteBuffer corillaBytes = null;
         double[] doubles;
         doubles = new double[doubleNum];
         ByteBuffer headerWrap = ByteBuffer.wrap(header);
@@ -360,20 +377,27 @@ public class DoubleCompress {
         int totalLength = byteBuffer.getInt();
         byte[] bytes = new byte[doubleDeltaBytesLength - 4];
         byteBuffer.get(bytes, 0, bytes.length);
-        byte[] decompress1 = Zstd.decompress(bytes, totalLength);
-        ByteBuffer doubleDeltaBytes = ByteBuffer.wrap(decompress1);
-
+        if (isContainDoubleDelta) {
+            byte[] decompress1 = Zstd.decompress(bytes, totalLength);
+            doubleDeltaBytes = ByteBuffer.wrap(decompress1);
+        }
         totalLength = byteBuffer.getInt();
         byte[] bytes1 = new byte[corillaBytesLength - 4];
         byteBuffer.get(bytes1, 0, bytes1.length);
-        byte[] decompress2 = Zstd.decompress(bytes1, totalLength);
-        ByteBuffer corillaBytes = ByteBuffer.wrap(decompress2);
-
+        if(isContainCorilla){
+            byte[] decompress2 = Zstd.decompress(bytes1, totalLength);
+            corillaBytes = ByteBuffer.wrap(decompress2);
+        }
         int start = 0;
         int count = 0;
-        while (doubleDeltaBytes.hasRemaining() || corillaBytes.hasRemaining()) {
+        while ((doubleDeltaBytes != null && doubleDeltaBytes.hasRemaining()) || (corillaBytes != null && corillaBytes.hasRemaining())) {
             double[] decode = null;
             if (doubleDeltaFlag[count]) {
+                if(!isContainDoubleDelta){
+                    start += valueSize;
+                    count++;
+                    continue;
+                }
                 final int anInt = doubleDeltaBytes.getShort();
                 if (!columns.contains(count)) {
                     doubleDeltaBytes.position(doubleDeltaBytes.position() + anInt);
@@ -386,6 +410,11 @@ public class DoubleCompress {
                 decode = decode3(ByteBuffer.wrap(array), valueSize);
                 DoubleDeltaDecompress(decode, 0, decode.length);
             } else if (corillaList.contains(count)) {
+                if(!isContainCorilla){
+                    start += valueSize;
+                    count++;
+                    continue;
+                }
                 final int anInt = corillaBytes.getShort();
                 if (!columns.contains(count)) {
                     corillaBytes.position(corillaBytes.position() + anInt);
@@ -397,6 +426,11 @@ public class DoubleCompress {
                 corillaBytes.get(array);
                 decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
             } else {
+                if(!isContainCorilla){
+                    start += valueSize;
+                    count++;
+                    continue;
+                }
                 final int anInt = corillaBytes.getShort();
                 byte[] array = new byte[anInt];
                 corillaBytes.get(array);
@@ -524,8 +558,8 @@ public class DoubleCompress {
 //            }
 //        }
         for (Integer column : columns) {
-            for(int j=0;j<150;j++){
-                if(doubles1[column*150+j]!=data[column*150+j]){
+            for (int j = 0; j < 150; j++) {
+                if (doubles1[column * 150 + j] != data[column * 150 + j]) {
                     System.out.println("not euqal");
                 }
             }

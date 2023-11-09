@@ -874,9 +874,9 @@ public class TSFileService {
 
     public void loadBucket() {
         long startTime = System.currentTimeMillis();
-        ExecutorService executorService = new ThreadPoolExecutor(16, 16,
+        ExecutorService executorService = new ThreadPoolExecutor(24, 24,
                 2L, TimeUnit.MINUTES, new LinkedBlockingQueue<>(100));
-        int batch = 16;
+        int batch = 24;
         List<IndexListWrapper>[] indexWrapperList = new ArrayList[batch];
         for (int i = 0; i < batch; i++) {
             indexWrapperList[i] = new ArrayList<>();
@@ -922,15 +922,16 @@ public class TSFileService {
                                     throw new RuntimeException(e);
                                 }
                                 final AggBucket aggBucket = new AggBucket();
-                                for (int i1 = 0; i1 < doubles.length; i1++) {
-                                    int columnIndex = i1 / Constants.CACHE_VINS_LINE_NUMS + Constants.INT_NUMS;
-                                    aggBucket.updateDouble(doubles[i1], columnIndex);
-
-                                }
-                                for (int i1 = 0; i1 < ints.length; i1++) {
-                                    int columnIndex = i1 / Constants.CACHE_VINS_LINE_NUMS;
-                                    aggBucket.updateInt(ints[i1], columnIndex);
-                                }
+//                                for (int i1 = 0; i1 < doubles.length; i1++) {
+//                                    int columnIndex = i1 / Constants.CACHE_VINS_LINE_NUMS + Constants.INT_NUMS;
+//                                    aggBucket.updateDouble(doubles[i1], columnIndex);
+//                                }
+                                aggBucket.updateDoubleByBatch(doubles, index.getValueSize());
+                                aggBucket.updateIntByBatch(ints,index.getValueSize());
+//                                for (int i1 = 0; i1 < ints.length; i1++) {
+//                                    int columnIndex = i1 / Constants.CACHE_VINS_LINE_NUMS;
+//                                    aggBucket.updateInt(ints[i1], columnIndex);
+//                                }
                                 index.setAggBucket(aggBucket);
                                 if (atomicInteger.getAndIncrement() % 100000 == 0) {
                                     System.out.println("load bucket num" + atomicInteger.get());
@@ -967,11 +968,22 @@ public class TSFileService {
 
     public void loadInt() {
         long start = System.currentTimeMillis();
+        ExecutorService executorService1 = Executors.newFixedThreadPool(16);
         for (IntFile intFile : intFiles) {
-            intFile.loadInt();
-            ;
+            executorService1.execute(intFile::loadInt);
         }
-        System.out.println("load int cost" + (System.currentTimeMillis() - start) + " ms");
+        executorService1.shutdown();
+        boolean b;
+        try {
+            b = executorService1.awaitTermination(30, TimeUnit.SECONDS);
+        }catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        if(b) {
+            System.out.println("load int cost" + (System.currentTimeMillis() - start) + " ms");
+        }else{
+            System.out.println("load int file fail");
+        }
         MemoryUtil.printJVMHeapMemory();
     }
 }

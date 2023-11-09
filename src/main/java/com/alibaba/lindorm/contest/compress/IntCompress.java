@@ -265,12 +265,22 @@ public class IntCompress {
         subSet.add(new Pair<>(3, 4));
         subSet.add(new Pair<>(4, 6));
         subSet.add(new Pair<>(6, 19));
+//        subSet.add(new Pair<>(12, 15));
+
         subSet.add(new Pair<>(15, 19));
         subSet.add(new Pair<>(19, 20));
+//        subSet.add(new Pair<>(20, 39));
+
         subSet.add(new Pair<>(12, 39));
         subSet.add(new Pair<>(34, 39));
         subSet.add(new Pair<>(11, 39));
         subSet.add(new Pair<>(39, 20));
+        subSet.add(new Pair<>(11, 34));
+        subSet.add(new Pair<>(6, 11));
+//        subSet.add(new Pair<>(6, 34));
+
+//        subSet.add(new Pair<>(4, 39));
+
 
         dependencyFinder = new DependencyFinder(subSet);
 
@@ -425,6 +435,7 @@ public class IntCompress {
                 pre = tmp;
             }
         }
+
         for (Pair<Integer, Integer> integerIntegerPair : subSet) {
             int start = integerIntegerPair.getLeft() * valueSize;
             int end = start + valueSize;
@@ -443,6 +454,16 @@ public class IntCompress {
 //                ints[i] /= 1000;
 //            }
 //        }
+//        int[][] splitArray = splitArray(ints, 210, 100 * 35);
+//        int index = 0;
+//        for (int[] ints1 : splitArray) {
+////            toGapArray(ints);
+//            System.out.printf("%d:", index++);
+//            for (int anInt : ints1) {
+//                System.out.printf("%10d,", anInt);
+//            }
+//            System.out.println("");
+//        }
         for (int i = 0; i < 40; i++) {
             if (notSecondDelta.contains(i)) continue;
             int start = i * valueSize;
@@ -454,16 +475,6 @@ public class IntCompress {
                 pre = tmp;
             }
         }
-//        int[][] splitArray = splitArray(ints, 210, 100 * 35);
-//        int index = 0;
-//        for (int[] ints1 : splitArray) {
-////            toGapArray(ints);
-//            System.out.printf("%d:", index++);
-//            for (int anInt : ints1) {
-//                System.out.printf("%10d,", anInt);
-//            }
-//            System.out.println("");
-//        }
 
     }
 

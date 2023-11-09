@@ -261,18 +261,18 @@ public class StringCompress {
         while (wrap.hasRemaining()) {
             boolean b = compressTypeBitSet.get(index);
             if (b == USING_MAP_COMPRESS) {
-                ArrayList<byte[]> arrayList = new ArrayList<>();
                 byte dictSize = wrap.get();
+                byte[][] arrayList = new byte[dictSize][];
                 for (int i = 0; i < dictSize; i++) {
                     short anInt1 = wrap.getShort();
                     byte[] dict = new byte[anInt1];
                     wrap.get(dict, 0, dict.length);
-                    arrayList.add(dict);
+                    arrayList[i] = dict;
                 }
                 if (dictSize == 1) {
                     // no index
                     for (int i = 0; i < valueSize; i++) {
-                        byteBuffers.add(ByteBuffer.wrap(arrayList.get(0)));
+                        byteBuffers.add(ByteBuffer.wrap(arrayList[0]));
                     }
                 } else if (dictSize == 2) {
                     byte[] values = new byte[UpperBoundByte(valueSize)];
@@ -283,10 +283,10 @@ public class StringCompress {
 //                    byteBuffers.add(ByteBuffer.wrap(arrayList.get(0)));
                         boolean bi = bitSet.get(i);
                         if (bi) {
-                            byte[] bytes1 = arrayList.get(1);
+                            byte[] bytes1 = arrayList[1];
                             byteBuffers.add(ByteBuffer.wrap(bytes1));
                         } else {
-                            byte[] bytes1 = arrayList.get(0);
+                            byte[] bytes1 = arrayList[0];
                             byteBuffers.add(ByteBuffer.wrap(bytes1));
                         }
                     }
@@ -297,7 +297,7 @@ public class StringCompress {
 //                    stringLengthBuffer.getShort();
 //                    byteBuffers.add(ByteBuffer.wrap(arrayList.get(0)));
                         int value = getTwoBit(values, i);
-                        byteBuffers.add(ByteBuffer.wrap(arrayList.get(value)));
+                        byteBuffers.add(ByteBuffer.wrap(arrayList[value]));
                     }
                 }
             } else {

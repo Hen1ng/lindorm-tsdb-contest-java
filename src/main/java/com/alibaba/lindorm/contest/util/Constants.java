@@ -28,7 +28,7 @@ public class Constants {
     public static String bigStringColumn = "JUBK";
     public static String bigStringColumn1 = "ORNI";
 
-    public static final int CACHE_VINS_LINE_NUMS = 220;
+    public static final int CACHE_VINS_LINE_NUMS = 230;
     public static int INT_NUMS;
     public static int FLOAT_NUMS;
     public static int STRING_NUMS;
@@ -38,7 +38,7 @@ public class Constants {
     public static final int TOTAL_BUFFER_NUMS = 1200;
     public static final int TOTAL_COMPRESS_NUMS = 1;
 
-    public static final int TOTAL_BUCKET = 100000;
+    public static final int TOTAL_BUCKET = 30000;
 
 
     public static final boolean OPEN_DOWNSAMPLE_BYPUCKET_OPT = true;
