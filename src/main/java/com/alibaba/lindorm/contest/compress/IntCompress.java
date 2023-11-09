@@ -190,18 +190,36 @@ public class IntCompress {
 //
 //        System.out.println(Arrays.equals(data1,data));
 //        IntCompressResult intCompressResult = compress4(data, 210);
+        for(int first=0;first<40;first++){
+            for(int second=first+1;second<40;second++){
+                subSet.add(new Pair<>(first,second));
+                byte[] compressed = compressOrigin(testNumReal.clone(), 210);
+                long byteLength = compressed.length;
+                int[] longs = decompressOrigin(compressed, 210);
+                for (int i = 0; i < longs.length; i++) {
+                    if (longs[i] != testNumReal[i]) {
+                        System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
+                    }
+                }
+                if((1.0d * byteLength / (data.length * 4))<0.1418154761904762) {
+                    System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
+                }
+                subSet.remove(subSet.size()-1);
+            }
+
+        }
         byte[] compressed = compressOrigin(data, 210);
         long byteLength = compressed.length;
 ////        final int[] output = new int[data.length];
 //        final int[] longs = decompress4V2(intCompressResult.data, 210, intCompressResult);
-        for(int i=0;i<40;i++){
-            int[] ints = decompressOriginBySingle(compressed, 210, i);
-            for (int j = 0; j <210; j++) {
-                if(ints[i*210+j]!=testNumReal[i*210+j]){
-                    System.out.println("not equal");
-                }
-            }
-        }
+//        for(int i=0;i<40;i++){
+//            int[] ints = decompressOriginBySingle(compressed, 210, i);
+//            for (int j = 0; j <210; j++) {
+//                if(ints[i*210+j]!=testNumReal[i*210+j]){
+//                    System.out.println("not equal");
+//                }
+//            }
+//        }
         int[] longs = decompressOrigin(compressed, 210);
 //        final byte[] bytes1 = compressZstd(data1);
         for (int i = 0; i < longs.length; i++) {
@@ -277,6 +295,18 @@ public class IntCompress {
         subSet.add(new Pair<>(39, 20));
         subSet.add(new Pair<>(11, 34));
         subSet.add(new Pair<>(6, 11));
+        subSet.add(new Pair<>(19,39));
+        subSet.add(new Pair<>(13,14));
+        subSet.add(new Pair<>(12,34));
+        subSet.add(new Pair<>(19,34));
+//        subSet.add(new Pair<>(19,34));
+        subSet.add(new Pair<>(1,14));
+        subSet.add(new Pair<>(1,13));
+        subSet.add(new Pair<>(22,33));
+        subSet.add(new Pair<>(4,10));
+        subSet.add(new Pair<>(24,29));
+        subSet.add(new Pair<>(1,32));
+
 //        subSet.add(new Pair<>(6, 34));
 
 //        subSet.add(new Pair<>(4, 39));
