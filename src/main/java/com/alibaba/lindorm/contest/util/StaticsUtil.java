@@ -43,6 +43,9 @@ public class StaticsUtil {
     public static AtomicLong TIMERANGE_TOTAL_TIME = new AtomicLong();
 
     public static AtomicLong TIMERANGE_UNCOMPRESS_TIME = new AtomicLong();
+    public static AtomicLong TIMERANGE_UNCOMPRESS_INT_TIME = new AtomicLong();
+    public static AtomicLong TIMERANGE_UNCOMPRESS_DOUBLE_TIME = new AtomicLong();
+    public static AtomicLong TIMERANGE_UNCOMPRESS_STRING_TIME = new AtomicLong();
 
     public static AtomicLong WRITE_TOTAL_COST = new AtomicLong();
     public static AtomicLong WRITE_PREPART_TIME = new AtomicLong();

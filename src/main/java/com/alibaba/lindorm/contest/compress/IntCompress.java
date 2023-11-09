@@ -1,9 +1,7 @@
 package com.alibaba.lindorm.contest.compress;
 
 import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
-import com.alibaba.lindorm.contest.compress.intcodec2.integercompression.*;
 import com.alibaba.lindorm.contest.file.TSFileService;
-import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
 import com.github.luben.zstd.Zstd;
@@ -14,7 +12,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class IntCompress {
 //    static Composition codec = new Composition(new NewPFDS9(), new VariableByte());
@@ -470,7 +467,7 @@ public class IntCompress {
 
     }
 
-    public static void recoverProcessBySingple(int[] ints, int valueSize, int index, Set<Integer> dependencies) {
+    public static void recoverProcessByColumn(int[] ints, int valueSize, Set<Integer> dependencies) {
         for (int i = 0; i < 40; i++) {
             if (notSecondDelta.contains(i)) continue;
             if (!dependencies.contains(i)) continue;
@@ -1207,10 +1204,115 @@ public class IntCompress {
                 }
             }
         }
-        recoverProcessBySingple(result, valueSize, index, dependencies);
+        recoverProcessByColumn(result, valueSize, dependencies);
         return result;
     }
-
+    public static int[] decompressOriginByColumns(byte[] bytes, int valueSize, Set<Integer> columns) {
+        ByteBuffer wrap = ByteBuffer.wrap(bytes);
+        int anInt = wrap.getInt();
+        byte[] bytes1 = new byte[bytes.length - 4];
+        wrap.get(bytes1, 0, bytes1.length);
+        byte[] decompress = Zstd.decompress(bytes1, anInt);
+        ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
+        byte[] compressType = new byte[5];
+        int[] result = new int[valueSize * 40];
+        wrap1.get(compressType, 0, compressType.length);
+        Set<Integer> dependencies = new HashSet<>();
+        for (Integer column : columns) {
+            dependencies.addAll(dependencyFinder.findDependencies(column));
+        }
+        for (int i = 0; i < 40; i++) {
+            boolean bit = getBit(i, compressType);
+            if (bit) {
+                // use map
+                int firstInt = wrap1.getInt();
+                result[i * valueSize] = firstInt;
+                byte dictSize = wrap1.get();
+                int bitSize = valueSize;
+                int dd = dictSize;
+                if (dictSize > 16) dd = 64;
+                else if (dictSize > 4) dd = 16;
+//                else if (dictSize > 4) dictSize = 8;
+                else if (dictSize > 2) dd = 4;
+                if (!dependencies.contains(i)) {
+                    int offset1 = 0;
+                    switch (dd) {
+                        case 1:
+                            offset1 += 4;
+                            break;
+                        case 2:
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize);
+                            break;
+                        case 4:
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize * 2);
+                            break;
+                        case 16:
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize * 4);
+                            break;
+                        case 64:
+                            offset1 += dictSize * 4 + UpperBoundByte(bitSize * 8);
+                            break;
+                    }
+                    wrap1.position(wrap1.position() + offset1);
+                    continue;
+                }
+                int[] dict = new int[dictSize];
+                for (int j = 0; j < dictSize; j++) {
+                    int anInt1 = wrap1.getInt();
+                    dict[j] = anInt1;
+                }
+                if (dd == 1) {
+                    for (int j = 1; j < valueSize; j++) {
+                        result[i * valueSize + j] = dict[0];
+                    }
+                } else if (dd == 2) {
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize)];
+                    wrap1.get(indexBit, 0, indexBit.length);
+                    for (int j = 1; j < valueSize; j++) {
+                        boolean bit1 = getBit(j, indexBit);
+                        result[i * valueSize + j] = bit1 ? dict[1] : dict[0];
+                    }
+                } else if (dd == 4) {
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize * 2)];
+                    wrap1.get(indexBit, 0, indexBit.length);
+                    for (int j = 1; j < valueSize; j++) {
+                        int ix = getTwoBit(indexBit, j);
+                        result[i * valueSize + j] = dict[ix];
+                    }
+                } else if (dd == 16) {
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize * 4)];
+                    wrap1.get(indexBit, 0, indexBit.length);
+                    for (int j = 1; j < valueSize; j++) {
+                        int ix = getFourBit(indexBit, j);
+                        result[i * valueSize + j] = dict[ix];
+                    }
+                } else if (dd == 64) {
+                    byte[] indexBit = new byte[UpperBoundByte(bitSize * 8)];
+                    wrap1.get(indexBit, 0, indexBit.length);
+                    for (int j = 1; j < valueSize; j++) {
+                        int ix = indexBit[j];
+                        result[i * valueSize + j] = dict[ix];
+                    }
+                }
+            } else {
+                // not use map
+                int length = wrap1.getInt();
+                if (!dependencies.contains(i)) {
+                    wrap1.position(wrap1.position() + length);
+                    continue;
+                }
+                byte[] bytes2 = new byte[length];
+                wrap1.get(bytes2, 0, bytes2.length);
+                long[] longs = decompress2WithoutZstd(bytes2, valueSize);
+                result[i * valueSize] = (int) longs[0];
+                for (int j = 0; j < longs.length; j++) {
+                    result[i * valueSize + j] = (int) (longs[j]);
+                }
+            }
+        }
+        recoverProcessByColumn(result, valueSize, dependencies);
+        return result;
+    }
     public static int[] decompressOrigin(byte[] bytes, int valueSize) {
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
         int anInt = wrap.getInt();

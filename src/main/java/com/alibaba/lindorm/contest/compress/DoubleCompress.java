@@ -17,7 +17,7 @@ import java.util.*;
 
 public class DoubleCompress {
 
-    public static boolean[] doubleDeltaFlag =  new boolean[10];
+    public static boolean[] doubleDeltaFlag = new boolean[10];
     public static ArrayList<Integer> corillaList = new ArrayList<>();
 
     public static final ThreadLocal<double[]> TOTAL_THREAD_LOCAL = ThreadLocal.withInitial(() -> new double[Constants.FLOAT_NUMS * Constants.CACHE_VINS_LINE_NUMS]);
@@ -252,14 +252,14 @@ public class DoubleCompress {
         {
             int length = 0;
             for (ByteBuffer doubleDeltaBuffer : doubleDeltaBuffers) {
-                length+=doubleDeltaBuffer.array().length;
+                length += doubleDeltaBuffer.array().length;
             }
             ByteBuffer allocate = ByteBuffer.allocate(length + doubleDeltaBuffers.size() * 2);
             for (ByteBuffer doubleDeltaBuffer : doubleDeltaBuffers) {
                 allocate.putShort((short) doubleDeltaBuffer.array().length);
                 allocate.put(doubleDeltaBuffer.array());
             }
-            byte[] compress = Zstd.compress(allocate.array(),3);
+            byte[] compress = Zstd.compress(allocate.array(), 3);
             doubleDeltaBytes = ByteBuffer.allocate(compress.length + 4);
             doubleDeltaBytes.putInt(allocate.array().length);
             doubleDeltaBytes.put(compress);
@@ -267,19 +267,19 @@ public class DoubleCompress {
         {
             int length = 0;
             for (ByteBuffer corillaBuffer : corillaBuffers) {
-                length = length+ corillaBuffer.array().length;
+                length = length + corillaBuffer.array().length;
             }
             ByteBuffer allocate = ByteBuffer.allocate(length + corillaBuffers.size() * 2);
             for (ByteBuffer buffer : corillaBuffers) {
                 allocate.putShort((short) buffer.array().length);
                 allocate.put(buffer.array());
             }
-            byte[] compress = Zstd.compress(allocate.array(),6);
+            byte[] compress = Zstd.compress(allocate.array(), 6);
             corillaBytes = ByteBuffer.allocate(compress.length + 4);
             corillaBytes.putInt(allocate.array().length);
             corillaBytes.put(compress);
         }
-        ByteBuffer allocate = ByteBuffer.allocate( doubleDeltaBytes.array().length + corillaBytes.array().length);
+        ByteBuffer allocate = ByteBuffer.allocate(doubleDeltaBytes.array().length + corillaBytes.array().length);
         allocate.put(doubleDeltaBytes.array());
         allocate.put(corillaBytes.array());
 
@@ -287,85 +287,144 @@ public class DoubleCompress {
         headerBuffer.putInt(doubleDeltaBytes.array().length);
         headerBuffer.putInt(corillaBytes.array().length);
 
-        return new doubleCompressResult(allocate.array(),headerBuffer.array());
+        return new doubleCompressResult(allocate.array(), headerBuffer.array());
     }
 
     // 单列解压
-    public static double[] decodeByIndex(ByteBuffer byteBuffer, int doubleNum, int valueSize,byte[] header,int index){
+    public static double[] decodeByIndex(ByteBuffer byteBuffer, int doubleNum, int valueSize, byte[] header, int index) {
         ByteBuffer headerWrap = ByteBuffer.wrap(header);
         int doubleDeltaBytesLength = headerWrap.getInt();
         int corillaBytesLength = headerWrap.getInt();
 
         int length = 0;
-        if(doubleDeltaFlag[index]){
+        if (doubleDeltaFlag[index]) {
             length = doubleDeltaBytesLength;
-        }else{
+        } else {
             length = corillaBytesLength;
         }
         int totalLength = byteBuffer.getInt();
-        byte[] bytes = new byte[length-4];
-        byteBuffer.get(bytes,0,bytes.length);
+        byte[] bytes = new byte[length - 4];
+        byteBuffer.get(bytes, 0, bytes.length);
         byte[] decompress = Zstd.decompress(bytes, totalLength);
         ByteBuffer wrap = ByteBuffer.wrap(decompress);
         double[] doubles = new double[valueSize * 10];
-        for(int i=0;i<10;i++){
+        for (int i = 0; i < 10; i++) {
             double[] decode = null;
-            if(doubleDeltaFlag[i]){
-                if(!doubleDeltaFlag[index]){
+            if (doubleDeltaFlag[i]) {
+                if (!doubleDeltaFlag[index]) {
                     continue;
                 }
                 final int anInt = wrap.getShort();
-                if(i!=index){
-                    wrap.position(wrap.position()+anInt);
+                if (i != index) {
+                    wrap.position(wrap.position() + anInt);
                     continue;
                 }
                 byte[] array = new byte[anInt];
                 wrap.get(array);
                 decode = decode3(ByteBuffer.wrap(array), valueSize);
                 DoubleDeltaDecompress(decode, 0, decode.length);
-            }else {
+            } else {
                 if (doubleDeltaFlag[index]) {
                     continue;
                 }
-                if(corillaList.contains(i)){
+                if (corillaList.contains(i)) {
                     final int anInt = wrap.getShort();
                     byte[] array = new byte[anInt];
-                    if(i!=index){
-                        wrap.position(wrap.position()+anInt);
+                    if (i != index) {
+                        wrap.position(wrap.position() + anInt);
                         continue;
                     }
                     wrap.get(array);
                     decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
-                }else {
+                } else {
                     final int anInt = wrap.getShort();
                     byte[] array = new byte[anInt];
                     wrap.get(array);
                     decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
                 }
             }
-            System.arraycopy(decode, 0, doubles, i*valueSize, decode.length);
+            System.arraycopy(decode, 0, doubles, i * valueSize, decode.length);
         }
-        recoverProcess(doubles,valueSize);
+        recoverProcess(doubles, valueSize);
         double[] result = new double[valueSize];
-        System.arraycopy(doubles,index*valueSize,result,0,valueSize);
+        System.arraycopy(doubles, index * valueSize, result, 0, valueSize);
         return result;
     }
 
-    // 解压全部
-    public static double[] decode2(ByteBuffer byteBuffer, int doubleNum, int valueSize,byte[] header) throws IOException {
+    public static double[] decode2ByColumns(ByteBuffer byteBuffer, int doubleNum, int valueSize, byte[] header, Set<Integer> columns) throws IOException {
         double[] doubles;
         doubles = new double[doubleNum];
         ByteBuffer headerWrap = ByteBuffer.wrap(header);
         int doubleDeltaBytesLength = headerWrap.getInt();
         int corillaBytesLength = headerWrap.getInt();
         int totalLength = byteBuffer.getInt();
-        byte[] bytes = new byte[doubleDeltaBytesLength-4];
-        byteBuffer.get(bytes,0,bytes.length);
+        byte[] bytes = new byte[doubleDeltaBytesLength - 4];
+        byteBuffer.get(bytes, 0, bytes.length);
         byte[] decompress1 = Zstd.decompress(bytes, totalLength);
         ByteBuffer doubleDeltaBytes = ByteBuffer.wrap(decompress1);
 
         totalLength = byteBuffer.getInt();
-        byte[] bytes1 = new byte[corillaBytesLength-4];
+        byte[] bytes1 = new byte[corillaBytesLength - 4];
+        byteBuffer.get(bytes1, 0, bytes1.length);
+        byte[] decompress2 = Zstd.decompress(bytes1, totalLength);
+        ByteBuffer corillaBytes = ByteBuffer.wrap(decompress2);
+
+        int start = 0;
+        int count = 0;
+        while (doubleDeltaBytes.hasRemaining() || corillaBytes.hasRemaining()) {
+            double[] decode = null;
+            if (doubleDeltaFlag[count]) {
+                final int anInt = doubleDeltaBytes.getShort();
+                if (!columns.contains(count)) {
+                    doubleDeltaBytes.position(doubleDeltaBytes.position() + anInt);
+                    start += valueSize;
+                    count++;
+                    continue;
+                }
+                byte[] array = new byte[anInt];
+                doubleDeltaBytes.get(array);
+                decode = decode3(ByteBuffer.wrap(array), valueSize);
+                DoubleDeltaDecompress(decode, 0, decode.length);
+            } else if (corillaList.contains(count)) {
+                final int anInt = corillaBytes.getShort();
+                if (!columns.contains(count)) {
+                    corillaBytes.position(corillaBytes.position() + anInt);
+                    start += valueSize;
+                    count++;
+                    continue;
+                }
+                byte[] array = new byte[anInt];
+                corillaBytes.get(array);
+                decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
+            } else {
+                final int anInt = corillaBytes.getShort();
+                byte[] array = new byte[anInt];
+                corillaBytes.get(array);
+                decode = decodeCorilla(ByteBuffer.wrap(array), valueSize);
+            }
+            System.arraycopy(decode, 0, doubles, start, decode.length);
+            start += valueSize;
+            count++;
+        }
+        recoverProcess(doubles, valueSize);
+        return doubles;
+    }
+
+    // 解压全部
+    public static double[] decode2(ByteBuffer byteBuffer, int doubleNum, int valueSize, byte[] header) throws IOException {
+        double[] doubles;
+        doubles = new double[doubleNum];
+        ByteBuffer headerWrap = ByteBuffer.wrap(header);
+        int doubleDeltaBytesLength = headerWrap.getInt();
+        int corillaBytesLength = headerWrap.getInt();
+        int totalLength = byteBuffer.getInt();
+        byte[] bytes = new byte[doubleDeltaBytesLength - 4];
+        byteBuffer.get(bytes, 0, bytes.length);
+        byte[] decompress1 = Zstd.decompress(bytes, totalLength);
+        ByteBuffer doubleDeltaBytes = ByteBuffer.wrap(decompress1);
+
+        totalLength = byteBuffer.getInt();
+        byte[] bytes1 = new byte[corillaBytesLength - 4];
         byteBuffer.get(bytes1, 0, bytes1.length);
         byte[] decompress2 = Zstd.decompress(bytes1, totalLength);
         ByteBuffer corillaBytes = ByteBuffer.wrap(decompress2);
@@ -434,31 +493,41 @@ public class DoubleCompress {
         final double[] decompress = toIntDecompressor.decompress();
         final boolean equals = Arrays.equals(values, decompress);
         final byte[] compress = Zstd.compress(compress2.array(), 25);
-        final double[] decode1 = decode2(ByteBuffer.wrap(array), 1500, 150,header);
-        for(int i=0;i<10;i++){
-            ByteBuffer wrap = ByteBuffer.wrap(header);
-            ByteBuffer wrap1 = ByteBuffer.wrap(array);
-            int doubleDeltaOffset = wrap.getInt();
-            int corrilaLength = wrap.getInt();
-            ByteBuffer byteBuffer = null;
-            if(doubleDeltaFlag[i]){
-                byteBuffer = wrap1;
-            }else{
-                wrap1.position(wrap1.position()+doubleDeltaOffset);
-                byte[] bytes = new byte[corrilaLength];
-                wrap1.get(bytes,0,bytes.length);
-                byteBuffer = ByteBuffer.wrap(bytes);
-            }
-            double[] doubles = decodeByIndex(byteBuffer, 150, 150, header,i);
+        final double[] decode1 = decode2(ByteBuffer.wrap(array), 1500, 150, header);
+        Set<Integer> columns = new HashSet<>();
+        columns.clear();
+        ;
+        columns.add(4);
+        columns.add(3);
+        columns.add(2);
+        columns.add(6);
+        double[] doubles1 = decode2ByColumns(ByteBuffer.wrap(array), 1500, 150, header, columns);
+//        for(int i=0;i<10;i++){
+//            ByteBuffer wrap = ByteBuffer.wrap(header);
+//            ByteBuffer wrap1 = ByteBuffer.wrap(array);
+//            int doubleDeltaOffset = wrap.getInt();
+//            int corrilaLength = wrap.getInt();
+//            ByteBuffer byteBuffer = null;
+//            if(doubleDeltaFlag[i]){
+//                byteBuffer = wrap1;
+//            }else{
+//                wrap1.position(wrap1.position()+doubleDeltaOffset);
+//                byte[] bytes = new byte[corrilaLength];
+//                wrap1.get(bytes,0,bytes.length);
+//                byteBuffer = ByteBuffer.wrap(bytes);
+//            }
+//            double[] doubles = decodeByIndex(byteBuffer, 150, 150, header,i);
+//            for(int j=0;j<150;j++){
+//                if(doubles[j]!=data[i*150+j]){
+//                    System.out.println(i + "->" + doubles[i] + " : " + data[i]);
+//                }
+//            }
+//        }
+        for (Integer column : columns) {
             for(int j=0;j<150;j++){
-                if(doubles[j]!=data[i*150+j]){
-                    System.out.println(i + "->" + doubles[i] + " : " + data[i]);
+                if(doubles1[column*150+j]!=data[column*150+j]){
+                    System.out.println("not euqal");
                 }
-            }
-        }
-        for (int i = 0; i < decode1.length; i++) {
-            if (decode1[i] != data[i]) {
-                System.out.println(i + "->" + decode1[i] + " : " + data[i]);
             }
         }
         System.out.println(Arrays.equals(decode1, data));

@@ -70,7 +70,7 @@ public class DataGenerator {
             rowFactory.ints[i] = random.nextInt(4);
         }
         for (int i = INT_NUM; i < INT_NUM + DOUBLE_NUM; i++) {
-            rowFactory.doubles[i - INT_NUM] = 0.1+random.nextDouble();
+            rowFactory.doubles[i - INT_NUM] = random.nextInt(1000);
         }
         for (int i = INT_NUM + DOUBLE_NUM; i < INT_NUM + DOUBLE_NUM + STRING_NUM; i++) {
             int length = 10;
@@ -263,8 +263,8 @@ public class DataGenerator {
             TSDBEngineImpl tsdbEngine = new TSDBEngineImpl(dataDir);
             tsdbEngine.connect();
 //            AggQuery(tsdbEngine);
-//            TimeRangeQuery(tsdbEngine);
-            DownSampleQuery(tsdbEngine);
+            TimeRangeQuery(tsdbEngine);
+//            DownSampleQuery(tsdbEngine);
             tsdbEngine.shutdown();
 //            tsdbEngineSample.shutdown();
             // Read saved data from file
@@ -321,9 +321,9 @@ public class DataGenerator {
                     throw new RuntimeException(e);
                 }
                 for (Row row : rows) {
-//                    for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
-//                        System.out.println(stringColumnValueEntry.getValue());
-//                    }
+                    for (Map.Entry<String, ColumnValue> stringColumnValueEntry : row.getColumns().entrySet()) {
+                        System.out.println(stringColumnValueEntry.getValue());
+                    }
 //                ByteBuffer tybjbz = row.getColumns().get("TYBJBZ").getStringValue();
 //                System.out.println(new String(tybjbz.array()));
 

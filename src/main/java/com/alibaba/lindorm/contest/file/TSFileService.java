@@ -249,7 +249,6 @@ public class TSFileService {
                     if ("downSample".equals(queryType)) {
                         StaticsUtil.GET_VALUE_TIMES.addAndGet(endGetValue - startGetValue);
                     }
-
                     if (value != null) {
                         rowArrayList.add(value);
                     }
@@ -285,22 +284,30 @@ public class TSFileService {
 
     }
 
-    public int[] decompressInts(Index index, IntFile intFile) {
+    public int[] decompressInts(Index index, IntFile intFile,Set<Integer> columns) {
         final long intOffset = index.getIntOffset();
         final ByteBuffer wrap = ByteBuffer.allocate(index.getIntLength() - 2);
         intFile.getFromOffsetByFileChannel(wrap, intOffset + 2);
-        return IntCompress.decompressOrigin(wrap.array(), index.getValueSize());
+        long start = System.nanoTime();
+        int[] ints = IntCompress.decompressOriginByColumns(wrap.array(), index.getValueSize(), columns);
+        StaticsUtil.TIMERANGE_UNCOMPRESS_INT_TIME.addAndGet(System.nanoTime()-start);
+        return ints;
     }
 
-    public double[] decompressDoubles(Index index, ByteBuffer dataBuffer, int doubleCompressInt, int valueSize) throws IOException {
+    public double[] decompressDoubles(Index index, ByteBuffer dataBuffer, int doubleCompressInt, int valueSize,Set<Integer> columns) throws IOException {
         final byte[] allocate1 = new byte[doubleCompressInt];
         dataBuffer.position(2);
         dataBuffer.get(allocate1);
-        double[] doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize, index.getDoubleHeader());
+        long start = System.nanoTime();
+        double[] doubles = DoubleCompress.decode2ByColumns(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize, index.getDoubleHeader(), columns);
+        StaticsUtil.TIMERANGE_UNCOMPRESS_DOUBLE_TIME.addAndGet(System.nanoTime()-start);
         return doubles;
+//        double[] doubles = DoubleCompress.decode2(ByteBuffer.wrap(allocate1), Constants.FLOAT_NUMS * valueSize, valueSize, index.getDoubleHeader());
+//        return doubles;
     }
 
     public List<ByteBuffer> decompressString(Index index, ByteBuffer dataBuffer, int doubleCompressInt) throws IOException {
+        long start = System.nanoTime();
         ByteBuffer stringLengthBuffer = null;
         Short everyStringLength = null;
         everyStringLength = dataBuffer.getShort(
@@ -330,7 +337,9 @@ public class TSFileService {
         );
         int totalLength1 = dataBuffer.getInt();
         dataBuffer.get(bytes1, 0, bytes1.length);
-        return StringCompress.decompress1(bytes1, stringLengthBuffer, index.getValueSize(), totalLength1);
+        ArrayList<ByteBuffer> byteBuffers = StringCompress.decompress1(bytes1, stringLengthBuffer, index.getValueSize(), totalLength1);
+        StaticsUtil.TIMERANGE_UNCOMPRESS_STRING_TIME.addAndGet(System.nanoTime()-start);
+        return byteBuffers;
     }
 
     public ArrayList<Row> getByIndexV2(Vin vin, long timeLowerBound, long timeUpperBound, Index index, Set<String> requestedColumns, int j) {
@@ -391,15 +400,24 @@ public class TSFileService {
             Future<double[]> doubleFuture = null;
             Future<List<ByteBuffer>> stringFuture = null;
             Future<byte[]> bigstringFuture = null;
-
+            Set<Integer> doubleColumns = new HashSet<>();
+            Set<Integer> intColumns = new HashSet<>();
+            for (String requestedColumn : requestedColumns) {
+                final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
+                if(columnIndex<Constants.INT_NUMS){
+                    intColumns.add(columnIndex);
+                } else if(columnIndex<Constants.INT_NUMS+Constants.FLOAT_NUMS){
+                    doubleColumns.add(columnIndex-Constants.INT_NUMS);
+                }
+            }
             for (String requestedColumn : requestedColumns) {
                 final int columnIndex = SchemaUtil.getIndexByColumn(requestedColumn);
                 if (intsFuture == null && columnIndex < Constants.INT_NUMS) {
-                    intsFuture = executorService.submit(() -> decompressInts(index, intFile));
+                    intsFuture = executorService.submit(() -> decompressInts(index, intFile,intColumns));
                 } else if (doubleFuture == null && columnIndex < Constants.INT_NUMS + Constants.FLOAT_NUMS) {
                     doubleFuture = executorService.submit(() -> {
                         try {
-                            return decompressDoubles(index, dataBuffer.asReadOnlyBuffer().duplicate(), doubleCompressInt, valueSize);
+                            return decompressDoubles(index, dataBuffer.asReadOnlyBuffer().duplicate(), doubleCompressInt, valueSize,doubleColumns);
                         } catch (IOException e) {
                             e.printStackTrace();
                             throw new RuntimeException(e);
