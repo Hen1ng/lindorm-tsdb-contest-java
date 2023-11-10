@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class StaticsUtil {
 
 
-
-
     public static AtomicLong READ_TIME = new AtomicLong(0);
 
     public static AtomicLong READ_TIMES = new AtomicLong(0);
@@ -85,8 +83,13 @@ public class StaticsUtil {
             while ((line = input.readLine()) != null) {
                 if (line.contains("Cpu(s):")) {
                     // 提取CPU使用率
-                    System.out.println(line);
-                    break;
+                    System.out.println("Cpu(s):" + line);
+                }
+                if (line.contains("KiB Mem")) {
+                    System.out.println("KiB Mem:" + line);
+                }
+                if (line.contains("KiB Swap")) {
+                    System.out.printf("KiB Swap:" + line);
                 }
             }
             input.close();

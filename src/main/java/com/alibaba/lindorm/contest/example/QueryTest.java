@@ -128,14 +128,14 @@ public class QueryTest {
 
                 tsdbEngineSample.shutdown();
             } else {
-                String v = "JlSn3DbGuzcnsjQjI";
+                String v = "OIY7RrTHsftX0TisQ";
                 tsdbEngineSample.connect();
                 List<Vin> list = new ArrayList<>();
                 list.add(new Vin(v.getBytes(StandardCharsets.UTF_8)));
                 Set<String> requestedColumns = new HashSet<>();
-//                requestedColumns.add("5String543210");
 //                requestedColumns.add("JUBK");
                 requestedColumns.add("0String0");
+                requestedColumns.add("1String10");
                 requestedColumns.add("0double");
                 requestedColumns.add("7double");
                 requestedColumns.add("1");
@@ -143,9 +143,13 @@ public class QueryTest {
                 requestedColumns.add("33");
                 requestedColumns.add("34");
                 requestedColumns.add("35");
+                requestedColumns.add("51");
+                requestedColumns.add("53");
                 requestedColumns.add("0");
                 requestedColumns.add("9double");
                 requestedColumns.add("ORNI");
+                requestedColumns.add("JUBK");
+
                 final Random random1 = new Random();
                 List<String> queryList = new ArrayList<>();
                 queryList.add("0String0");
@@ -159,6 +163,7 @@ public class QueryTest {
                 queryList.add("0");
                 queryList.add("9double");
                 queryList.add("ORNI");
+                queryList.add("JUBK");
                 final ArrayList<Vin> vins1 = new ArrayList<>(VinDictMap.getVinDictMap().keySet());
 
                 final LatestQueryRequest latestQueryRequest = new LatestQueryRequest("", list, requestedColumns);

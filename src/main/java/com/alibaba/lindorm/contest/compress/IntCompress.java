@@ -140,19 +140,19 @@ public class IntCompress {
         return result;
     }
 
-    static {
-        String fileName = "int.txt";  // 替换为你的文件路径
-        try {
-            testNumReal = readIntsFromFile(fileName);
-            System.out.println(testNumReal.length);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    static {
+//        String fileName = "int.txt";  // 替换为你的文件路径
+//        try {
+//            testNumReal = readIntsFromFile(fileName);
+//            System.out.println(testNumReal.length);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
-        for(int i=0;i<40;i++){
+        for (int i = 0; i < 40; i++) {
             Set<Integer> dependencies = dependencyFinder.findDependencies(i);
             System.out.println(dependencies);
         }
@@ -190,36 +190,63 @@ public class IntCompress {
 //
 //        System.out.println(Arrays.equals(data1,data));
 //        IntCompressResult intCompressResult = compress4(data, 210);
-        for(int first=0;first<40;first++){
-            for(int second=first+1;second<40;second++){
-                subSet.add(new Pair<>(first,second));
-                byte[] compressed = compressOrigin(testNumReal.clone(), 210);
-                long byteLength = compressed.length;
-                int[] longs = decompressOrigin(compressed, 210);
-                for (int i = 0; i < longs.length; i++) {
-                    if (longs[i] != testNumReal[i]) {
-                        System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
-                    }
-                }
-                if((1.0d * byteLength / (data.length * 4))<0.1418154761904762) {
-                    System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
-                }
-                subSet.remove(subSet.size()-1);
-            }
-
-        }
+//        Pair<Integer, Integer> integerIntegerPair = new Pair<Integer, Integer>(0, 0);
+//        double bench = 0.1412202380952381;
+//
+//        for (int first = 0; first < 40; first++) {
+//            for (int second = first + 1; second < 40; second++) {
+//                {
+//                    subSet.add(new Pair<>(first, second));
+//                    byte[] compressed = compressOrigin(testNumReal.clone(), 210);
+//                    long byteLength = compressed.length;
+//                    int[] longs = decompressOrigin(compressed, 210);
+//                    for (int i = 0; i < longs.length; i++) {
+//                        if (longs[i] != testNumReal[i]) {
+//                            System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
+//                        }
+//                    }
+//                    if ((1.0d * byteLength / (data.length * 4)) < bench) {
+//                        System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
+//                        bench = (1.0d * byteLength / (data.length * 4));
+//                        integerIntegerPair = new Pair<>(first, second);
+//                    }
+//                    subSet.remove(subSet.size() - 1);
+//                }
+//                {
+//                    subSet.add(new Pair<>(first, -second));
+//                    byte[] compressed = compressOrigin(testNumReal.clone(), 210);
+//                    long byteLength = compressed.length;
+//                    int[] longs = decompressOrigin(compressed, 210);
+//                    for (int i = 0; i < longs.length; i++) {
+//                        if (longs[i] != testNumReal[i]) {
+//                            System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
+//                        }
+//                    }
+//                    if ((1.0d * byteLength / (data.length * 4)) < bench) {
+//                        System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
+//                        bench = (1.0d * byteLength / (data.length * 4));
+//                        integerIntegerPair = new Pair<>(first, -second);
+//                    }
+//                    subSet.remove(subSet.size() - 1);
+//                }
+//            }
+//
+//        }
+//        System.out.println(integerIntegerPair.getLeft() + "|" + integerIntegerPair.getRight());
         byte[] compressed = compressOrigin(data, 210);
         long byteLength = compressed.length;
 ////        final int[] output = new int[data.length];
 //        final int[] longs = decompress4V2(intCompressResult.data, 210, intCompressResult);
-//        for(int i=0;i<40;i++){
-//            int[] ints = decompressOriginBySingle(compressed, 210, i);
-//            for (int j = 0; j <210; j++) {
-//                if(ints[i*210+j]!=testNumReal[i*210+j]){
-//                    System.out.println("not equal");
-//                }
-//            }
-//        }
+        for(int i=0;i<40;i++){
+            Set<Integer> integers = new HashSet<>();
+            integers.add(i);
+            int[] ints = decompressOriginByColumns(compressed, 210, integers);
+            for (int j = 0; j <210; j++) {
+                if(ints[i*210+j]!=testNumReal[i*210+j]){
+                    System.out.println("not equal " + ints[i*210+j] +": " +testNumReal[i*210+j]);
+                }
+            }
+        }
         int[] longs = decompressOrigin(compressed, 210);
 //        final byte[] bytes1 = compressZstd(data1);
         for (int i = 0; i < longs.length; i++) {
@@ -295,22 +322,30 @@ public class IntCompress {
         subSet.add(new Pair<>(39, 20));
         subSet.add(new Pair<>(11, 34));
         subSet.add(new Pair<>(6, 11));
-        subSet.add(new Pair<>(19,39));
-        subSet.add(new Pair<>(13,14));
-        subSet.add(new Pair<>(12,34));
-        subSet.add(new Pair<>(19,34));
+        subSet.add(new Pair<>(19, 39));
+        subSet.add(new Pair<>(13, 14));
+        subSet.add(new Pair<>(12, 34));
+        subSet.add(new Pair<>(19, 34));
 //        subSet.add(new Pair<>(19,34));
-        subSet.add(new Pair<>(1,14));
-        subSet.add(new Pair<>(1,13));
-        subSet.add(new Pair<>(22,33));
-        subSet.add(new Pair<>(4,10));
-        subSet.add(new Pair<>(24,29));
-        subSet.add(new Pair<>(1,32));
-
-//        subSet.add(new Pair<>(6, 34));
-
-//        subSet.add(new Pair<>(4, 39));
-
+        subSet.add(new Pair<>(1, 14));
+        subSet.add(new Pair<>(1, 13));
+        subSet.add(new Pair<>(22, 33));
+        subSet.add(new Pair<>(4, 10));
+        subSet.add(new Pair<>(24, 29));
+        subSet.add(new Pair<>(1, 32));
+        subSet.add(new Pair<>(23, -27));
+        subSet.add(new Pair<>(18, -37));
+        subSet.add(new Pair<>(6, -19));
+        subSet.add(new Pair<>(4, -6));
+        subSet.add(new Pair<>(5, -14));
+        subSet.add(new Pair<>(8, 9));
+        subSet.add(new Pair<>(8, -29));
+        subSet.add(new Pair<>(2, 25));
+        subSet.add(new Pair<>(17, -35));
+        subSet.add(new Pair<>(25, -37));
+        subSet.add(new Pair<>(8, -18));
+        subSet.add(new Pair<>(17, -39));
+        subSet.add(new Pair<>(15, 23));
 
         dependencyFinder = new DependencyFinder(subSet);
 
@@ -470,8 +505,13 @@ public class IntCompress {
             int start = integerIntegerPair.getLeft() * valueSize;
             int end = start + valueSize;
             int subIndex = integerIntegerPair.getRight();
+            int p = 1;
+            if (subIndex < 0) {
+                p = -1;
+                subIndex = -subIndex;
+            }
             for (int i = start; i < end; i++) {
-                ints[i] -= ints[subIndex * valueSize + (i - start)];
+                ints[i] -= p * ints[subIndex * valueSize + (i - start)];
             }
         }
 //        for (Integer integer : divSet) {
@@ -525,17 +565,22 @@ public class IntCompress {
         while (!stack.isEmpty()) {
             Pair<Integer, Integer> pop = stack.pop();
             Integer left = pop.getLeft();
-            if (!dependencies.contains(left)) continue;
+            if (!dependencies.contains(left)&&!dependencies.contains(-left)) continue;
             int start = pop.getLeft() * valueSize;
             int end = start + valueSize;
             int subIndex = pop.getRight();
+            int p = 1;
+            if (subIndex < 0) {
+                p = -1;
+                subIndex = -subIndex;
+            }
             for (int i = start; i < end; i++) {
-                ints[i] += ints[subIndex * valueSize + (i - start)];
+                ints[i] += p * ints[subIndex * valueSize + (i - start)];
             }
         }
         for (int i = 0; i < 40; i++) {
             if (notFirstDelta.contains(i)) continue;
-            if (!dependencies.contains(i))continue;
+            if (!dependencies.contains(i)) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
             for (int j = start + 1; j < end; j++) {
@@ -562,8 +607,13 @@ public class IntCompress {
             int start = pop.getLeft() * valueSize;
             int end = start + valueSize;
             int subIndex = pop.getRight();
+            int p = 1;
+            if (subIndex < 0) {
+                p = -1;
+                subIndex = -subIndex;
+            }
             for (int i = start; i < end; i++) {
-                ints[i] += ints[subIndex * valueSize + (i - start)];
+                ints[i] += p * ints[subIndex * valueSize + (i - start)];
             }
         }
         for (int i = 0; i < 40; i++) {
@@ -1155,7 +1205,12 @@ public class IntCompress {
         byte[] compressType = new byte[5];
         int[] result = new int[valueSize * 40];
         wrap1.get(compressType, 0, compressType.length);
-        Set<Integer> dependencies = dependencyFinder.findDependencies(index);
+        Set<Integer> dependencies1 = dependencyFinder.findDependencies(index);
+        Set<Integer> dependencies = new HashSet<>();
+        for (Integer i : dependencies1) {
+            if(i<0)dependencies.add(-i);
+            else dependencies.add(i);
+        }
         for (int i = 0; i < 40; i++) {
             boolean bit = getBit(i, compressType);
             if (bit) {
@@ -1169,7 +1224,7 @@ public class IntCompress {
                 else if (dictSize > 4) dd = 16;
 //                else if (dictSize > 4) dictSize = 8;
                 else if (dictSize > 2) dd = 4;
-                if (!dependencies.contains(i)) {
+                if (!dependencies.contains(i)&&!dependencies.contains(-i)) {
                     int offset1 = 0;
                     switch (dd) {
                         case 1:
@@ -1232,7 +1287,7 @@ public class IntCompress {
             } else {
                 // not use map
                 int length = wrap1.getInt();
-                if (!dependencies.contains(i)) {
+                if (!dependencies.contains(i)&&!dependencies.contains(-i)) {
                     wrap1.position(wrap1.position() + length);
                     continue;
                 }
@@ -1248,6 +1303,7 @@ public class IntCompress {
         recoverProcessByColumn(result, valueSize, dependencies);
         return result;
     }
+
     public static int[] decompressOriginByColumns(byte[] bytes, int valueSize, Set<Integer> columns) {
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
         int anInt = wrap.getInt();
@@ -1258,9 +1314,14 @@ public class IntCompress {
         byte[] compressType = new byte[5];
         int[] result = new int[valueSize * 40];
         wrap1.get(compressType, 0, compressType.length);
-        Set<Integer> dependencies = new HashSet<>();
+        Set<Integer> dependencies1 = new HashSet<>();
         for (Integer column : columns) {
-            dependencies.addAll(dependencyFinder.findDependencies(column));
+            dependencies1.addAll(dependencyFinder.findDependencies(column));
+        }
+        Set<Integer> dependencies = new HashSet<>();
+        for (Integer i : dependencies1) {
+            if(i<0)dependencies.add(-i);
+            else dependencies.add(i);
         }
         for (int i = 0; i < 40; i++) {
             boolean bit = getBit(i, compressType);
@@ -1354,6 +1415,7 @@ public class IntCompress {
         recoverProcessByColumn(result, valueSize, dependencies);
         return result;
     }
+
     public static int[] decompressOrigin(byte[] bytes, int valueSize) {
         ByteBuffer wrap = ByteBuffer.wrap(bytes);
         int anInt = wrap.getInt();
@@ -1868,3 +1930,4 @@ public class IntCompress {
 
     }
 }
+

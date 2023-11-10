@@ -175,7 +175,7 @@ public class StringCompress {
                 // if dictSize == 4 => indexToLength = (valueSize*2+7)/8
 
                 compressBitSet.set(index);
-                StaticsUtil.MAP_COMPRESS_TIME.addAndGet(1);
+//                StaticsUtil.MAP_COMPRESS_TIME.addAndGet(1);
                 int dictSize = set.size();
                 if (dictSize == 3) dictSize = 4;
                 int dictLength = 0;

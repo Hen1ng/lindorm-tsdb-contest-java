@@ -116,11 +116,21 @@ public class Index {
 
     private int length;
 
-    public int getBigStringOffset() {
+    public long getBigStringOffset() {
         return bigStringOffset;
     }
 
-    private int bigStringOffset;
+    private long bigStringOffset;
+
+    public int getBigStringLength() {
+        return bigStringLength;
+    }
+
+    public void setBigStringLength(int bigStringLength) {
+        this.bigStringLength = bigStringLength;
+    }
+
+    private int bigStringLength;
 
 
     public Index(long offset
@@ -134,9 +144,10 @@ public class Index {
             , int doubleLength
             , long previousTimeStamp
             , byte[] timeStampBytes
-            , int bigStringOffset
+            , long bigStringOffset
             , byte[] doubleHeader
             , IntCompress.IntCompressResult intCompressResult
+            , int bigStringLength
     ) {
         this.offset = offset;
         this.intOffset = intOffset;
@@ -152,6 +163,7 @@ public class Index {
         this.bigStringOffset = bigStringOffset;
         this.doubleHeader = doubleHeader;
         this.intCompressResult = intCompressResult;
+        this.bigStringLength = bigStringLength;
     }
 
     public byte[] bytes() {
@@ -161,7 +173,7 @@ public class Index {
             bytes = aggBucket.bytes();
         }
 //        final byte[] bytes1 = intCompressResult.bytes();
-        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 4 + 4 * 6 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length );
+        ByteBuffer allocate = ByteBuffer.allocate(4 + bytes.length + 8 * 4 + 4 * 6 + 8 + 8 + 2 + timeStampBytes.length + 2 + doubleHeader.length );
         allocate.putInt(bytes.length);
         allocate.put(bytes);
         allocate.putLong(offset);
@@ -172,7 +184,8 @@ public class Index {
         allocate.putInt(length);
         allocate.putInt(intLength);
         allocate.putInt(doubleLength);
-        allocate.putInt(bigStringOffset);
+        allocate.putInt(bigStringLength);
+        allocate.putLong(bigStringOffset);
         allocate.putLong(previousTimeStamp);
         allocate.putShort((short) timeStampBytes.length);
         allocate.put(timeStampBytes);
@@ -204,7 +217,8 @@ public class Index {
         int length = wrap.getInt();
         int intLength = wrap.getInt();
         int doubleLength = wrap.getInt();
-        int bigStringOffset = wrap.getInt();
+        int bigStringLength = wrap.getInt();
+        final long bigStringOffset = wrap.getLong();
         long previousTimeStamp = wrap.getLong();
         short timeStampBytesLength = wrap.getShort();
         byte[] bytes1 = new byte[timeStampBytesLength];
@@ -227,7 +241,8 @@ public class Index {
                 bytes1,
                 bigStringOffset,
                 doubleHeader,
-                null
+                null,
+                bigStringLength
         );
     }
 

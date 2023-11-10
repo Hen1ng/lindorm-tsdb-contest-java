@@ -59,6 +59,13 @@ public class TSFile {
                     directByteBuffer = byteBuffer.asReadOnlyBuffer();
                     System.out.println("load file to bytebuffer" + fileName + "result " + "directByteBuffer capacity" + directByteBuffer.capacity() + "limit : " + directByteBuffer.limit() + "position : " +position);
                 }
+                if (fileName >= Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM && fileName < Constants.LOAD_TS_FILE_TO_DIRECT_MEMORY_NUM + Constants.LOAD_TS_FILE_TO__MEMORY_ARRAY_NUM) {
+                    final long position = FilePosition.TS_FILE_POSITION_ARRAY[fileName];
+                    final ByteBuffer allocate = ByteBuffer.allocate((int) position);
+                    getFromOffsetByFileChannel(allocate, initPosition, null);
+                    array = allocate.array();
+                    System.out.println("delete file " + fileName + " array length" + array.length);
+                }
             }
 //            this.mappedByteBuffer = this.fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, fileSize);
         } catch (Exception e) {
@@ -77,6 +84,7 @@ public class TSFile {
             fileChannel.write(byteBuffer, currentPos);
             return initPosition + andAdd;
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("TSFile append error, e" + e + "currentPos" + currentPos);
         }
         System.out.println("TSFile not enough, return -2");
@@ -93,19 +101,19 @@ public class TSFile {
 
     public void getFromOffsetByFileChannel(ByteBuffer byteBuffer, long offset, Context ctx) {
         try {
-            if (StaticsUtil.START_COUNT_IOPS != 0) {
-                StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement();
-            }
+//            if (StaticsUtil.START_COUNT_IOPS != 0) {
+//                StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement();
+//            }
             int remaining = byteBuffer.remaining();
-            long start = System.nanoTime();
+//            long start = System.nanoTime();
             if (array != null) {
                 byteBuffer.put(array, (int) (offset - initPosition), byteBuffer.remaining());
-                long end = System.nanoTime();
-                if (ctx != null) {
-                    ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
-                    ctx.setHitArray(ctx.getHitArray() + 1);
-                    ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
-                }
+//                long end = System.nanoTime();
+//                if (ctx != null) {
+//                    ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
+//                    ctx.setHitArray(ctx.getHitArray() + 1);
+//                    ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
+//                }
                 return;
             }
             if (directByteBuffer != null) {
@@ -118,10 +126,10 @@ public class TSFile {
             }
             this.fileChannel.read(byteBuffer, offset - initPosition);
             long end = System.nanoTime();
-            if (ctx != null) {
-                ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
-                ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
-            }
+//            if (ctx != null) {
+//                ctx.setReadFileSize(ctx.getReadFileSize() + remaining);
+//                ctx.setReadFileTime(ctx.getReadFileTime() + (end - start));
+//            }
         } catch (Exception e) {
             System.out.println("getFromOffsetByFileChannel error, e" + e + "offset:" + offset + "initPosition " + initPosition);
             e.printStackTrace();

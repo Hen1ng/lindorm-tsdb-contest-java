@@ -8,6 +8,7 @@ import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.list.SortedList;
+import com.github.luben.zstd.Zstd;
 import com.sun.source.doctree.SinceTree;
 
 import java.nio.ByteBuffer;
@@ -489,8 +490,17 @@ public class MemoryTable {
         }
     }
 
-//    public static void main(String[] args) {
-//        double maxDouble = -Double.MAX_VALUE;
-//        System.out.println(maxDouble > 0);
-//    }
+    public static void main(String[] args) {
+       String s = "asdfjasdfsdfasdfasdf";
+        final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(s.length());
+        final ByteBuffer byteBuffer1 = ByteBuffer.allocate(s.length());
+        byteBuffer.put(s.getBytes());
+        byteBuffer1.put(s.getBytes());
+        final byte[] compress1 = Zstd.compress(byteBuffer1.array(), 3);
+        final ByteBuffer compress = Zstd.compress(byteBuffer, 3);
+        final ByteBuffer decompress = Zstd.decompress(compress, s.length());
+        byte[] bytes = new byte[s.length()];
+        decompress.get(bytes);
+        final String s1 = new String(bytes);
+    }
 }
