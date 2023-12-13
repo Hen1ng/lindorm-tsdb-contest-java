@@ -1,7 +1,5 @@
 package com.alibaba.lindorm.contest.file;
 
-import com.alibaba.lindorm.contest.compress.GzipCompress;
-import com.alibaba.lindorm.contest.compress.ZlibCompress;
 import com.alibaba.lindorm.contest.util.Constants;
 import com.alibaba.lindorm.contest.util.Context;
 import com.alibaba.lindorm.contest.util.RestartUtil;
@@ -199,12 +197,5 @@ public class TSFile {
         return fileName;
     }
 
-    public void totalCompressInShutDown() {
-        final ByteBuffer allocate = ByteBuffer.allocate((int) (this.position.get() - initPosition));
-        getFromOffsetByFileChannel(allocate, initPosition,null);
-        final byte[] array1 = allocate.array();
-        final ZlibCompress gzipCompress = new ZlibCompress();
-        final byte[] compress = gzipCompress.compress(array1);
-        System.out.println("totalCompressInShutDown before size :" + array1.length + " after size :" + compress.length);
-    }
+
 }

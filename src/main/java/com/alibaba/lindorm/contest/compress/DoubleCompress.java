@@ -1,14 +1,11 @@
 package com.alibaba.lindorm.contest.compress;
 
-import com.alibaba.lindorm.contest.compress.doublecompress.FpcCompressor;
+import com.alibaba.lindorm.contest.compress.fpc.FpcCompressor;
 import com.alibaba.lindorm.contest.compress.doublecompress1.*;
 import com.alibaba.lindorm.contest.compress.gorilla.*;
 import com.alibaba.lindorm.contest.compress.gorilla.ByteBufferBitInput;
 import com.alibaba.lindorm.contest.compress.gorilla.ByteBufferBitOutput;
-import com.alibaba.lindorm.contest.compress.gorilla.ValueCompressor;
-import com.alibaba.lindorm.contest.compress.gorilla.ValueDecompressor;
 import com.alibaba.lindorm.contest.util.Constants;
-import com.alibaba.lindorm.contest.util.Pair;
 import com.github.luben.zstd.Zstd;
 
 import java.io.IOException;
@@ -220,14 +217,6 @@ public class DoubleCompress {
             }
         }
     }
-
-    public static ByteBuffer encodeByFloatCompress(double[] values, int start, int end) {
-        double[] doubles = new double[end - start];
-        System.arraycopy(values, start, doubles, 0, end - start);
-        byte[] bytes = FloatCompress.encode2(doubles);
-        return ByteBuffer.wrap(bytes);
-    }
-
 
     public static doubleCompressResult encode2(double[] values, int valueSize) throws IOException {
         double[] doubles = preProcess(values, valueSize);

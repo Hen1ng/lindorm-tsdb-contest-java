@@ -1,11 +1,5 @@
 package com.alibaba.lindorm.contest.util;
 
-import com.alibaba.lindorm.contest.compress.DoubleColumnHashMapCompress;
-import com.alibaba.lindorm.contest.compress.IntColumnHashMapCompress;
-import com.alibaba.lindorm.contest.compress.StringColumnHashMapCompress;
-
-import java.util.concurrent.ConcurrentSkipListSet;
-
 public class Constants {
     public static final int OS_PAGE_SIZE = 1024 * 4;
 

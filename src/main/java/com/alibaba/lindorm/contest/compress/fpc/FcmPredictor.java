@@ -8,40 +8,33 @@
  * Contributors:
  *     Michael Kutschke - initial API and implementation
  ******************************************************************************/
-package com.alibaba.lindorm.contest.compress.doublecompress;
-
-import com.alibaba.lindorm.contest.util.Constants;
+package com.alibaba.lindorm.contest.compress.fpc;
 
 import java.util.Arrays;
 
-public class DfcmPredictor {
+public class FcmPredictor {
 
     public static final ThreadLocal<long[]> LONG_ARRAY_THREAD_LOCAL = ThreadLocal.withInitial(() -> new long[1024]);
-
     private long[] table;
-    private int dfcm_hash;
-    private long lastValue;
+    private int fcm_hash;
 
     public void clear() {
         Arrays.fill(table, 0);
-        dfcm_hash = 0;
-        lastValue = 0;
+        fcm_hash = 0;
     }
 
-    public DfcmPredictor(int logOfTableSize) {
+    public FcmPredictor(int logOfTableSize) {
         table = LONG_ARRAY_THREAD_LOCAL.get();
         Arrays.fill(table, 0);
     }
 
     public long getPrediction() {
-        return table[dfcm_hash] + lastValue;
+        return table[fcm_hash];
     }
 
     public void update(long true_value) {
-        table[dfcm_hash] = true_value - lastValue;
-        dfcm_hash = (int) (((dfcm_hash << 2) ^ ((true_value - lastValue) >> 40)) &
-                (table.length - 1));
-        lastValue = true_value;
+        table[fcm_hash] = true_value;
+        fcm_hash = (int) (((fcm_hash << 6) ^ (true_value >> 48)) & (table.length - 1));
     }
 
 }

@@ -8,7 +8,7 @@
  * Contributors:
  *     Michael Kutschke - initial API and implementation
  ******************************************************************************/
-package com.alibaba.lindorm.contest.compress.doublecompress;
+package com.alibaba.lindorm.contest.compress.fpc;
 
 import java.nio.ByteBuffer;
 

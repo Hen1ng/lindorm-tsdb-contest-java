@@ -1,7 +1,5 @@
 package com.alibaba.lindorm.contest.index;
 
-import com.alibaba.lindorm.contest.compress.GzipCompress;
-import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.Vin;
 import com.alibaba.lindorm.contest.util.Constants;

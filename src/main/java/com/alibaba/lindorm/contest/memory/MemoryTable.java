@@ -6,19 +6,17 @@ import com.alibaba.lindorm.contest.index.MapIndex;
 import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Row;
 import com.alibaba.lindorm.contest.structs.Vin;
-import com.alibaba.lindorm.contest.util.*;
-import com.alibaba.lindorm.contest.util.list.SortedList;
+import com.alibaba.lindorm.contest.util.Constants;
+import com.alibaba.lindorm.contest.util.Pair;
+import com.alibaba.lindorm.contest.util.RestartUtil;
+import com.alibaba.lindorm.contest.util.SchemaUtil;
 import com.github.luben.zstd.Zstd;
-import com.sun.source.doctree.SinceTree;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
@@ -31,85 +29,25 @@ import static com.alibaba.lindorm.contest.index.MapIndex.INDEX_ARRAY;
  */
 public class MemoryTable {
 
-    public ExecutorService fixThreadPool;
-    private Lock bufferValuesLock;
-
-    private Condition hasFreeBuffer;
-
-
-    private ConcurrentHashMap<Vin, Queue<Integer>> vinToBufferIndex;
-
-    private Queue<Integer> freeList;
-    private List<Value>[] bufferValues;
     private final List<Value>[] values;
-//    private final long[] valuesLastUpdateTimeStamp;
-
-
-    private final int size;
     private final AtomicInteger atomicIndex = new AtomicInteger(0);
     private final ReentrantReadWriteLock[] spinLockArray;
     private final TSFileService tsFileService;
-    private final AtomicLong queryLastTimes = new AtomicLong(0);
     private final AtomicLong queryTimeRangeTimes = new AtomicLong(0);
 
 
     public MemoryTable(int size, TSFileService tsFileService) {
-        this.size = size;
         this.values = new ArrayList[size];
-//        valuesLastUpdateTimeStamp = new long[5000];
-//        this.bufferValues = new SortedList[Constants.TOTAL_BUFFER_NUMS];
         this.tsFileService = tsFileService;
         this.spinLockArray = new ReentrantReadWriteLock[60000];
         for (int i = 0; i < 60000; i++) {
             this.spinLockArray[i] = new ReentrantReadWriteLock();
         }
-//        this.bufferValuesLock = new ReentrantLock();
-//        this.hasFreeBuffer = this.bufferValuesLock.newCondition();
-//        this.freeList = new LinkedList<>();
-//        this.fixThreadPool = Executors.newFixedThreadPool(8);
-//        this.vinToBufferIndex = new ConcurrentHashMap<>();
         for (int i = 0; i < size; i++) {
             values[i] = new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS);
-//            values[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
         }
-//        for(int i=0;i<Constants.TOTAL_BUFFER_NUMS;i++){
-//            bufferValues[i] = new SortedList<>((v1, v2) -> (int) (v2.getTimestamp() - v1.getTimestamp()));
-//            freeList.add(i);
-//        }
     }
 
-    public void asyncPut(Row row) {
-        Vin vin = row.getVin();
-        long ts = row.getTimestamp();
-        final byte[] vin1 = vin.getVin();
-        final int hash = getStringHash(vin1, 0, vin1.length);
-        int lock = hash % spinLockArray.length;
-        spinLockArray[lock].writeLock().lock();
-        try {
-            Integer index = VinDictMap.get(vin);
-            if (index == null) {
-                index = atomicIndex.getAndIncrement();
-                VinDictMap.put(vin, index);
-            }
-            List<Value> valueSortedList = values[index];
-            valueSortedList.add(new Value(ts, row.getColumns()));
-            if (valueSortedList.size() >= Constants.CACHE_VINS_LINE_NUMS) {
-                int bufferIndex = getFreeBufferIndex(vin);
-                // maybe used copy will be speed up
-                assert (bufferValues[bufferIndex].isEmpty());
-                values[index] = bufferValues[bufferIndex];
-                bufferValues[bufferIndex] = valueSortedList;
-                Integer finalIndex = index;
-                Integer finalBufferIndex = bufferIndex;
-                fixThreadPool.execute(() -> {
-                    tsFileService.write(vin, bufferValues[finalBufferIndex], Constants.CACHE_VINS_LINE_NUMS, finalIndex);
-                    freeBufferByIndex(vin, finalBufferIndex);
-                });
-            }
-        } finally {
-            spinLockArray[lock].writeLock().unlock();
-        }
-    }
 
     public void put(Row row) {
         Vin vin = row.getVin();
@@ -203,7 +141,6 @@ public class MemoryTable {
                 columns.put(requestedColumn, value.getColumnValues()[queryColumns[j]]);
                 j++;
             }
-//            print(columns, requestedColumns);
             return new Row(vin, value.getTimestamp(), columns);
         } catch (Exception e) {
             e.printStackTrace();;
@@ -212,28 +149,12 @@ public class MemoryTable {
     }
 
     public Row getFromMemoryTable(Vin vin, Set<String> requestedColumns, int slot) {
-//        long start = System.currentTimeMillis();
-//        queryLastTimes.getAndIncrement();
-//        long totalStringLength = 0;
-        try {
-            Value value = values[slot].get(0);
-            final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
-            for (String requestedColumn : requestedColumns) {
-//                final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(requestedColumn);
-//                if (columnType.equals(ColumnValue.ColumnType.COLUMN_TYPE_STRING)) {
-//                    final ByteBuffer stringValue = value.getColumns().get(requestedColumn).getStringValue();
-//                    final ByteBuffer compact = stringValue.slice();
-//                    columns.put(requestedColumn, new ColumnValue.StringColumn(compact));
-//                } else {
-                    columns.put(requestedColumn, value.getColumns().get(requestedColumn));
-//                }
-            }
-            return new Row(vin, value.getTimestamp(), columns);
-        } finally {
-//            if (queryLastTimes.get() % 300000000 == 0) {
-//                System.out.println("getLast cost: " + (System.currentTimeMillis() - start) + " ms" + " totalStringLength: " + totalStringLength);
-//            }
+        Value value = values[slot].get(0);
+        final Map<String, ColumnValue> columns = new HashMap<>(requestedColumns.size());
+        for (String requestedColumn : requestedColumns) {
+                columns.put(requestedColumn, value.getColumns().get(requestedColumn));
         }
+        return new Row(vin, value.getTimestamp(), columns);
     }
 
 
@@ -256,72 +177,6 @@ public class MemoryTable {
             if (queryTimeRangeTimes.get() % 1000000 == 0) {
                 System.out.println("getTimeRangeRow cost: " + (System.currentTimeMillis() - start) + " ms");
             }
-//            spinLockArray[lock].readLock().unlock();
-        }
-    }
-
-    public ArrayList<Row> getTimeRangeRowForQueryTest(Vin vin, long timeLowerBound, long timeUpperBound, Set<String> requestedColumns) {
-        final byte[] vin1 = vin.getVin();
-        final int keyHash = getStringHash(vin1, 0, vin1.length);
-        int slot = keyHash % size;
-        spinLockArray[slot].readLock().lock();
-        try {
-            Integer i = VinDictMap.get(vin);
-            if (i == null) {
-                return null;
-            }
-            final Set<Index> v2 = MapIndex.getV2(i, timeLowerBound, timeUpperBound);
-            ArrayList<Row> rowArrayList = new ArrayList<>();
-            if (v2 == null) {
-                return rowArrayList;
-            }
-            for (Index index : v2) {
-                final Integer integer = VinDictMap.get(vin);
-                final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, integer);
-                if (!byIndex.isEmpty()) {
-                    rowArrayList.addAll(byIndex);
-                }
-
-            }
-            return rowArrayList;
-        } finally {
-            spinLockArray[slot].readLock().lock();
-        }
-    }
-
-    private int getFreeBufferIndex(Vin vin) {
-        this.bufferValuesLock.lock();
-        try {
-            while (freeList.isEmpty()) {
-                hasFreeBuffer.await();
-            }
-            StaticsUtil.MAX_IDLE_BUFFER = Math.min(StaticsUtil.MAX_IDLE_BUFFER, freeList.size());
-            int i = freeList.poll();
-            if (vinToBufferIndex.containsKey(vin)) {
-                Queue<Integer> integers = vinToBufferIndex.get(vin);
-                integers.add(i);
-            } else {
-                LinkedList<Integer> integers = new LinkedList<>();
-                integers.add(i);
-                vinToBufferIndex.put(vin, integers);
-            }
-            return i;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } finally {
-            bufferValuesLock.unlock();
-        }
-    }
-
-    private void freeBufferByIndex(Vin vin, int index) {
-        this.bufferValuesLock.lock();
-        try {
-            freeList.add(index);
-            bufferValues[index].clear();
-            vinToBufferIndex.remove(vin);
-            hasFreeBuffer.signal();
-        } finally {
-            bufferValuesLock.unlock();
         }
     }
 
@@ -365,7 +220,6 @@ public class MemoryTable {
         try {
             final List<Index> indexList = MapIndex.get(vinIndex, timeLowerBound, timeUpperBound);
             for (Index index : indexList) {
-//                final Integer integer = VinDictMap.get(vin);
                 final ArrayList<Row> byIndex = tsFileService.getByIndexV2(vin, timeLowerBound, timeUpperBound, index, requestedColumns, vinIndex);
                 if (!byIndex.isEmpty()) {
                     rowArrayList.addAll(byIndex);
@@ -397,40 +251,6 @@ public class MemoryTable {
         System.out.println("writeToFileBeforeShutdown finish cost: " + (System.currentTimeMillis() - start) + " ms");
     }
 
-
-    public void writeToFileBeforeShutdownMultiThread() {
-        try {
-            int threadNum = 10;
-            final ExecutorService executorService = Executors.newFixedThreadPool(threadNum);
-            List<List<List<Value>>> listList = new ArrayList<>();
-            for (int i = 0; i < threadNum; i++) {
-                listList.add(new ArrayList<>(Constants.CACHE_VINS_LINE_NUMS));
-            }
-            int i = 0;
-            for (int i1 = 0; i1 < values.length; i1++) {
-                int mod = i1 % threadNum;
-                listList.get(mod).add(values[i1]);
-            }
-            List<Future<Void>> futures = new ArrayList<>(threadNum);
-            for (List<List<Value>> sortedLists : listList) {
-                final Future<Void> submit = executorService.submit(() -> {
-                    for (List<Value> valueList : sortedLists) {
-                        if (!valueList.isEmpty()) {
-                            final Vin vin = new Vin(VinDictMap.get(i));
-                            tsFileService.write(vin, valueList, valueList.size(), i);
-                        }
-                    }
-                    return null;
-                });
-                futures.add(submit);
-            }
-            for (Future<Void> future : futures) {
-                future.get();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public List<Value>[] getValues() {
         return values;
@@ -467,24 +287,6 @@ public class MemoryTable {
                 total += 1;
             }
             System.out.println("loadLastTsToMemory finish cost:" + (System.currentTimeMillis() - start) + " ms" + "total " + total);
-//            start = System.currentTimeMillis();
-//            ExecutorService executorService = Executors.newFixedThreadPool(200);
-//            int i = 0;
-//            for (List<Index> indices : INDEX_ARRAY) {
-//                executorService.submit(() -> {
-//                    for (Index index : indices) {
-//                        final ByteBuffer timestampList = tsFileService.getTimestampList(index, i);
-//                        final int valueSize = index.getValueSize();
-//                        List<Long> timestamps = new ArrayList<>(valueSize);
-//                        for (int i = 0; i < valueSize; i++) {
-//                            timestamps.add(timestampList.getLong());
-//                        }
-//                        index.setTimestampList(timestamps);
-//                    }
-//                });
-//                i++;
-//            }
-//            System.out.println("load timestamp to memory finish cost:" + (System.currentTimeMillis() - start) + " ms");
         } catch (Exception e) {
             System.out.println("loadLastTsToMemory error, e" + e);
         }

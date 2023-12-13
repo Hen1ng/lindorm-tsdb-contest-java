@@ -13,7 +13,6 @@ import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.index.BigBucket;
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.index.MapIndex;
-import com.alibaba.lindorm.contest.memory.DoubleCache;
 import com.alibaba.lindorm.contest.memory.MemoryTable;
 import com.alibaba.lindorm.contest.memory.VinDictMap;
 import com.alibaba.lindorm.contest.structs.*;
@@ -33,16 +32,9 @@ import static com.alibaba.lindorm.contest.structs.ColumnValue.ColumnType.COLUMN_
 
 public class TSDBEngineImpl extends TSDBEngine {
 
-    private final AtomicLong upsertTimes;
-    private final AtomicLong executeLatestQueryTimes;
-    private final AtomicLong executeLatestQueryVinsSize;
-    private final AtomicLong executeTimeRangeQueryTimes;
-    private final AtomicLong executeAggregateQueryTimes;
 
-    private final AtomicLong executeDownsampleQueryTimes;
     private TSFileService fileService = null;
     private final MemoryTable memoryTable;
-    private Unsafe unsafe = UnsafeUtil.getUnsafe();
     private File indexFile;
     private File vinDictFile;
     private File schemaFile;
@@ -88,13 +80,7 @@ public class TSDBEngineImpl extends TSDBEngine {
         } catch (Exception e) {
             System.out.println("create dataPath error, e" + e);
         }
-        this.upsertTimes = new AtomicLong(0);
         this.memoryTable = new MemoryTable(Constants.TOTAL_VIN_NUMS, fileService);
-        this.executeLatestQueryTimes = new AtomicLong(0);
-        this.executeTimeRangeQueryTimes = new AtomicLong(0);
-        this.executeLatestQueryVinsSize = new AtomicLong(0);
-        this.executeAggregateQueryTimes = new AtomicLong(0);
-        this.executeDownsampleQueryTimes = new AtomicLong(0);
         System.out.println("TSDBEngineImpl init finish");
         MemoryUtil.printJVMHeapMemory();
     }
@@ -106,7 +92,6 @@ public class TSDBEngineImpl extends TSDBEngine {
         InetAddress localhost = InetAddress.getLocalHost();
         System.out.println("host: " + localhost.getHostAddress());
         long start = System.currentTimeMillis();
-//        MapIndex.loadMapFromFile(indexFile);
         VinDictMap.loadMapFromFile(vinDictFile);
         SchemaUtil.loadMapFromFile(schemaFile);
         System.out.println("vin and schema load finish");
@@ -142,27 +127,6 @@ public class TSDBEngineImpl extends TSDBEngine {
     @Override
     public void shutdown() {
         long start = System.currentTimeMillis();
-//        System.out.println("upsertTimes:" + upsertTimes.get());
-//        System.out.println("total string length:" + StaticsUtil.STRING_TOTAL_LENGTH.get());
-//        System.out.println("compress string length:" + StaticsUtil.STRING_COMPRESS_LENGTH.get());
-//        if (StaticsUtil.STRING_TOTAL_LENGTH.get() != 0) {
-//            System.out.println("compress string rate:" + StaticsUtil.STRING_COMPRESS_LENGTH.get() * 1.0d / StaticsUtil.STRING_TOTAL_LENGTH.get());
-//        }
-//        System.out.println("compress double length: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get());
-//        System.out.println("compress double rate: " + StaticsUtil.DOUBLE_COMPRESS_LENGTH.get() * 1.0d / (180000000L * 10L * 8L));
-//        System.out.println("compress long length: " + StaticsUtil.LONG_COMPRESS_LENGTH.get());
-//        System.out.println("compress long rate: " + (StaticsUtil.LONG_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 8L));
-//        System.out.println("compress int length: " + StaticsUtil.INT_COMPRESS_LENGTH.get());
-//        System.out.println("compress int rate: " + (StaticsUtil.INT_COMPRESS_LENGTH.get() * 1.0d) / (180000000L * 40L * 4L));
-//        System.out.println("compress short :" + (StaticsUtil.STRING_SHORT_LENGTH));
-//        System.out.println("compress short bytes : " + (StaticsUtil.STRING_BYTE_LENGTH));
-//        System.out.println("compress indexFile size: " + indexFile.length());
-//        System.out.println("idle Buffer size : " + StaticsUtil.MAX_IDLE_BUFFER);
-//        System.out.println("compress use map times : " + StaticsUtil.MAP_COMPRESS_TIME.get());
-
-//        for (String s : SchemaUtil.maps.keySet()) {
-//            System.out.println("key: " + s + "size " + SchemaUtil.maps.get(s).size());
-//        }
         try {
             if (RestartUtil.IS_FIRST_START) {
                 final ExecutorService executorService1 = Executors.newFixedThreadPool(8);
@@ -206,10 +170,6 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public void write(WriteRequest wReq) throws IOException {
-//        if (upsertTimes.incrementAndGet() == 1) {
-//            System.out.println("start upsert, ts:" + System.currentTimeMillis());
-//        }
-//        writeThreadSet.add(Thread.currentThread().getName());
         try {
             final Collection<Row> rows = wReq.getRows();
             for (Row row : rows) {
@@ -250,15 +210,6 @@ public class TSDBEngineImpl extends TSDBEngine {
 
     @Override
     public ArrayList<Row> executeTimeRangeQuery(TimeRangeQueryRequest trReadReq) throws IOException {
-//        if (executeTimeRangeQueryTimes.getAndIncrement() == 1) {
-//            System.out.println("executeTimeRangeQuery start, ts:" + System.currentTimeMillis());
-//        }
-//        if (executeTimeRangeQueryTimes.get() % 200000 == 0) {
-////            MemoryUtil.printJVMHeapMemory();
-//            System.out.println("TIMERANGE_TOTAL_TIME : "+StaticsUtil.TIMERANGE_TOTAL_TIME+"  TIMERANGE_UNCOMPRESS_TIME:"+StaticsUtil.TIMERANGE_UNCOMPRESS_TIME+" TIMERANGE_READ_TIME:" +StaticsUtil.TIMERANGE_READ_TIME + "  TIMERANGE_UNCOMPRESS_INT_TIME:" + StaticsUtil.TIMERANGE_UNCOMPRESS_INT_TIME + "  TIMERANGE_UNCOMPRESS_DOUBLE_TIME"+StaticsUtil.TIMERANGE_UNCOMPRESS_DOUBLE_TIME+"  TIMERANGE_UNCOMPRESS_STRING_TIME: "+StaticsUtil.TIMERANGE_UNCOMPRESS_STRING_TIME);
-////            System.out.println("executeTimeRangeQuery times :" + executeTimeRangeQueryTimes.get() + " querySize:" + trReadReq.getRequestedColumns().size());
-////            System.out.printf("TIME_RANGE_READ_FILE_SIZE " + StaticsUtil.TIME_RANGE_READ_FILE_SIZE.get() + "TIME_RANGE_READ_TIME " + StaticsUtil.TIME_RANGE_READ_TIME.get());
-//        }
         try {
             return memoryTable.getTimeRangeRow(trReadReq.getVin(), trReadReq.getTimeLowerBound(), trReadReq.getTimeUpperBound(), trReadReq.getRequestedColumns());
         } catch (Exception e) {
@@ -277,95 +228,8 @@ public class TSDBEngineImpl extends TSDBEngine {
             System.exit(-1);
         }
         return null;
-//        ArrayList<Row> rows = new ArrayList<>();
-//        final String columnName = aggregationReq.getColumnName();
-//        final Aggregator aggregator = aggregationReq.getAggregator();
-//        final ColumnValue.ColumnType columnType = SchemaUtil.getSchema().getColumnTypeMap().get(columnName);
-//        Set<String> requestedColumns = new HashSet<>();
-//        requestedColumns.add(columnName);
-//        final ArrayList<Row> timeRangeRow = memoryTable.getTimeRangeRow(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), aggregationReq.getTimeUpperBound(), requestedColumns);
-//        if (timeRangeRow == null || timeRangeRow.isEmpty()) {
-//            return rows;
-//        }
-//        switch (aggregator) {
-//            case AVG:
-//                double intSum = 0;
-//                double doubleSum = 0;
-//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-//                    for (Row row : timeRangeRow) {
-//                        intSum += row.getColumns().get(columnName).getIntegerValue();
-//                    }
-//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-//                    for (Row row : timeRangeRow) {
-//                        doubleSum += row.getColumns().get(columnName).getDoubleFloatValue();
-//                    }
-//                } else {
-//                    System.out.println("executeAggregateQuery columnValue string type not support compare");
-//                }
-//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-//                    Map<String, ColumnValue> columns = new HashMap<>(1);
-//                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(intSum / timeRangeRow.size()));
-//                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
-//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-//                    Map<String, ColumnValue> columns = new HashMap<>(1);
-//                    columns.put(columnName, new ColumnValue.DoubleFloatColumn(doubleSum / timeRangeRow.size()));
-//                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
-//                }
-//                break;
-//            case MAX:
-//                int maxInt = Integer.MIN_VALUE;
-//                double maxDouble = -Double.MAX_VALUE;
-//                final ColumnValue firstValue = timeRangeRow.get(0).getColumns().get(columnName);
-//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-//                    maxInt = firstValue.getIntegerValue();
-//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-//                    maxDouble = firstValue.getDoubleFloatValue();
-//                }
-//                Map<String, ColumnValue> columns = timeRangeRow.get(0).getColumns();
-//                if (columnType.equals(COLUMN_TYPE_INTEGER)) {
-//                    for (Row row : timeRangeRow) {
-//                        final ColumnValue columnValue = row.getColumns().get(columnName);
-//                        int integerValue = columnValue.getIntegerValue();
-//                        if (integerValue >= maxInt) {
-//                            columns = row.getColumns();
-//                            maxInt = integerValue;
-//                        }
-//                    }
-//                } else if (columnType.equals(COLUMN_TYPE_DOUBLE_FLOAT)) {
-//                    for (Row row : timeRangeRow) {
-//                        final ColumnValue columnValue = row.getColumns().get(columnName);
-//                        double doubleFloatValue = columnValue.getDoubleFloatValue();
-//                        if (doubleFloatValue >= maxDouble) {
-//                            maxDouble = doubleFloatValue;
-//                            columns = row.getColumns();
-//                        }
-//                    }
-//                } else {
-//                    System.out.println("executeAggregateQuery columnValue string type not support compare");
-//                }
-//                if (columns != null) {
-//                    rows.add(new Row(aggregationReq.getVin(), aggregationReq.getTimeLowerBound(), columns));
-//                } else {
-//                    System.out.println("columns is null");
-//                    System.out.println("maxInt: " + maxInt + " maxDouble : " + maxDouble + "timeRangeRow size : " + timeRangeRow.size());
-//                    for (Row row : timeRangeRow) {
-//                        System.out.println(row.toString());
-//                    }
-//                }
-//                break;
-//            default:
-//                System.out.println("executeAggregateQuery aggregator error, not support");
-//                System.exit(-1);
-//        }
-//        return rows;
     }
 
-    public ArrayList<Row> getRowsFromIndex(Vin vin, Index index, Set<String> requestColumns) {
-        Integer i = VinDictMap.get(vin);
-        return fileService.getByIndexV2(vin, index.getMinTimestamp(), index.getMaxTimestamp(), index, requestColumns, i);
-    }
-
-    private final AtomicLong aggQueryTimes = new AtomicLong(0);
 
     public ArrayList<Row> executeAggregateQueryByBucket(TimeRangeAggregationRequest aggregationReq) throws IOException {
 //        long start1 = System.nanoTime();
@@ -412,15 +276,9 @@ public class TSDBEngineImpl extends TSDBEngine {
                                     System.out.println("executeAggregateQuery columnValue string type not support compare");
                                 }
                             } else if (index.getMaxTimestamp() >= aggregationReq.getTimeLowerBound() && index.getMinTimestamp() <= aggregationReq.getTimeLowerBound()) {
-//                                long start = System.nanoTime();
                                 timeRangeColumnValue.addAll(fileService.getSingleValueByIndex(aggregationReq.getVin(), timeLower, timeUpper, index, columnIndex, i1, null, ctx, null, "agg", null));
-//                                readFileCost += (System.nanoTime() - start);
-//                                accessFile++;
                             } else if (index.getMinTimestamp() <= aggregationReq.getTimeUpperBound() - 1 && index.getMaxTimestamp() >= aggregationReq.getTimeUpperBound() - 1) {
-//                                long start = System.nanoTime();
                                 timeRangeColumnValue.addAll(fileService.getSingleValueByIndex(aggregationReq.getVin(), timeLower, timeUpper, index, columnIndex, i1, null, ctx, null, "agg", null));
-//                                readFileCost += (System.nanoTime() - start);
-//                                accessFile++;
                             }
                         }
                     }
@@ -521,23 +379,9 @@ public class TSDBEngineImpl extends TSDBEngine {
                 System.out.println("executeAggregateQuery aggregator error, not support");
                 System.exit(-1);
         }
-//        long gap = System.nanoTime() - start1;
-//        StaticsUtil.AGG_TOTAL_TIME.getAndAdd(gap);
-//        StaticsUtil.AGG_TOTAL_READ_FILE_TIME.getAndAdd(readFileCost);
-//        if (aggQueryTimes.getAndIncrement() % 200000 == 0) {
-//            StaticsUtil.printCPU();
-//            System.out.println("aggQueryTimes "+ aggQueryTimes.get() + "total cost " + (gap) + "readFileCost " + readFileCost + "accessFile " + accessFile + "AGG_TOTAL_TIME " + StaticsUtil.AGG_TOTAL_TIME.get() + " ns" + "AGG_TOTAL_READ_FILE_TIME " + StaticsUtil.AGG_TOTAL_READ_FILE_TIME.get() + ctx);
-//        }
         return rows;
     }
 
-    public ArrayList<Row> getCrossRows(Vin vin, Index index, long startTime, long endTime, Set<String> requestedColumns) {
-        long sTime = Math.max(startTime, index.getMinTimestamp());
-        long eTime = Math.min(endTime, index.getMaxTimestamp());
-        Integer i = VinDictMap.get(vin);
-        ArrayList<Row> timeRangeRow = new ArrayList<>(fileService.getByIndexV2(vin, sTime, eTime, index, requestedColumns, i));
-        return timeRangeRow;
-    }
 
     public static class CacheData {
 
@@ -820,23 +664,6 @@ public class TSDBEngineImpl extends TSDBEngine {
                 i++;
                 rows.add(new Row(vin, startTime, columns));
             }
-//            long endTime = System.nanoTime();
-//            long gap = endTime - beginTime;
-//            StaticsUtil.DOWNSAMPLE_TOTAL_TIME.getAndAdd(gap);
-//            if (executeDownsampleQueryTimes.getAndIncrement() % 200000 == 0) {
-//                System.out.println("DoubleCache cacheNums" + DoubleCache.cacheNums.get());
-//                if (StaticsUtil.START_COUNT_IOPS != 0) {
-//                    StaticsUtil.START_COUNT_IOPS = System.currentTimeMillis();
-//                }
-//                System.out.println("executeDownSampleQeury " + downsampleReq.getAggregator() +"  filter : " + downsampleReq.getColumnFilter().getCompareOp());
-//                System.out.println("executeDownsampleQuery Access File: " + ctx.getAccessTimes());
-//                System.out.println("executeDownsampleQuery hit : " + ctx.getHitTimes());
-//                System.out.println("executeDownsampleQueryTimes" + executeDownsampleQueryTimes.get() + " executeDownsampleQuery useTime : " + (gap) + "ns" + "DOWNSAMPLE_TOTAL_TIME useTime : " + StaticsUtil.DOWNSAMPLE_TOTAL_TIME.get() + " ns" );
-//                StaticsUtil.printCPU();
-//                System.out.println("IPOS: " + StaticsUtil.DOWN_SAMPLE_IOPS.getAndIncrement() * 1.0d /(System.currentTimeMillis() - StaticsUtil.START_COUNT_IOPS));
-
-//                System.out.println("executeDownsampleQuery readFile useTime : " + readFileTime);
-//            }
             return rows;
         } catch (Exception e) {
             e.printStackTrace();

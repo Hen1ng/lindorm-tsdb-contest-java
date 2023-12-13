@@ -1,6 +1,5 @@
 package com.alibaba.lindorm.contest.compress;
 
-import com.alibaba.lindorm.contest.compress.intcodec.simple.Simple9Codes;
 import com.alibaba.lindorm.contest.file.TSFileService;
 import com.alibaba.lindorm.contest.util.*;
 import com.alibaba.lindorm.contest.util.ZigZagUtil;
@@ -1894,18 +1893,6 @@ public class IntCompress {
         return longs;
     }
 
-    public static byte[] compress(int[] ints) {
-//        ints = Simple9Codes.innerEncode(ints);
-        ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
-        for (int i : ints) {
-            allocate.putInt(i);
-        }
-        final byte[] array = allocate.array();
-        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-        return gzipCompress.compress(array);
-    }
-
-
     public static byte[] compressShort(short[] shorts, int valueSize) {
 
         BitSet bitSet = SHORT_ARRTY_TYPE_THREAD_LOCAL.get();
@@ -1955,29 +1942,6 @@ public class IntCompress {
         return Zstd.compress(array, 22);
     }
 
-    public static byte[] compress4(int[] ints) {
-        ints = Simple9Codes.innerEncode(ints);
-        ByteBuffer allocate = ByteBuffer.allocate(ints.length * 4);
-        for (int i : ints) {
-            allocate.putInt(i);
-        }
-        final byte[] array = allocate.array();
-        return ZstdCompress.compress(array, 12);
-    }
-
-
-    public static int[] decompress(byte[] bytes) {
-        GzipCompress gzipCompress = TSFileService.GZIP_COMPRESS_THREAD_LOCAL.get();
-        final byte[] bytes1 = gzipCompress.deCompress(bytes);
-        final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
-        int[] ints = new int[bytes1.length / 4];
-        for (int j = 0; j < ints.length; j++) {
-            ints[j] = wrap.getInt();
-        }
-        return ints;
-//        return Simple9Codes.decode(ints);
-    }
-
     public static short[] decompressShort(byte[] bytes, int valueSize, int totalLength) {
         final byte[] bytes1 = Zstd.decompress(bytes, totalLength);
         final ByteBuffer wrap = ByteBuffer.wrap(bytes1);
@@ -1999,7 +1963,6 @@ public class IntCompress {
             }
         }
         return shorts;
-//        return Simple9Codes.decode(ints);
     }
 
     public static int[] decompressZstd(byte[] bytes, int num) {
