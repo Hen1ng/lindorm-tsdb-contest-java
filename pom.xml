@@ -19,28 +19,48 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-<!--    Don't modify the groupId, artifactId and version !  -->
-<!--    不要修改 groupId, artifactId 以及 version ！ -->
+    <!--    Don't modify the groupId, artifactId and version !  -->
+    <!--    不要修改 groupId, artifactId 以及 version ！ -->
     <groupId>com.alibaba.lindorm.tsdb.contest</groupId>
     <artifactId>lindorm-tsdb-contest-java</artifactId>
     <version>1.0</version><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><source>10</source><target>10</target></configuration></plugin></plugins></build>
 
-<!--    Don't add thirty dependencies, the compile env has no internet connection-->
-<!--    不要增加第三方依赖，编译环境断网-->
-<!--    Don't add any local dependencies (e.g, local jar file), which is not allowed in contest rules-->
-<!--    不要将第三方依赖通过本地 JAR 文件的方式引入-->
+    <!--    Don't add thirty dependencies, the compile env has no internet connection-->
+    <!--    不要增加第三方依赖，编译环境断网-->
+    <!--    Don't add any local dependencies (e.g, local jar file), which is not allowed in contest rules-->
+    <!--    不要将第三方依赖通过本地 JAR 文件的方式引入-->
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-<!--    <dependencies>-->
-<!--        <dependency>-->
-<!--            <groupId>org.xerial</groupId>-->
-<!--            <artifactId>snappy</artifactId>-->
-<!--            <version>1.1.7</version>-->
-<!--        </dependency>-->
-<!--    </dependencies>-->
+    <dependencies>
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
+            <version>1.5.5-2</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/zstd-jni-1.5.5-2.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.23.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.github.rdblue/brotli-codec -->
+        <dependency>
+            <groupId>com.nixxcode.jvmbrotli</groupId>
+            <artifactId>jvmbrotli</artifactId>
+            <version>0.2.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/thirdlibs/jvmbrotli-0.2.0.jar</systemPath>
+            <optional>true</optional>
+        </dependency>
+
+    </dependencies>
+
 
 </project>

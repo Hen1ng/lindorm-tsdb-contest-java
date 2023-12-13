@@ -31,16 +31,16 @@ import java.util.Set;
 public class TimeRangeQueryRequest {
   private final String tableName;
   private final Vin vin;
-  @Constant private final Set<String> requestedFields;
+  @Constant private final Set<String> requestedColumns;
   private final long timeLowerBound;
   private final long timeUpperBound;
 
   public TimeRangeQueryRequest(String tableName, Vin vin,
-      @Constant Set<String> requestedFields,
+      @Constant Set<String> requestedColumns,
       long timeLowerBound, long timeUpperBound) {
     this.tableName = tableName;
     this.vin = vin;
-    this.requestedFields = requestedFields;
+    this.requestedColumns = requestedColumns;
     this.timeLowerBound = timeLowerBound;
     this.timeUpperBound = timeUpperBound;
   }
@@ -49,8 +49,8 @@ public class TimeRangeQueryRequest {
     return vin;
   }
 
-  public @Constant Set<String> getRequestedFields() {
-    return requestedFields;
+  public @Constant Set<String> getRequestedColumns() {
+    return requestedColumns;
   }
 
   public long getTimeLowerBound() {

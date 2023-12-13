@@ -48,7 +48,7 @@ public class BytesUtil {
 
     public static long bytes2Long(byte[] byteNum) {
         long num = 0;
-        for (int ix = 7; ix >= 0; --ix) {
+        for (int ix = 0; ix <= 7; ix++) {
             num <<= 8;
             num |= (byteNum[ix] & 0xff);
         }
@@ -57,7 +57,7 @@ public class BytesUtil {
 
     public static long bytes2Long(byte[] bytes, int start) {
         long num = 0;
-        for (int ix = start + 7; ix >= start; --ix) {
+        for (int ix = start; ix <= start + 7; ix++) {
             num <<= 8;
             num |= (bytes[ix] & 0xff);
         }
@@ -112,9 +112,7 @@ public class BytesUtil {
     }
 
     public static void main(String[] args) {
-        final byte[] bytes = new byte[2];
-        bytes[0] = 0;
-        bytes[1] = 1;
-        System.out.println(toInt(bytes, 0 , 2));
+        final byte[] bytes = BytesUtil.long2Bytes(-2222L);
+        final long l = BytesUtil.bytes2Long(bytes);
     }
 }

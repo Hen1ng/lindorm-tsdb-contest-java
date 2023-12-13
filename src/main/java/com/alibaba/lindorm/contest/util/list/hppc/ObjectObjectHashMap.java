@@ -465,7 +465,7 @@ public class ObjectObjectHashMap<KType, VType>
         for (ObjectObjectCursor<?, ?> c : other) {
             KType key = (KType) c.key;
             if (!containsKey(key) ||
-                    !java.util.Objects.equals(c.value, get(key))) {
+                    !Objects.equals(c.value, get(key))) {
                 return false;
             }
         }

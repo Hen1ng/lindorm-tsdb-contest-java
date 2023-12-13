@@ -8,5 +8,6 @@ public class RestartUtil {
 
     public static void setFirstStart(File file) {
         IS_FIRST_START = !file.exists();
+        System.out.println("IS_FIRST_START :" +IS_FIRST_START);
     }
 }

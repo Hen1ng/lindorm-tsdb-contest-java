@@ -38,18 +38,29 @@ public class GzipCompress implements Compress {
     public byte[] deCompress(byte[] data) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayInputStream in = new ByteArrayInputStream(data);
-
+        GZIPInputStream ungzip = null;
         try {
-            GZIPInputStream ungzip = new GZIPInputStream(in);
+            ungzip = new GZIPInputStream(in);
             byte[] buffer = new byte[2048];
             int n;
             while ((n = ungzip.read(buffer)) >= 0) {
                 out.write(buffer, 0, n);
             }
+            return out.toByteArray();
+
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (ungzip != null) {
+                try {
+                    ungzip.close();
+                } catch (Exception e) {
+                    System.out.println("GzipCompress unzip close erorr, " + e);
+                }
+            }
+
         }
 
-        return out.toByteArray();
+        return null;
     }
 }

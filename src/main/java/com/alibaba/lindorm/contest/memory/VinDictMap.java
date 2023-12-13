@@ -2,6 +2,7 @@ package com.alibaba.lindorm.contest.memory;
 
 import com.alibaba.lindorm.contest.index.Index;
 import com.alibaba.lindorm.contest.structs.Vin;
+import com.alibaba.lindorm.contest.util.Constants;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -9,15 +10,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.alibaba.lindorm.contest.util.Constants.TOTAL_VIN_NUMS;
+
 public class VinDictMap {
 
-    private static final byte[][] INDEX_VIN = new byte[30000][17];
+    private static final byte[][] INDEX_VIN = new byte[TOTAL_VIN_NUMS][17];
 
     public static Map<Vin, Integer> getVinDictMap() {
         return VIN_DICT_MAP;
     }
 
-    private static Map<Vin, Integer> VIN_DICT_MAP = new ConcurrentHashMap<>(30000);
+    private static Map<Vin, Integer> VIN_DICT_MAP = new ConcurrentHashMap<>(TOTAL_VIN_NUMS);
 
     public static void put(Vin vin, Integer index) {
         VIN_DICT_MAP.put(vin, index);
@@ -62,6 +65,7 @@ public class VinDictMap {
                 INDEX_VIN[Integer.parseInt(split[1])] = split[0].getBytes(StandardCharsets.UTF_8);
             }
         }
+//        file.delete();
     }
 
 }

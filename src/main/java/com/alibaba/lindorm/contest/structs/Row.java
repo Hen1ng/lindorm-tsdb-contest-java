@@ -25,7 +25,7 @@ import java.util.Map;
 /**
  * A row corresponds to a specific vin.
  * One vin may have several rows, where each row has its unique timestamp.
- * In write request, the fields contains all columns in our schema, which
+ * In write request, the columns map contains all columns in our schema, which
  * form a complete row. In read request, the result may only contain several
  * columns according to our request.
  */

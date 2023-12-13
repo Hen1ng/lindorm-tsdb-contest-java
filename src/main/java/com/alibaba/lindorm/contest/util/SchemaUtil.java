@@ -4,9 +4,7 @@ import com.alibaba.lindorm.contest.structs.ColumnValue;
 import com.alibaba.lindorm.contest.structs.Schema;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SchemaUtil {
@@ -14,8 +12,11 @@ public class SchemaUtil {
     private static final TreeMap<String, ColumnValue.ColumnType> INT_MAP = new TreeMap<>();
     private static final TreeMap<String, ColumnValue.ColumnType> STRING_MAP = new TreeMap<>();
     private static final TreeMap<String, ColumnValue.ColumnType> FLOAT_MAP = new TreeMap<>();
-    private static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
+    public static final Map<String, Integer> COLUMNS_INDEX = new ConcurrentHashMap<>(60);
     private static final String[] INDEX_ARRAY = new String[60];
+    public static final int[] COLUMNS_INDEX_ARRAY = new int[60];
+    public static final Map<String, Set<Integer>> maps = new ConcurrentHashMap();
+
 
     public static Schema getSchema() {
         return schema1;
@@ -50,10 +51,28 @@ public class SchemaUtil {
             i++;
         }
         for (String key : STRING_MAP.keySet()) {
+            if ("JUBK".equals(key) || "ORNI".equals(key)) {
+                continue;
+            }
             INDEX_ARRAY[i] = key;
             COLUMNS_INDEX.put(key, i);
             System.out.println("key: " + key + " index : " + i);
             i++;
+        }
+        INDEX_ARRAY[i] = "ORNI";
+        COLUMNS_INDEX.put("ORNI", i);
+        System.out.println("key: " + "ORNI" + " index : " + i);
+        i++;
+        INDEX_ARRAY[i] = "JUBK";
+        COLUMNS_INDEX.put("JUBK", i);
+        System.out.println("key: " + "JUBK" + " index : " + i);
+        for (String s : INDEX_ARRAY) {
+            maps.put(s, new HashSet<>());
+        }
+        int j = 0;
+        for (String key : schema.getColumnTypeMap().keySet()) {
+            COLUMNS_INDEX_ARRAY[j] = COLUMNS_INDEX.get(key);
+            j++;
         }
     }
 
@@ -89,6 +108,9 @@ public class SchemaUtil {
         int intNums = 0;
         int stringNums = 0;
         int doubleNums = 0;
+        if (!file.exists()) {
+            return;
+        }
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -114,5 +136,11 @@ public class SchemaUtil {
             Constants.setFloatNums(doubleNums);
             Constants.setIntNums(intNums);
         }
+        int j = 0;
+        for (String key : schema1.getColumnTypeMap().keySet()) {
+            COLUMNS_INDEX_ARRAY[j] = COLUMNS_INDEX.get(key);
+            j++;
+        }
+        file.delete();
     }
 }

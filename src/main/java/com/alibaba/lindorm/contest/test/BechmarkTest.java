@@ -117,15 +117,18 @@ public class BechmarkTest {
     }
 
     public static void main(String[] args) throws Exception {
-//        SortedList<Long> sortedList = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
-//        SortedList<Long> sortedList1 = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
-//        SortedList<Long> sortedList2 = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
-//        sortedList.add(2L);
-//        sortedList.add(2L);
-//        sortedList.add(1L);
-//        sortedList.add(7L);
-//        sortedList.add(0L);
-//        sortedList.add(10L);
+        SortedList<Long> sortedList = new SortedList<>((l1, l2) -> -1 * l1.compareTo(l2));
+
+        sortedList.add(2L);
+        sortedList.add(2L);
+        sortedList.add(1L);
+        sortedList.add(7L);
+        sortedList.add(0L);
+        sortedList.add(10L);
+        SortedList<Long> sortedList1 = sortedList;
+        sortedList.clear();
+        System.out.println(sortedList1.size());
+
 //        for (Long aLong : sortedList) {
 //            System.out.println(aLong);
 //        }
@@ -138,14 +141,14 @@ public class BechmarkTest {
 //        map.get(vin1).add(1L);
 //        map.get(vin1).add(10L);
 //        System.out.println(map);
-        final String randomString = BytesUtil.getRandomString(1024 * 4 );
+        final String randomString = BytesUtil.getRandomString(20 );
 //        System.out.println(randomString);
         final ZlibCompress zlibCompress = new ZlibCompress();
         final GzipCompress gzipCompress = new GzipCompress();
         final DeflaterCompress deflaterCompress = new DeflaterCompress();
-        final byte[] compress = gzipCompress.compress(randomString.getBytes(StandardCharsets.UTF_8));
+        final byte[] compress = zlibCompress.compress(randomString.getBytes(StandardCharsets.UTF_8));
         System.out.println(compress.length);
-        System.out.println(new String(gzipCompress.deCompress(compress)).equals(randomString));
+        System.out.println(new String(deflaterCompress.deCompress(compress)).equals(randomString));
 
         final String randomString1 = BytesUtil.getRandomString(1024 * 4 );
         final byte[] compress1 = gzipCompress.compress(randomString1.getBytes(StandardCharsets.UTF_8));
