@@ -140,21 +140,37 @@ public class IntCompress {
         return result;
     }
 
-//    static {
-//        String fileName = "int.txt";  // 替换为你的文件路径
-//        try {
-//            testNumReal = readIntsFromFile(fileName);
-//            System.out.println(testNumReal.length);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    static {
+        String fileName = "int.txt";  // 替换为你的文件路径
+        try {
+            testNumReal = readIntsFromFile(fileName);
+            System.out.println(testNumReal.length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
+//        for(Pair<Integer, Integer> integerIntegerPair : subSet){
+//            System.out.println(subSet.size());
+//            System.out.printf("[%d,%d],",integerIntegerPair.getLeft(),integerIntegerPair.getRight());
+//        }
+
+        Set<Integer> dependencies1 = new HashSet<>();
         for (int i = 0; i < 40; i++) {
             Set<Integer> dependencies = dependencyFinder.findDependencies(i);
-            System.out.println(dependencies);
+            if(i!=12)continue;
+            for (Integer int1 : dependencies) {
+                if (int1 < 0) dependencies1.add(-int1);
+                else dependencies1.add(int1);
+            }
+            System.out.println(dependencies1);
+        }
+        for(Pair<Integer, Integer> integerIntegerPair : subSet){
+            if(dependencies1.contains(integerIntegerPair.getLeft())){
+                System.out.printf("[%d,%d]",integerIntegerPair.getLeft(),integerIntegerPair.getRight());
+            }
         }
         int[] data = testNumReal.clone();
 //        data = combineArray(splitArray);
@@ -191,59 +207,85 @@ public class IntCompress {
 //        System.out.println(Arrays.equals(data1,data));
 //        IntCompressResult intCompressResult = compress4(data, 210);
 //        Pair<Integer, Integer> integerIntegerPair = new Pair<Integer, Integer>(0, 0);
-//        double bench = 0.1412202380952381;
+//        byte[] compressed1 = compressOrigin(testNumReal.clone(), 210);
+//        long byteLength1 = compressed1.length;
+//        double benchNow = (1.0d * byteLength1 / (data.length * 4));
+//        double updateBench = benchNow;
+//        double eps = 0.0001;
+////
+//        for (int iter = 0; iter < 50; iter++) {
+//            for (int first = 0; first < 40; first++) {
+//                for (int second = first + 1; second < 40; second++) {
+//                    {
+//                        subSet.add(new Pair<>(first, second));
+//                        byte[] compressed = compressOrigin(testNumReal.clone(), 210);
+//                        long byteLength = compressed.length;
+//                        int[] longs = decompressOrigin(compressed, 210);
+//                        boolean cycle = false;
+//                        for (int i = 0; i < longs.length; i++) {
+//                            if (longs[i] != testNumReal[i]) {
+//                                cycle = true;
+////                                break;
+////                                System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
+//                                break;
+//                            }
+//                        }
+//                        if (cycle){break;}
+//                        if ((1.0d * byteLength / (data.length * 4)) < benchNow-eps) {
+////                            System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
+//                            Random random = new Random();
+//                            if(random.nextFloat()>0.5) {
+//                                updateBench = (1.0d * byteLength / (data.length * 4));
+//                                integerIntegerPair = new Pair<>(first, second);
+//                            }
+//                        }
+//                        subSet.remove(subSet.size() - 1);
+//                    }
+//                    {
+//                        subSet.add(new Pair<>(first, -second));
+//                        byte[] compressed = compressOrigin(testNumReal.clone(), 210);
+//                        long byteLength = compressed.length;
+//                        int[] longs = decompressOrigin(compressed, 210);
+//                        boolean cycle = false;
+//                        for (int i = 0; i < longs.length; i++) {
+//                            if (longs[i] != testNumReal[i]) {
+//                                cycle = true;
+//                                break;
+////                                System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
+//                            }
+//                        }
+//                        if (cycle){break;}
 //
-//        for (int first = 0; first < 40; first++) {
-//            for (int second = first + 1; second < 40; second++) {
-//                {
-//                    subSet.add(new Pair<>(first, second));
-//                    byte[] compressed = compressOrigin(testNumReal.clone(), 210);
-//                    long byteLength = compressed.length;
-//                    int[] longs = decompressOrigin(compressed, 210);
-//                    for (int i = 0; i < longs.length; i++) {
-//                        if (longs[i] != testNumReal[i]) {
-//                            System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
+//                        if ((1.0d * byteLength / (data.length * 4)) < benchNow-eps) {
+//                            Random random = new Random();
+////                            System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
+//                            if(random.nextFloat()>0.5) {
+//                                updateBench = (1.0d * byteLength / (data.length * 4));
+//                                integerIntegerPair = new Pair<>(first, -second);
+//                            }
 //                        }
+//                        subSet.remove(subSet.size() - 1);
 //                    }
-//                    if ((1.0d * byteLength / (data.length * 4)) < bench) {
-//                        System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
-//                        bench = (1.0d * byteLength / (data.length * 4));
-//                        integerIntegerPair = new Pair<>(first, second);
-//                    }
-//                    subSet.remove(subSet.size() - 1);
 //                }
-//                {
-//                    subSet.add(new Pair<>(first, -second));
-//                    byte[] compressed = compressOrigin(testNumReal.clone(), 210);
-//                    long byteLength = compressed.length;
-//                    int[] longs = decompressOrigin(compressed, 210);
-//                    for (int i = 0; i < longs.length; i++) {
-//                        if (longs[i] != testNumReal[i]) {
-//                            System.out.printf("%d:%d->%d\n", i, longs[i], testNumReal[i]);
-//                        }
-//                    }
-//                    if ((1.0d * byteLength / (data.length * 4)) < bench) {
-//                        System.out.println("first :" + first + "second :" + second + "  compress rate : " + 1.0d * byteLength / (data.length * 4));
-//                        bench = (1.0d * byteLength / (data.length * 4));
-//                        integerIntegerPair = new Pair<>(first, -second);
-//                    }
-//                    subSet.remove(subSet.size() - 1);
+//                if (integerIntegerPair.getLeft() != 0 && integerIntegerPair.getRight() !=0 && updateBench < benchNow - eps) {
+//                    System.out.println("first :" + integerIntegerPair.getLeft() + "second :" + integerIntegerPair.getRight() + "  compress rate : " + updateBench);
+//                    subSet.add(integerIntegerPair);
+//                    benchNow = updateBench;
 //                }
 //            }
-//
 //        }
 //        System.out.println(integerIntegerPair.getLeft() + "|" + integerIntegerPair.getRight());
         byte[] compressed = compressOrigin(data, 210);
         long byteLength = compressed.length;
 ////        final int[] output = new int[data.length];
 //        final int[] longs = decompress4V2(intCompressResult.data, 210, intCompressResult);
-        for(int i=0;i<40;i++){
+        for (int i = 0; i < 40; i++) {
             Set<Integer> integers = new HashSet<>();
             integers.add(i);
             int[] ints = decompressOriginByColumns(compressed, 210, integers);
-            for (int j = 0; j <210; j++) {
-                if(ints[i*210+j]!=testNumReal[i*210+j]){
-                    System.out.println("not equal " + ints[i*210+j] +": " +testNumReal[i*210+j]);
+            for (int j = 0; j < 210; j++) {
+                if (ints[i * 210 + j] != testNumReal[i * 210 + j]) {
+                    System.out.println("not equal " + ints[i * 210 + j] + ": " + testNumReal[i * 210 + j]);
                 }
             }
         }
@@ -297,6 +339,9 @@ public class IntCompress {
     public static ArrayList<Integer> notFirstDelta;
 
     public static ArrayList<Integer> notSecondDelta;
+    public static boolean[] notSecondDeltaFlag;
+    public static boolean[] notFirstDeltaFlag;
+
     public static ArrayList<Integer> divSet;
 
     public static ArrayList<Integer> split1 = new ArrayList<>(10);
@@ -455,6 +500,13 @@ public class IntCompress {
 //        notSecondDelta.add(38);
         notSecondDelta.add(39);
 
+        notSecondDeltaFlag = new boolean[40];
+        for (int i = 0; i < 40; i++) {
+            if (!notSecondDelta.contains(i)) notSecondDeltaFlag[i] = false;
+            else notSecondDeltaFlag[i] = true;
+        }
+
+
     }
 
     public static void setFourBit(byte[] values, int index, int value) {
@@ -490,15 +542,27 @@ public class IntCompress {
     public static void preProcess(int[] ints, int valueSize) {
         // delta
         for (int i = 0; i < 40; i++) {
-            if (notFirstDelta.contains(i)) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
             int pre = ints[start];
+            int min = Integer.MAX_VALUE;
+            int max = Integer.MIN_VALUE;
+            HashMap<Integer, Integer> integerIntegerHashMap = new HashMap<>();
             for (int j = start + 1; j < end; j++) {
                 int tmp = ints[j];
                 ints[j] = ints[j] - pre;
                 pre = tmp;
             }
+            for(int j = start + 1; j< end;j++){
+                if (!integerIntegerHashMap.containsKey(ints[j])){
+                    integerIntegerHashMap.put(ints[j],1);
+                }
+                min = Math.min(min,ints[j]);
+                max = Math.max(max,ints[j]);
+            }
+            System.out.printf("%d : [%d,%d]",i,min,max);
+//            System.out.printf("%d,",integerIntegerHashMap.size());
+            System.out.println("");
         }
 
         for (Pair<Integer, Integer> integerIntegerPair : subSet) {
@@ -513,6 +577,25 @@ public class IntCompress {
             for (int i = start; i < end; i++) {
                 ints[i] -= p * ints[subIndex * valueSize + (i - start)];
             }
+        }
+        System.out.println("=======================");
+        for (int i = 0; i < 40; i++) {
+            int start = i * valueSize;
+            int end = (i + 1) * valueSize;
+            int pre = ints[start];
+            int min = Integer.MAX_VALUE;
+            int max = Integer.MIN_VALUE;
+            HashMap<Integer, Integer> integerIntegerHashMap = new HashMap<>();
+            for(int j = start + 1; j< end;j++){
+                if (!integerIntegerHashMap.containsKey(ints[j])){
+                    integerIntegerHashMap.put(ints[j],1);
+                }
+                min = Math.min(min,ints[j]);
+                max = Math.max(max,ints[j]);
+            }
+            System.out.printf("%d : [%d,%d]",i,min,max);
+//            System.out.printf("%d,",integerIntegerHashMap.size());
+            System.out.println("");
         }
 //        for (Integer integer : divSet) {
 //            int start = integer * valueSize;
@@ -535,7 +618,7 @@ public class IntCompress {
 //            System.out.println("");
 //        }
         for (int i = 0; i < 40; i++) {
-            if (notSecondDelta.contains(i)) continue;
+            if (notSecondDeltaFlag[i]) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
             int pre = ints[start + 1];
@@ -546,11 +629,31 @@ public class IntCompress {
             }
         }
 
+        System.out.println("=======================");
+        for (int i = 0; i < 40; i++) {
+            int start = i * valueSize;
+            int end = (i + 1) * valueSize;
+            int pre = ints[start];
+            int min = Integer.MAX_VALUE;
+            int max = Integer.MIN_VALUE;
+            HashMap<Integer, Integer> integerIntegerHashMap = new HashMap<>();
+            for(int j = start + 1; j< end;j++){
+                if (!integerIntegerHashMap.containsKey(ints[j])){
+                    integerIntegerHashMap.put(ints[j],1);
+                }
+                min = Math.min(min,ints[j]);
+                max = Math.max(max,ints[j]);
+            }
+//            System.out.printf("[%d,%d]",min,max);
+            System.out.printf("%d,",integerIntegerHashMap.size());
+            System.out.println("");
+        }
+
     }
 
     public static void recoverProcessByColumn(int[] ints, int valueSize, Set<Integer> dependencies) {
         for (int i = 0; i < 40; i++) {
-            if (notSecondDelta.contains(i)) continue;
+            if (notSecondDeltaFlag[i]) continue;
             if (!dependencies.contains(i)) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
@@ -565,7 +668,7 @@ public class IntCompress {
         while (!stack.isEmpty()) {
             Pair<Integer, Integer> pop = stack.pop();
             Integer left = pop.getLeft();
-            if (!dependencies.contains(left)&&!dependencies.contains(-left)) continue;
+            if (!dependencies.contains(left) && !dependencies.contains(-left)) continue;
             int start = pop.getLeft() * valueSize;
             int end = start + valueSize;
             int subIndex = pop.getRight();
@@ -579,7 +682,6 @@ public class IntCompress {
             }
         }
         for (int i = 0; i < 40; i++) {
-            if (notFirstDelta.contains(i)) continue;
             if (!dependencies.contains(i)) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
@@ -591,7 +693,7 @@ public class IntCompress {
 
     public static void recoveryProcess(int[] ints, int valueSize) {
         for (int i = 0; i < 40; i++) {
-            if (notSecondDelta.contains(i)) continue;
+            if (notSecondDeltaFlag[i]) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
             for (int j = start + 2; j < end; j++) {
@@ -617,7 +719,6 @@ public class IntCompress {
             }
         }
         for (int i = 0; i < 40; i++) {
-            if (notFirstDelta.contains(i)) continue;
             int start = i * valueSize;
             int end = (i + 1) * valueSize;
             for (int j = start + 1; j < end; j++) {
@@ -1165,6 +1266,7 @@ public class IntCompress {
                 totalLength += allocate.array().length;
                 arrayList.add(allocate);
             } else {
+                System.out.printf("use simple8 %d\n",start/210);
                 long[] longs2 = new long[valueSize];
                 for (int j = start; j < start + valueSize; j++) {
                     longs2[j - start] = ints[j];
@@ -1208,7 +1310,7 @@ public class IntCompress {
         Set<Integer> dependencies1 = dependencyFinder.findDependencies(index);
         Set<Integer> dependencies = new HashSet<>();
         for (Integer i : dependencies1) {
-            if(i<0)dependencies.add(-i);
+            if (i < 0) dependencies.add(-i);
             else dependencies.add(i);
         }
         for (int i = 0; i < 40; i++) {
@@ -1224,7 +1326,7 @@ public class IntCompress {
                 else if (dictSize > 4) dd = 16;
 //                else if (dictSize > 4) dictSize = 8;
                 else if (dictSize > 2) dd = 4;
-                if (!dependencies.contains(i)&&!dependencies.contains(-i)) {
+                if (!dependencies.contains(i) && !dependencies.contains(-i)) {
                     int offset1 = 0;
                     switch (dd) {
                         case 1:
@@ -1287,7 +1389,7 @@ public class IntCompress {
             } else {
                 // not use map
                 int length = wrap1.getInt();
-                if (!dependencies.contains(i)&&!dependencies.contains(-i)) {
+                if (!dependencies.contains(i) && !dependencies.contains(-i)) {
                     wrap1.position(wrap1.position() + length);
                     continue;
                 }
@@ -1310,6 +1412,7 @@ public class IntCompress {
         byte[] bytes1 = new byte[bytes.length - 4];
         wrap.get(bytes1, 0, bytes1.length);
         byte[] decompress = Zstd.decompress(bytes1, anInt);
+//        byte[] decompress = bytes;
         ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
         byte[] compressType = new byte[5];
         int[] result = new int[valueSize * 40];
@@ -1320,7 +1423,7 @@ public class IntCompress {
         }
         Set<Integer> dependencies = new HashSet<>();
         for (Integer i : dependencies1) {
-            if(i<0)dependencies.add(-i);
+            if (i < 0) dependencies.add(-i);
             else dependencies.add(i);
         }
         for (int i = 0; i < 40; i++) {
@@ -1423,6 +1526,7 @@ public class IntCompress {
         wrap.get(bytes1, 0, bytes1.length);
 //        byte[] decompress = bytes1;
         byte[] decompress = Zstd.decompress(bytes1, anInt);
+//        byte[] decompress = bytes;
         ByteBuffer wrap1 = ByteBuffer.wrap(decompress);
         byte[] compressType = new byte[5];
         int[] result = new int[valueSize * 40];

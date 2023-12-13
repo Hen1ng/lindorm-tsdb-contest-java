@@ -240,6 +240,12 @@ public class DoubleCompress {
             ByteBuffer encode = null;
             if (doubleDeltaFlag[i]) {
                 DoubleDeltaCompress(values, i * valueSize, (i + 1) * valueSize);
+                for(int j=i*valueSize;j<(i+1)*valueSize;j++){
+                    long longBits = Double.doubleToLongBits(values[j]);
+                    String binaryString = Long.toBinaryString(longBits);
+                    System.out.printf("%.15f : %s\n",values[j],binaryString);
+                }
+                System.out.println();
                 encode = encode3(values, i * valueSize, (i + 1) * valueSize);
                 doubleDeltaBuffers.add(encode);
             } else if (corillaListFlag[i]) {
