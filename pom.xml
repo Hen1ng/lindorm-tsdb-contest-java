@@ -39,14 +39,14 @@
         <dependency>
             <groupId>com.github.luben</groupId>
             <artifactId>zstd-jni</artifactId>
-            <version>1.5.5-2</version>
+            <version>1.5.7-3</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/thirdlibs/zstd-jni-1.5.5-2.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.23.0</version>
+            <version>1.26.0</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/thirdlibs/commons-compress-1.23.0.jar</systemPath>
         </dependency>
